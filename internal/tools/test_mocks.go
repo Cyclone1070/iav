@@ -8,23 +8,20 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-	"time"
 )
 
 // mockFileInfo implements FileInfo
 type mockFileInfo struct {
-	name    string
-	size    int64
-	mode    os.FileMode
-	modTime time.Time
-	isDir   bool
+	name  string
+	size  int64
+	mode  os.FileMode
+	isDir bool
 }
 
-func (f *mockFileInfo) Name() string       { return f.name }
-func (f *mockFileInfo) Size() int64        { return f.size }
-func (f *mockFileInfo) Mode() os.FileMode  { return f.mode }
-func (f *mockFileInfo) ModTime() time.Time { return f.modTime }
-func (f *mockFileInfo) IsDir() bool        { return f.isDir }
+func (f *mockFileInfo) Name() string      { return f.name }
+func (f *mockFileInfo) Size() int64       { return f.size }
+func (f *mockFileInfo) Mode() os.FileMode { return f.mode }
+func (f *mockFileInfo) IsDir() bool       { return f.isDir }
 
 // mockFileHandle represents a file handle for temp files
 type mockFileHandle struct {
@@ -128,31 +125,29 @@ func (f *MockFileSystem) SetOperationError(operation string, err error) {
 }
 
 // CreateFile creates a file with content
-func (f *MockFileSystem) CreateFile(path string, content []byte, modTime time.Time, perm os.FileMode) {
+func (f *MockFileSystem) CreateFile(path string, content []byte, perm os.FileMode) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.files[path] = content
 	f.fileInfos[path] = &mockFileInfo{
-		name:    filepath.Base(path),
-		size:    int64(len(content)),
-		mode:    perm,
-		modTime: modTime,
-		isDir:   false,
+		name:  filepath.Base(path),
+		size:  int64(len(content)),
+		mode:  perm,
+		isDir: false,
 	}
 	f.dirs[path] = false
 }
 
 // CreateDir creates a directory
-func (f *MockFileSystem) CreateDir(path string, modTime time.Time) {
+func (f *MockFileSystem) CreateDir(path string) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.dirs[path] = true
 	f.fileInfos[path] = &mockFileInfo{
-		name:    filepath.Base(path),
-		size:    0,
-		mode:    os.ModeDir | 0o755,
-		modTime: modTime,
-		isDir:   true,
+		name:  filepath.Base(path),
+		size:  0,
+		mode:  os.ModeDir | 0o755,
+		isDir: true,
 	}
 }
 
@@ -162,11 +157,10 @@ func (f *MockFileSystem) CreateSymlink(symlinkPath, targetPath string) {
 	defer f.mu.Unlock()
 	f.symlinks[symlinkPath] = targetPath
 	f.fileInfos[symlinkPath] = &mockFileInfo{
-		name:    filepath.Base(symlinkPath),
-		size:    0,
-		mode:    os.ModeSymlink | 0o777,
-		modTime: time.Now(),
-		isDir:   false,
+		name:  filepath.Base(symlinkPath),
+		size:  0,
+		mode:  os.ModeSymlink | 0o777,
+		isDir: false,
 	}
 }
 
@@ -268,11 +262,10 @@ func (f *MockFileSystem) EnsureDirs(path string) error {
 		if !f.dirs[current] {
 			f.dirs[current] = true
 			f.fileInfos[current] = &mockFileInfo{
-				name:    part,
-				size:    0,
-				mode:    os.ModeDir | 0o755,
-				modTime: time.Now(),
-				isDir:   true,
+				name:  part,
+				size:  0,
+				mode:  os.ModeDir | 0o755,
+				isDir: true,
 			}
 		}
 	}
@@ -384,11 +377,10 @@ func (f *MockFileSystem) Rename(oldpath, newpath string) error {
 		// Move temp file content to new path
 		f.files[newpath] = handle.content
 		f.fileInfos[newpath] = &mockFileInfo{
-			name:    filepath.Base(newpath),
-			size:    int64(len(handle.content)),
-			mode:    0o644,
-			modTime: time.Now(),
-			isDir:   false,
+			name:  filepath.Base(newpath),
+			size:  int64(len(handle.content)),
+			mode:  0o644,
+			isDir: false,
 		}
 		f.dirs[newpath] = false
 		delete(f.tempFiles, oldpath)
@@ -400,11 +392,10 @@ func (f *MockFileSystem) Rename(oldpath, newpath string) error {
 		f.files[newpath] = content
 		if info, ok := f.fileInfos[oldpath]; ok {
 			f.fileInfos[newpath] = &mockFileInfo{
-				name:    filepath.Base(newpath),
-				size:    info.size,
-				mode:    info.mode,
-				modTime: info.modTime,
-				isDir:   info.isDir,
+				name:  filepath.Base(newpath),
+				size:  info.size,
+				mode:  info.mode,
+				isDir: info.isDir,
 			}
 		}
 		delete(f.files, oldpath)
@@ -524,55 +515,6 @@ func (f *MockChecksumComputer) ComputeChecksum(data []byte) string {
 	// Use real SHA-256 implementation for deterministic behaviour
 	hash := sha256.Sum256(data)
 	return hex.EncodeToString(hash[:])
-}
-
-// MockClock implements Clock with controllable time
-type MockClock struct {
-	mu    sync.RWMutex
-	times []time.Time
-	index int
-}
-
-// NewMockClock creates a new mock clock
-func NewMockClock() *MockClock {
-	return &MockClock{
-		times: []time.Time{time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)},
-		index: 0,
-	}
-}
-
-// SetTime sets the current time
-func (f *MockClock) SetTime(t time.Time) {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	f.times = []time.Time{t}
-	f.index = 0
-}
-
-// AdvanceTime adds a time to the sequence
-func (f *MockClock) AdvanceTime(t time.Time) {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	f.times = append(f.times, t)
-}
-
-func (f *MockClock) Now() time.Time {
-	f.mu.RLock()
-	defer f.mu.RUnlock()
-
-	if f.index < len(f.times) {
-		return f.times[f.index]
-	}
-	return f.times[len(f.times)-1]
-}
-
-// Tick advances to the next time
-func (f *MockClock) Tick() {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	if f.index < len(f.times)-1 {
-		f.index++
-	}
 }
 
 // MockChecksumStore implements ChecksumStore with in-memory storage

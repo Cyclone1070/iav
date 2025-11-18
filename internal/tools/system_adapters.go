@@ -6,7 +6,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"time"
 )
 
 const (
@@ -195,11 +194,4 @@ func (r *SHA256Checksum) ComputeChecksum(data []byte) string {
 func computeChecksum(data []byte) string {
 	hash := sha256.Sum256(data)
 	return hex.EncodeToString(hash[:])
-}
-
-// SystemClock implements Clock using time.Now
-type SystemClock struct{}
-
-func (r *SystemClock) Now() time.Time {
-	return time.Now()
 }

@@ -17,18 +17,15 @@ func TestEditFile(t *testing.T) {
 	t.Run("conflict detection when cache checksum differs", func(t *testing.T) {
 		fs := NewMockFileSystem(maxFileSize)
 		cache := NewMockChecksumStore()
-		clock := NewMockClock()
-
 		originalContent := []byte("original content")
-		fs.CreateFile("/workspace/test.txt", originalContent, clock.Now(), 0o644)
+		fs.CreateFile("/workspace/test.txt", originalContent, 0o644)
 
 		// Read file to populate cache
 		ctx := &WorkspaceContext{
 			FS:               fs,
 			BinaryDetector:   NewMockBinaryDetector(),
 			ChecksumComputer: NewMockChecksumComputer(),
-			Clock:            clock,
-			ChecksumCache:            cache,
+			ChecksumCache:    cache,
 			MaxFileSize:      maxFileSize,
 			WorkspaceRoot:    workspaceRoot,
 		}
@@ -40,7 +37,7 @@ func TestEditFile(t *testing.T) {
 
 		// Modify file externally (simulate external change)
 		modifiedContent := []byte("modified externally")
-		fs.CreateFile("/workspace/test.txt", modifiedContent, clock.Now(), 0o644)
+		fs.CreateFile("/workspace/test.txt", modifiedContent, 0o644)
 
 		// Try to edit - should fail with conflict
 		ops := []Operation{
@@ -60,17 +57,14 @@ func TestEditFile(t *testing.T) {
 	t.Run("multiple operations", func(t *testing.T) {
 		fs := NewMockFileSystem(maxFileSize)
 		cache := NewMockChecksumStore()
-		clock := NewMockClock()
-
 		content := []byte("line1\nline2\nline3")
-		fs.CreateFile("/workspace/test.txt", content, clock.Now(), 0644)
+		fs.CreateFile("/workspace/test.txt", content, 0644)
 
 		ctx := &WorkspaceContext{
 			FS:               fs,
 			BinaryDetector:   NewMockBinaryDetector(),
 			ChecksumComputer: NewMockChecksumComputer(),
-			Clock:            clock,
-			ChecksumCache:            cache,
+			ChecksumCache:    cache,
 			MaxFileSize:      maxFileSize,
 			WorkspaceRoot:    workspaceRoot,
 		}
@@ -118,17 +112,14 @@ func TestEditFile(t *testing.T) {
 	t.Run("snippet not found", func(t *testing.T) {
 		fs := NewMockFileSystem(maxFileSize)
 		cache := NewMockChecksumStore()
-		clock := NewMockClock()
-
 		content := []byte("test content")
-		fs.CreateFile("/workspace/test.txt", content, clock.Now(), 0644)
+		fs.CreateFile("/workspace/test.txt", content, 0644)
 
 		ctx := &WorkspaceContext{
 			FS:               fs,
 			BinaryDetector:   NewMockBinaryDetector(),
 			ChecksumComputer: NewMockChecksumComputer(),
-			Clock:            clock,
-			ChecksumCache:            cache,
+			ChecksumCache:    cache,
 			MaxFileSize:      maxFileSize,
 			WorkspaceRoot:    workspaceRoot,
 		}
@@ -155,17 +146,14 @@ func TestEditFile(t *testing.T) {
 	t.Run("snippet ambiguous", func(t *testing.T) {
 		fs := NewMockFileSystem(maxFileSize)
 		cache := NewMockChecksumStore()
-		clock := NewMockClock()
-
 		content := []byte("test test test")
-		fs.CreateFile("/workspace/test.txt", content, clock.Now(), 0644)
+		fs.CreateFile("/workspace/test.txt", content, 0644)
 
 		ctx := &WorkspaceContext{
 			FS:               fs,
 			BinaryDetector:   NewMockBinaryDetector(),
 			ChecksumComputer: NewMockChecksumComputer(),
-			Clock:            clock,
-			ChecksumCache:            cache,
+			ChecksumCache:    cache,
 			MaxFileSize:      maxFileSize,
 			WorkspaceRoot:    workspaceRoot,
 		}
@@ -192,19 +180,17 @@ func TestEditFile(t *testing.T) {
 	t.Run("binary file rejection", func(t *testing.T) {
 		fs := NewMockFileSystem(maxFileSize)
 		cache := NewMockChecksumStore()
-		clock := NewMockClock()
 		detector := NewMockBinaryDetector()
 
 		content := []byte("test content")
-		fs.CreateFile("/workspace/binary.bin", content, clock.Now(), 0644)
+		fs.CreateFile("/workspace/binary.bin", content, 0644)
 		detector.SetBinaryPath("/workspace/binary.bin", true)
 
 		ctx := &WorkspaceContext{
 			FS:               fs,
 			BinaryDetector:   detector,
 			ChecksumComputer: NewMockChecksumComputer(),
-			Clock:            clock,
-			ChecksumCache:            cache,
+			ChecksumCache:    cache,
 			MaxFileSize:      maxFileSize,
 			WorkspaceRoot:    workspaceRoot,
 		}
@@ -226,18 +212,15 @@ func TestEditFile(t *testing.T) {
 	t.Run("permission preservation", func(t *testing.T) {
 		fs := NewMockFileSystem(maxFileSize)
 		cache := NewMockChecksumStore()
-		clock := NewMockClock()
-
 		originalPerm := os.FileMode(0755)
 		content := []byte("test content")
-		fs.CreateFile("/workspace/test.txt", content, clock.Now(), originalPerm)
+		fs.CreateFile("/workspace/test.txt", content, originalPerm)
 
 		ctx := &WorkspaceContext{
 			FS:               fs,
 			BinaryDetector:   NewMockBinaryDetector(),
 			ChecksumComputer: NewMockChecksumComputer(),
-			Clock:            clock,
-			ChecksumCache:            cache,
+			ChecksumCache:    cache,
 			MaxFileSize:      maxFileSize,
 			WorkspaceRoot:    workspaceRoot,
 		}
@@ -274,17 +257,14 @@ func TestEditFile(t *testing.T) {
 	t.Run("empty Before string", func(t *testing.T) {
 		fs := NewMockFileSystem(maxFileSize)
 		cache := NewMockChecksumStore()
-		clock := NewMockClock()
-
 		content := []byte("test content")
-		fs.CreateFile("/workspace/test.txt", content, clock.Now(), 0644)
+		fs.CreateFile("/workspace/test.txt", content, 0644)
 
 		ctx := &WorkspaceContext{
 			FS:               fs,
 			BinaryDetector:   NewMockBinaryDetector(),
 			ChecksumComputer: NewMockChecksumComputer(),
-			Clock:            clock,
-			ChecksumCache:            cache,
+			ChecksumCache:    cache,
 			MaxFileSize:      maxFileSize,
 			WorkspaceRoot:    workspaceRoot,
 		}
@@ -311,14 +291,11 @@ func TestEditFile(t *testing.T) {
 	t.Run("file not found", func(t *testing.T) {
 		fs := NewMockFileSystem(maxFileSize)
 		cache := NewMockChecksumStore()
-		clock := NewMockClock()
-
 		ctx := &WorkspaceContext{
 			FS:               fs,
 			BinaryDetector:   NewMockBinaryDetector(),
 			ChecksumComputer: NewMockChecksumComputer(),
-			Clock:            clock,
-			ChecksumCache:            cache,
+			ChecksumCache:    cache,
 			MaxFileSize:      maxFileSize,
 			WorkspaceRoot:    workspaceRoot,
 		}
@@ -340,8 +317,6 @@ func TestEditFile(t *testing.T) {
 	t.Run("large content after edit", func(t *testing.T) {
 		fs := NewMockFileSystem(maxFileSize)
 		cache := NewMockChecksumStore()
-		clock := NewMockClock()
-
 		// Create file with unique marker just under limit
 		prefix := []byte("UNIQUE_MARKER_12345")
 		middle := make([]byte, int(maxFileSize)-100-len(prefix))
@@ -349,14 +324,13 @@ func TestEditFile(t *testing.T) {
 			middle[i] = 'A'
 		}
 		content := append(prefix, middle...)
-		fs.CreateFile("/workspace/test.txt", content, clock.Now(), 0644)
+		fs.CreateFile("/workspace/test.txt", content, 0644)
 
 		ctx := &WorkspaceContext{
 			FS:               fs,
 			BinaryDetector:   NewMockBinaryDetector(),
 			ChecksumComputer: NewMockChecksumComputer(),
-			Clock:            clock,
-			ChecksumCache:            cache,
+			ChecksumCache:    cache,
 			MaxFileSize:      maxFileSize,
 			WorkspaceRoot:    workspaceRoot,
 		}
@@ -389,17 +363,14 @@ func TestEditFile(t *testing.T) {
 	t.Run("race condition detection - file modified between read and write", func(t *testing.T) {
 		fs := NewMockFileSystem(maxFileSize)
 		cache := NewMockChecksumStore()
-		clock := NewMockClock()
-
 		originalContent := []byte("original content")
-		fs.CreateFile("/workspace/test.txt", originalContent, clock.Now(), 0o644)
+		fs.CreateFile("/workspace/test.txt", originalContent, 0o644)
 
 		ctx := &WorkspaceContext{
 			FS:               fs,
 			BinaryDetector:   NewMockBinaryDetector(),
 			ChecksumComputer: NewMockChecksumComputer(),
-			Clock:            clock,
-			ChecksumCache:            cache,
+			ChecksumCache:    cache,
 			MaxFileSize:      maxFileSize,
 			WorkspaceRoot:    workspaceRoot,
 		}
@@ -412,7 +383,7 @@ func TestEditFile(t *testing.T) {
 
 		// Modify file externally (simulate concurrent modification)
 		modifiedContent := []byte("modified externally")
-		fs.CreateFile("/workspace/test.txt", modifiedContent, clock.Now(), 0o644)
+		fs.CreateFile("/workspace/test.txt", modifiedContent, 0o644)
 
 		// Try to edit - should fail with conflict due to revalidation
 		ops := []Operation{
@@ -432,20 +403,17 @@ func TestEditFile(t *testing.T) {
 	t.Run("edit through symlink chain inside workspace", func(t *testing.T) {
 		fs := NewMockFileSystem(maxFileSize)
 		cache := NewMockChecksumStore()
-		clock := NewMockClock()
-
 		// Create symlink chain: link1 -> link2 -> target.txt
 		fs.CreateSymlink("/workspace/link1", "/workspace/link2")
 		fs.CreateSymlink("/workspace/link2", "/workspace/target.txt")
 		content := []byte("original content")
-		fs.CreateFile("/workspace/target.txt", content, clock.Now(), 0644)
+		fs.CreateFile("/workspace/target.txt", content, 0644)
 
 		ctx := &WorkspaceContext{
 			FS:               fs,
 			BinaryDetector:   NewMockBinaryDetector(),
 			ChecksumComputer: NewMockChecksumComputer(),
-			Clock:            clock,
-			ChecksumCache:            cache,
+			ChecksumCache:    cache,
 			MaxFileSize:      maxFileSize,
 			WorkspaceRoot:    workspaceRoot,
 		}
@@ -487,20 +455,17 @@ func TestEditFile(t *testing.T) {
 	t.Run("edit through symlink chain escaping workspace", func(t *testing.T) {
 		fs := NewMockFileSystem(maxFileSize)
 		cache := NewMockChecksumStore()
-		clock := NewMockClock()
-
 		// Create chain: link1 -> link2 -> /tmp/outside/file.txt
 		fs.CreateSymlink("/workspace/link1", "/workspace/link2")
 		fs.CreateSymlink("/workspace/link2", "/tmp/outside/file.txt")
-		fs.CreateDir("/tmp/outside", clock.Now())
-		fs.CreateFile("/tmp/outside/file.txt", []byte("content"), clock.Now(), 0644)
+		fs.CreateDir("/tmp/outside")
+		fs.CreateFile("/tmp/outside/file.txt", []byte("content"), 0644)
 
 		ctx := &WorkspaceContext{
 			FS:               fs,
 			BinaryDetector:   NewMockBinaryDetector(),
 			ChecksumComputer: NewMockChecksumComputer(),
-			Clock:            clock,
-			ChecksumCache:            cache,
+			ChecksumCache:    cache,
 			MaxFileSize:      maxFileSize,
 			WorkspaceRoot:    workspaceRoot,
 		}

@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"strings"
 	"testing"
-	"time"
 )
 
 func TestResolve(t *testing.T) {
@@ -89,8 +88,8 @@ func TestResolve(t *testing.T) {
 		}
 
 		// Create nested directory structure
-		fs.CreateDir("/workspace/nested", time.Now())
-		fs.CreateFile("/workspace/file.txt", []byte("content"), time.Now(), 0644)
+		fs.CreateDir("/workspace/nested")
+		fs.CreateFile("/workspace/file.txt", []byte("content"), 0644)
 
 		// Path with .. that stays within workspace should be allowed
 		abs, rel, err := Resolve(ctx, "nested/../file.txt")
@@ -142,8 +141,8 @@ func TestResolve(t *testing.T) {
 		}
 
 		// Create nested directory structure
-		fs.CreateDir("/workspace/nested", time.Now())
-		fs.CreateFile("/workspace/file.txt", []byte("content"), time.Now(), 0644)
+		fs.CreateDir("/workspace/nested")
+		fs.CreateFile("/workspace/file.txt", []byte("content"), 0644)
 		// Create symlink that points to path with ..
 		fs.CreateSymlink("/workspace/link", "/workspace/nested/../file.txt")
 
@@ -187,8 +186,8 @@ func TestResolve(t *testing.T) {
 			WorkspaceRoot: workspaceRoot,
 		}
 
-		fs.CreateDir("/workspace/nested", time.Now())
-		fs.CreateFile("/workspace/file.txt", []byte("content"), time.Now(), 0644)
+		fs.CreateDir("/workspace/nested")
+		fs.CreateFile("/workspace/file.txt", []byte("content"), 0644)
 
 		// Directly test resolveSymlink with .. (bypassing Resolve's Clean)
 		// This simulates what happens when a symlink target contains ..
@@ -227,7 +226,7 @@ func TestResolve(t *testing.T) {
 
 		// Create symlink pointing inside workspace
 		fs.CreateSymlink("/workspace/link", "/workspace/target.txt")
-		fs.CreateFile("/workspace/target.txt", []byte("target"), time.Now(), 0644)
+		fs.CreateFile("/workspace/target.txt", []byte("target"), 0644)
 
 		abs, rel, err := Resolve(ctx, "link")
 		if err != nil {
@@ -253,7 +252,7 @@ func TestResolve(t *testing.T) {
 		// Create symlink chain: link1 -> link2 -> target
 		fs.CreateSymlink("/workspace/link1", "/workspace/link2")
 		fs.CreateSymlink("/workspace/link2", "/workspace/target.txt")
-		fs.CreateFile("/workspace/target.txt", []byte("target"), time.Now(), 0644)
+		fs.CreateFile("/workspace/target.txt", []byte("target"), 0644)
 
 		abs, _, err := Resolve(ctx, "link1")
 		if err != nil {
@@ -352,7 +351,7 @@ func TestIsDirectory(t *testing.T) {
 			WorkspaceRoot: workspaceRoot,
 		}
 
-		fs.CreateFile("/workspace/test.txt", []byte("content"), time.Now(), 0644)
+		fs.CreateFile("/workspace/test.txt", []byte("content"), 0644)
 
 		isDir, err := IsDirectory(ctx, "test.txt")
 		if err != nil {
@@ -370,7 +369,7 @@ func TestIsDirectory(t *testing.T) {
 			WorkspaceRoot: workspaceRoot,
 		}
 
-		fs.CreateDir("/workspace/subdir", time.Now())
+		fs.CreateDir("/workspace/subdir")
 
 		isDir, err := IsDirectory(ctx, "subdir")
 		if err != nil {
@@ -395,7 +394,7 @@ func TestResolveSymlinkEscapePrevention(t *testing.T) {
 
 		// Create symlink directory pointing outside
 		fs.CreateSymlink("/workspace/link", "/outside")
-		fs.CreateDir("/outside", time.Now())
+		fs.CreateDir("/outside")
 
 		// Try to resolve a file through the symlink directory
 		_, _, err := Resolve(ctx, "link/escape.txt")
@@ -413,8 +412,8 @@ func TestResolveSymlinkEscapePrevention(t *testing.T) {
 
 		// Create symlink directory pointing inside workspace
 		fs.CreateSymlink("/workspace/link", "/workspace/target")
-		fs.CreateDir("/workspace/target", time.Now())
-		fs.CreateFile("/workspace/target/file.txt", []byte("content"), time.Now(), 0644)
+		fs.CreateDir("/workspace/target")
+		fs.CreateFile("/workspace/target/file.txt", []byte("content"), 0644)
 
 		abs, rel, err := Resolve(ctx, "link/file.txt")
 		if err != nil {
@@ -437,9 +436,9 @@ func TestResolveSymlinkEscapePrevention(t *testing.T) {
 		}
 
 		// Create nested symlink structure: workspace/nested/link -> /outside
-		fs.CreateDir("/workspace/nested", time.Now())
+		fs.CreateDir("/workspace/nested")
 		fs.CreateSymlink("/workspace/nested/link", "/outside")
-		fs.CreateDir("/outside", time.Now())
+		fs.CreateDir("/outside")
 
 		// Try to resolve a file through nested symlink
 		_, _, err := Resolve(ctx, "nested/link/escape.txt")
@@ -484,7 +483,7 @@ func TestResolveMissingDirectories(t *testing.T) {
 
 		// Create symlink pointing to a directory
 		fs.CreateSymlink("/workspace/link", "/workspace/target")
-		fs.CreateDir("/workspace/target", time.Now())
+		fs.CreateDir("/workspace/target")
 
 		// Path through symlink with missing subdirectories
 		abs, rel, err := Resolve(ctx, "link/missing/sub/file.txt")
@@ -516,7 +515,7 @@ func TestResolveSymlinkChains(t *testing.T) {
 		// Create chain: link1 -> link2 -> target
 		fs.CreateSymlink("/workspace/link1", "/workspace/link2")
 		fs.CreateSymlink("/workspace/link2", "/workspace/target.txt")
-		fs.CreateFile("/workspace/target.txt", []byte("target"), time.Now(), 0644)
+		fs.CreateFile("/workspace/target.txt", []byte("target"), 0644)
 
 		abs, rel, err := Resolve(ctx, "link1")
 		if err != nil {
@@ -540,7 +539,7 @@ func TestResolveSymlinkChains(t *testing.T) {
 
 		// Chain where first hop escapes
 		fs.CreateSymlink("/workspace/link1", "/tmp/outside")
-		fs.CreateDir("/tmp/outside", time.Now())
+		fs.CreateDir("/tmp/outside")
 
 		_, _, err := Resolve(ctx, "link1")
 		if err != ErrOutsideWorkspace {
@@ -558,7 +557,7 @@ func TestResolveSymlinkChains(t *testing.T) {
 		// Chain: link1 -> link2 -> /tmp/outside
 		fs.CreateSymlink("/workspace/link1", "/workspace/link2")
 		fs.CreateSymlink("/workspace/link2", "/tmp/outside")
-		fs.CreateDir("/tmp/outside", time.Now())
+		fs.CreateDir("/tmp/outside")
 
 		_, _, err := Resolve(ctx, "link1")
 		if err != ErrOutsideWorkspace {
@@ -640,7 +639,7 @@ func TestResolveSymlinkChains(t *testing.T) {
 		const chainLength = maxHops + 1 // 65 hops
 
 		// Create the final target
-		fs.CreateFile("/workspace/target.txt", []byte("target"), time.Now(), 0644)
+		fs.CreateFile("/workspace/target.txt", []byte("target"), 0644)
 
 		// Create the chain: link0 -> link1 -> link2 -> ... -> link64 -> target.txt
 		for i := 0; i < chainLength; i++ {
@@ -681,7 +680,7 @@ func TestResolveSymlinkChains(t *testing.T) {
 		const chainLength = maxHops // 64 hops
 
 		// Create the final target
-		fs.CreateFile("/workspace/target.txt", []byte("target"), time.Now(), 0644)
+		fs.CreateFile("/workspace/target.txt", []byte("target"), 0644)
 
 		// Create the chain: link0 -> link1 -> link2 -> ... -> link63 -> target.txt
 		for i := 0; i < chainLength; i++ {

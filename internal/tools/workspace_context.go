@@ -6,7 +6,6 @@ type WorkspaceContext struct {
 	FS               FileSystem
 	BinaryDetector   BinaryDetector
 	ChecksumComputer ChecksumComputer
-	Clock            Clock
 	ChecksumCache    ChecksumStore
 	MaxFileSize      int64
 	WorkspaceRoot    string // canonical, symlink-resolved workspace root
@@ -30,7 +29,6 @@ func NewWorkspaceContextWithOptions(workspaceRoot string, maxFileSize int64) (*W
 		FS:               NewOSFileSystem(maxFileSize),
 		BinaryDetector:   &SystemBinaryDetector{},
 		ChecksumComputer: &SHA256Checksum{},
-		Clock:            &SystemClock{},
 		ChecksumCache:    NewChecksumCache(),
 		MaxFileSize:      maxFileSize,
 		WorkspaceRoot:    canonicalRoot,
@@ -55,7 +53,6 @@ func NewWorkspaceContextWithOptionsDI(workspaceRoot string, maxFileSize int64, c
 		FS:               NewOSFileSystem(maxFileSize),
 		BinaryDetector:   &SystemBinaryDetector{},
 		ChecksumComputer: &SHA256Checksum{},
-		Clock:            &SystemClock{},
 		ChecksumCache:    NewChecksumCache(),
 		MaxFileSize:      maxFileSize,
 		WorkspaceRoot:    canonicalRoot,

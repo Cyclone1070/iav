@@ -2,7 +2,6 @@ package tools
 
 import (
 	"os"
-	"time"
 )
 
 // FileInfo represents file metadata
@@ -10,7 +9,6 @@ type FileInfo interface {
 	Name() string
 	Size() int64
 	Mode() os.FileMode
-	ModTime() time.Time
 	IsDir() bool
 }
 
@@ -74,12 +72,6 @@ type BinaryDetector interface {
 type ChecksumComputer interface {
 	// ComputeChecksum computes SHA-256 checksum of data
 	ComputeChecksum(data []byte) string
-}
-
-// Clock provides time operations
-type Clock interface {
-	// Now returns the current time
-	Now() time.Time
 }
 
 // ChecksumStore provides checksum cache operations.

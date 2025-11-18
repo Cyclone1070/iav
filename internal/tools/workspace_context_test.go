@@ -11,7 +11,6 @@ func TestMultiContextIsolation(t *testing.T) {
 	// Create two separate contexts with different workspace roots
 	fs1 := NewMockFileSystem(maxFileSize)
 	cache1 := NewMockChecksumStore()
-	clock := NewMockClock()
 
 	fs2 := NewMockFileSystem(maxFileSize)
 	cache2 := NewMockChecksumStore()
@@ -20,7 +19,6 @@ func TestMultiContextIsolation(t *testing.T) {
 		FS:               fs1,
 		BinaryDetector:   NewMockBinaryDetector(),
 		ChecksumComputer: NewMockChecksumComputer(),
-		Clock:            clock,
 		ChecksumCache:    cache1,
 		MaxFileSize:      maxFileSize,
 		WorkspaceRoot:    "/workspace1",
@@ -30,7 +28,6 @@ func TestMultiContextIsolation(t *testing.T) {
 		FS:               fs2,
 		BinaryDetector:   NewMockBinaryDetector(),
 		ChecksumComputer: NewMockChecksumComputer(),
-		Clock:            clock,
 		ChecksumCache:    cache2,
 		MaxFileSize:      maxFileSize,
 		WorkspaceRoot:    "/workspace2",
@@ -105,13 +102,11 @@ func TestCustomFileSizeLimit(t *testing.T) {
 	t.Run("small limit enforced", func(t *testing.T) {
 		fs := NewMockFileSystem(smallLimit)
 		cache := NewMockChecksumStore()
-		clock := NewMockClock()
 
 		ctx := &WorkspaceContext{
 			FS:               fs,
 			BinaryDetector:   NewMockBinaryDetector(),
 			ChecksumComputer: NewMockChecksumComputer(),
-			Clock:            clock,
 			ChecksumCache:    cache,
 			MaxFileSize:      smallLimit,
 			WorkspaceRoot:    workspaceRoot,
@@ -132,13 +127,11 @@ func TestCustomFileSizeLimit(t *testing.T) {
 	t.Run("large limit allows bigger files", func(t *testing.T) {
 		fs := NewMockFileSystem(largeLimit)
 		cache := NewMockChecksumStore()
-		clock := NewMockClock()
 
 		ctx := &WorkspaceContext{
 			FS:               fs,
 			BinaryDetector:   NewMockBinaryDetector(),
 			ChecksumComputer: NewMockChecksumComputer(),
-			Clock:            clock,
 			ChecksumCache:    cache,
 			MaxFileSize:      largeLimit,
 			WorkspaceRoot:    workspaceRoot,
@@ -159,7 +152,6 @@ func TestCustomFileSizeLimit(t *testing.T) {
 	t.Run("different limits in different contexts", func(t *testing.T) {
 		fs1 := NewMockFileSystem(smallLimit)
 		cache1 := NewMockChecksumStore()
-		clock := NewMockClock()
 
 		fs2 := NewMockFileSystem(largeLimit)
 		cache2 := NewMockChecksumStore()
@@ -168,7 +160,6 @@ func TestCustomFileSizeLimit(t *testing.T) {
 			FS:               fs1,
 			BinaryDetector:   NewMockBinaryDetector(),
 			ChecksumComputer: NewMockChecksumComputer(),
-			Clock:            clock,
 			ChecksumCache:    cache1,
 			MaxFileSize:      smallLimit,
 			WorkspaceRoot:    workspaceRoot,
@@ -178,7 +169,6 @@ func TestCustomFileSizeLimit(t *testing.T) {
 			FS:               fs2,
 			BinaryDetector:   NewMockBinaryDetector(),
 			ChecksumComputer: NewMockChecksumComputer(),
-			Clock:            clock,
 			ChecksumCache:    cache2,
 			MaxFileSize:      largeLimit,
 			WorkspaceRoot:    workspaceRoot,
@@ -241,9 +231,6 @@ func TestNewWorkspaceContext(t *testing.T) {
 		}
 		if ctx.ChecksumComputer == nil {
 			t.Error("expected non-nil ChecksumComputer")
-		}
-		if ctx.Clock == nil {
-			t.Error("expected non-nil Clock")
 		}
 		if ctx.ChecksumCache == nil {
 			t.Error("expected non-nil Cache")
@@ -321,9 +308,6 @@ func TestNewWorkspaceContextWithOptions(t *testing.T) {
 		}
 		if ctx.ChecksumComputer == nil {
 			t.Error("expected non-nil ChecksumComputer")
-		}
-		if ctx.Clock == nil {
-			t.Error("expected non-nil Clock")
 		}
 		if ctx.ChecksumCache == nil {
 			t.Error("expected non-nil Cache")
