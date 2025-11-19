@@ -303,42 +303,6 @@ func (f *MockFileSystem) Readlink(path string) (string, error) {
 	return target, nil
 }
 
-func (f *MockFileSystem) EvalSymlinks(path string) (string, error) {
-	f.mu.RLock()
-	defer f.mu.RUnlock()
-
-	// Follow symlink chain
-	visited := make(map[string]bool)
-	current := path
-
-	for {
-		if visited[current] {
-			return "", fmt.Errorf("symlink loop detected")
-		}
-		visited[current] = true
-
-		target, ok := f.symlinks[current]
-		if !ok {
-			// Not a symlink, return as-is
-			return current, nil
-		}
-
-		if filepath.IsAbs(target) {
-			current = target
-		} else {
-			current = filepath.Join(filepath.Dir(current), target)
-		}
-		current = filepath.Clean(current)
-	}
-}
-
-func (f *MockFileSystem) Abs(path string) (string, error) {
-	if filepath.IsAbs(path) {
-		return filepath.Clean(path), nil
-	}
-	return filepath.Abs(path)
-}
-
 func (f *MockFileSystem) UserHomeDir() (string, error) {
 	return "/home/user", nil
 }

@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"io"
 	"os"
-	"path/filepath"
 )
 
 const (
@@ -132,14 +131,6 @@ func (r *OSFileSystem) IsDir(path string) (bool, error) {
 
 func (r *OSFileSystem) Readlink(path string) (string, error) {
 	return os.Readlink(path)
-}
-
-func (r *OSFileSystem) EvalSymlinks(path string) (string, error) {
-	return filepath.EvalSymlinks(path)
-}
-
-func (r *OSFileSystem) Abs(path string) (string, error) {
-	return filepath.Abs(path)
 }
 
 func (r *OSFileSystem) UserHomeDir() (string, error) {

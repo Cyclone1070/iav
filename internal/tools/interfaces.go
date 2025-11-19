@@ -37,12 +37,6 @@ type FileSystem interface {
 	// Readlink reads the target of a symlink
 	Readlink(path string) (string, error)
 
-	// EvalSymlinks evaluates symlinks in a path, following chains
-	EvalSymlinks(path string) (string, error)
-
-	// Abs returns an absolute representation of path
-	Abs(path string) (string, error)
-
 	// UserHomeDir returns the current user's home directory
 	UserHomeDir() (string, error)
 
