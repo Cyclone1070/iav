@@ -105,47 +105,6 @@ func Resolve(ctx *models.WorkspaceContext, path string) (abs string, rel string,
 	return abs, rel, nil
 }
 
-// EnsureParentDirs creates parent directories for a given path if they don't exist.
-// It validates that all parent directories remain within the workspace boundary.
-func EnsureParentDirs(ctx *models.WorkspaceContext, path string) error {
-	abs, _, err := Resolve(ctx, path)
-	if err != nil {
-		return fmt.Errorf("failed to resolve path for parent directories: %w", err)
-	}
-
-	parent := filepath.Dir(abs)
-	if parent == abs {
-		return nil
-	}
-
-	// Validate that parent directory is within workspace using symlink resolution
-	_, err = resolveSymlink(ctx, parent)
-	if err != nil {
-		return fmt.Errorf("failed to validate parent directory: %w", err)
-	}
-
-	if err := ctx.FS.EnsureDirs(parent); err != nil {
-		return fmt.Errorf("failed to create parent directories: %w", err)
-	}
-
-	return nil
-}
-
-// IsDirectory checks if a resolved path points to a directory.
-func IsDirectory(ctx *models.WorkspaceContext, path string) (bool, error) {
-	abs, _, err := Resolve(ctx, path)
-	if err != nil {
-		return false, fmt.Errorf("failed to resolve path: %w", err)
-	}
-
-	isDir, err := ctx.FS.IsDir(abs)
-	if err != nil {
-		return false, fmt.Errorf("failed to check if path is directory: %w", err)
-	}
-
-	return isDir, nil
-}
-
 // resolveSymlink resolves symlinks by walking each path component.
 // This prevents symlink escape attacks even when the final file doesn't exist.
 // It handles missing intermediate directories gracefully to allow directory creation.

@@ -26,9 +26,10 @@ func WriteFile(ctx *models.WorkspaceContext, path string, content string, perm *
 		return nil, fmt.Errorf("failed to check if file exists: %w", err)
 	}
 
-	// Ensure parent directories exist
-	if err := services.EnsureParentDirs(ctx, path); err != nil {
-		return nil, err
+	// Ensure parent directories exist using already-resolved path
+	parentDir := filepath.Dir(abs)
+	if err := ctx.FS.EnsureDirs(parentDir); err != nil {
+		return nil, fmt.Errorf("failed to create parent directories: %w", err)
 	}
 
 	contentBytes := []byte(content)

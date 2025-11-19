@@ -15,10 +15,10 @@ func ReadFile(ctx *models.WorkspaceContext, path string, offset *int64, limit *i
 		return nil, err
 	}
 
-	// Check if it's a directory
-	isDir, err := services.IsDirectory(ctx, path)
+	// Check if it's a directory using already-resolved path
+	isDir, err := ctx.FS.IsDir(abs)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to check if path is directory: %w", err)
 	}
 	if isDir {
 		return nil, fmt.Errorf("path is a directory, not a file")

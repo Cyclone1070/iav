@@ -79,6 +79,12 @@ type ChecksumManager interface {
 	Clear()
 }
 
+// GitignoreService provides gitignore pattern matching functionality
+type GitignoreService interface {
+	// ShouldIgnore checks if a relative path matches gitignore patterns
+	ShouldIgnore(relativePath string) bool
+}
+
 // FileHandle represents a file handle for writing operations.
 // This contains low level methods for writing, syncing, and closing files.
 // Both *os.File and mock implementations satisfy this interface.

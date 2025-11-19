@@ -5,7 +5,6 @@ package services
 // Any changes to these tests must be reviewed against the symlink safety specification.
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 	"testing"
@@ -297,89 +296,6 @@ func TestResolve(t *testing.T) {
 		_, _, err := Resolve(ctx, "test.txt")
 		if err == nil {
 			t.Error("expected error for empty workspace root")
-		}
-	})
-}
-
-func TestEnsureParentDirs(t *testing.T) {
-	workspaceRoot := "/workspace"
-	maxFileSize := int64(1024 * 1024)
-
-	t.Run("create nested directories", func(t *testing.T) {
-		fs := NewMockFileSystem(maxFileSize)
-		ctx := &models.WorkspaceContext{
-			FS:            fs,
-			WorkspaceRoot: workspaceRoot,
-		}
-
-		err := EnsureParentDirs(ctx, "nested/deep/file.txt")
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-
-		// Verify directories were created
-		isDir, err := fs.IsDir("/workspace/nested")
-		if err != nil || !isDir {
-			t.Error("expected nested directory to be created")
-		}
-
-		isDir, err = fs.IsDir("/workspace/nested/deep")
-		if err != nil || !isDir {
-			t.Error("expected deep directory to be created")
-		}
-	})
-
-	t.Run("reject path outside workspace", func(t *testing.T) {
-		fs := NewMockFileSystem(maxFileSize)
-		ctx := &models.WorkspaceContext{
-			FS:            fs,
-			WorkspaceRoot: workspaceRoot,
-		}
-
-		err := EnsureParentDirs(ctx, "../outside/file.txt")
-		if !errors.Is(err, models.ErrOutsideWorkspace) {
-			t.Errorf("expected ErrOutsideWorkspace, got %v", err)
-		}
-	})
-}
-
-func TestIsDirectory(t *testing.T) {
-	workspaceRoot := "/workspace"
-	maxFileSize := int64(1024 * 1024)
-
-	t.Run("file is not directory", func(t *testing.T) {
-		fs := NewMockFileSystem(maxFileSize)
-		ctx := &models.WorkspaceContext{
-			FS:            fs,
-			WorkspaceRoot: workspaceRoot,
-		}
-
-		fs.CreateFile("/workspace/test.txt", []byte("content"), 0644)
-
-		isDir, err := IsDirectory(ctx, "test.txt")
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if isDir {
-			t.Error("expected file not to be directory")
-		}
-	})
-
-	t.Run("directory is directory", func(t *testing.T) {
-		fs := NewMockFileSystem(maxFileSize)
-		ctx := &models.WorkspaceContext{
-			FS:            fs,
-			WorkspaceRoot: workspaceRoot,
-		}
-
-		fs.CreateDir("/workspace/subdir")
-
-		isDir, err := IsDirectory(ctx, "subdir")
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if !isDir {
-			t.Error("expected directory to be directory")
 		}
 	})
 }

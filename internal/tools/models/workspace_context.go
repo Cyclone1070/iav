@@ -8,4 +8,5 @@ type WorkspaceContext struct {
 	ChecksumManager  ChecksumManager
 	MaxFileSize      int64
 	WorkspaceRoot    string // canonical, symlink-resolved workspace root
+	GitignoreService GitignoreService // optional, can be nil
 }

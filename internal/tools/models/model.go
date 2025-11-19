@@ -9,6 +9,10 @@ const (
 	DefaultMaxFileSize = 5 * 1024 * 1024
 	// BinaryDetectionSampleSize is how many bytes to sample for binary detection
 	BinaryDetectionSampleSize = 4096
+	// DefaultListDirectoryLimit is the default limit for directory listing pagination
+	DefaultListDirectoryLimit = 1000
+	// MaxListDirectoryLimit is the maximum allowed limit for directory listing pagination
+	MaxListDirectoryLimit = 10000
 )
 
 // Operation represents a single edit operation for EditFile.
@@ -55,6 +59,10 @@ type DirectoryEntry struct {
 type ListDirectoryResponse struct {
 	DirectoryPath string
 	Entries       []DirectoryEntry
+	Offset        int
+	Limit         int
+	TotalCount    int  // Total entries before pagination
+	Truncated     bool // True if more entries exist beyond offset+limit
 }
 
 // Sentinel errors for consistent error handling
@@ -66,7 +74,9 @@ var (
 	ErrSnippetNotFound  = errors.New("snippet not found in file")
 	ErrSnippetAmbiguous = errors.New("snippet occurrence count does not match expected")
 	ErrTooLarge         = errors.New("file or content exceeds size limit")
-	ErrFileMissing      = errors.New("file does not exist")
-	ErrInvalidOffset    = errors.New("offset must be >= 0")
-	ErrInvalidLimit     = errors.New("limit must be >= 0")
+	ErrFileMissing             = errors.New("file does not exist")
+	ErrInvalidOffset            = errors.New("offset must be >= 0")
+	ErrInvalidLimit             = errors.New("limit must be >= 0")
+	ErrInvalidPaginationOffset  = errors.New("offset must be >= 0")
+	ErrInvalidPaginationLimit   = errors.New("limit must be between 1 and MaxListDirectoryLimit")
 )
