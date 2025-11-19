@@ -81,9 +81,9 @@ func TestReadFile(t *testing.T) {
 		checksumManager := services.NewChecksumManager()
 		detector := services.NewMockBinaryDetector()
 
-		content := []byte("test content")
+		// Create file with null bytes (actual binary content)
+		content := []byte{0x00, 0x01, 0x02, 't', 'e', 's', 't'}
 		fs.CreateFile("/workspace/binary.bin", content, 0644)
-		detector.SetBinaryPath("/workspace/binary.bin", true)
 
 		ctx := &models.WorkspaceContext{
 			FS:               fs,

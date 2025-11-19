@@ -15,33 +15,20 @@ func ReadFile(ctx *models.WorkspaceContext, path string, offset *int64, limit *i
 		return nil, err
 	}
 
-	// Check if it's a directory using already-resolved path
-	isDir, err := ctx.FS.IsDir(abs)
-	if err != nil {
-		return nil, fmt.Errorf("failed to check if path is directory: %w", err)
-	}
-	if isDir {
-		return nil, fmt.Errorf("path is a directory, not a file")
-	}
-
-	// Get file info
+	// Get file info (single stat syscall)
 	info, err := ctx.FS.Stat(abs)
 	if err != nil {
 		return nil, fmt.Errorf("failed to stat file: %w", err)
 	}
 
+	// Check if it's a directory using info we already have
+	if info.IsDir() {
+		return nil, fmt.Errorf("path is a directory, not a file")
+	}
+
 	// Enforce size limit
 	if info.Size() > ctx.MaxFileSize {
 		return nil, models.ErrTooLarge
-	}
-
-	// Check for binary
-	isBinary, err := ctx.BinaryDetector.IsBinary(abs)
-	if err != nil {
-		return nil, fmt.Errorf("failed to check if file is binary: %w", err)
-	}
-	if isBinary {
-		return nil, models.ErrBinaryFile
 	}
 
 	// Derive offset and limit
@@ -59,10 +46,15 @@ func ReadFile(ctx *models.WorkspaceContext, path string, offset *int64, limit *i
 		}
 	}
 
-	// Read the file range
+	// Read the file range (single open+read syscall)
 	contentBytes, err := ctx.FS.ReadFileRange(abs, actualOffset, actualLimit)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read file: %w", err)
+	}
+
+	// Check for binary using content we already read
+	if ctx.BinaryDetector.IsBinaryContent(contentBytes) {
+		return nil, models.ErrBinaryFile
 	}
 
 	// Convert to string

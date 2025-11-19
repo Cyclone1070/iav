@@ -36,13 +36,13 @@ func ListDirectory(ctx *models.WorkspaceContext, path string, offset int, limit 
 		return nil, err
 	}
 
-	// Ensure it's a directory using already-resolved path
-	isDir, err := ctx.FS.IsDir(abs)
+	// Get file info to check if it's a directory (single stat syscall)
+	info, err := ctx.FS.Stat(abs)
 	if err != nil {
-		return nil, fmt.Errorf("failed to check if path is directory: %w", err)
+		return nil, fmt.Errorf("failed to stat path: %w", err)
 	}
 
-	if !isDir {
+	if !info.IsDir() {
 		return nil, fmt.Errorf("path is not a directory: %s", rel)
 	}
 

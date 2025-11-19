@@ -290,21 +290,6 @@ func (f *MockFileSystem) EnsureDirs(path string) error {
 	return nil
 }
 
-func (f *MockFileSystem) IsDir(path string) (bool, error) {
-	f.mu.RLock()
-	defer f.mu.RUnlock()
-
-	if err, ok := f.errors[path]; ok {
-		return false, err
-	}
-
-	if info, ok := f.fileInfos[path]; ok {
-		return info.IsDir(), nil
-	}
-
-	return false, os.ErrNotExist
-}
-
 func (f *MockFileSystem) Readlink(path string) (string, error) {
 	f.mu.RLock()
 	defer f.mu.RUnlock()
@@ -506,17 +491,10 @@ func NewMockBinaryDetector() *MockBinaryDetector {
 	}
 }
 
-// SetBinaryPath marks a path as binary
+// SetBinaryPath marks a path as binary (deprecated, kept for test compatibility)
+// Note: Binary detection now uses IsBinaryContent which checks actual file content
 func (f *MockBinaryDetector) SetBinaryPath(path string, isBinary bool) {
 	f.binaryPaths[path] = isBinary
-}
-
-func (f *MockBinaryDetector) IsBinary(path string) (bool, error) {
-	if isBinary, ok := f.binaryPaths[path]; ok {
-		return isBinary, nil
-	}
-	// Default: check for NUL bytes
-	return false, nil
 }
 
 func (f *MockBinaryDetector) IsBinaryContent(content []byte) bool {

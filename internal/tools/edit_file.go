@@ -35,19 +35,15 @@ func EditFile(ctx *models.WorkspaceContext, path string, operations []models.Ope
 		return nil, fmt.Errorf("failed to stat file: %w", err)
 	}
 
-	// Check for binary
-	isBinary, err := ctx.BinaryDetector.IsBinary(abs)
-	if err != nil {
-		return nil, fmt.Errorf("failed to check if file is binary: %w", err)
-	}
-	if isBinary {
-		return nil, models.ErrBinaryFile
-	}
-
-	// Read full file
+	// Read full file (single open+read syscall)
 	contentBytes, err := ctx.FS.ReadFileRange(abs, 0, 0)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read file: %w", err)
+	}
+
+	// Check for binary using content we already read
+	if ctx.BinaryDetector.IsBinaryContent(contentBytes) {
+		return nil, models.ErrBinaryFile
 	}
 
 	content := string(contentBytes)

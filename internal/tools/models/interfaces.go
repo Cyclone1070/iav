@@ -31,9 +31,6 @@ type FileSystem interface {
 	// Must only create directories within the workspace boundary.
 	EnsureDirs(path string) error
 
-	// IsDir checks if a path is a directory
-	IsDir(path string) (bool, error)
-
 	// Readlink reads the target of a symlink
 	Readlink(path string) (string, error)
 
@@ -60,8 +57,6 @@ type FileSystem interface {
 
 // BinaryDetector checks if content is binary
 type BinaryDetector interface {
-	// IsBinary checks if a file contains binary data
-	IsBinary(path string) (bool, error)
 	// IsBinaryContent checks if content bytes contain binary data
 	IsBinaryContent(content []byte) bool
 }

@@ -114,14 +114,6 @@ func (r *OSFileSystem) EnsureDirs(path string) error {
 	return os.MkdirAll(path, 0o755)
 }
 
-func (r *OSFileSystem) IsDir(path string) (bool, error) {
-	info, err := os.Stat(path)
-	if err != nil {
-		return false, err
-	}
-	return info.IsDir(), nil
-}
-
 func (r *OSFileSystem) Readlink(path string) (string, error) {
 	return os.Readlink(path)
 }

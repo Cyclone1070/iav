@@ -1,36 +1,11 @@
 package services
 
 import (
-	"io"
-	"os"
-
 	"github.com/Cyclone1070/deployforme/internal/tools/models"
 )
 
 // SystemBinaryDetector implements BinaryDetector using local heuristics
 type SystemBinaryDetector struct{}
-
-func (r *SystemBinaryDetector) IsBinary(path string) (bool, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return false, err
-	}
-	defer file.Close()
-
-	buf := make([]byte, models.BinaryDetectionSampleSize)
-	n, err := file.Read(buf)
-	if err != nil && err != io.EOF {
-		return false, err
-	}
-
-	for i := range n {
-		if buf[i] == 0 {
-			return true, nil
-		}
-	}
-
-	return false, nil
-}
 
 func (r *SystemBinaryDetector) IsBinaryContent(content []byte) bool {
 	// Check for common text file BOMs (UTF-16, UTF-32)
