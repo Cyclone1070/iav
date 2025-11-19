@@ -52,6 +52,10 @@ type FileSystem interface {
 
 	// Remove removes the named file or directory.
 	Remove(name string) error
+
+	// ListDir lists the contents of a directory.
+	// Returns a slice of FileInfo for each entry in the directory.
+	ListDir(path string) ([]FileInfo, error)
 }
 
 // BinaryDetector checks if content is binary

@@ -117,7 +117,7 @@ func (f *MockFileSystem) SetError(path string, err error) {
 }
 
 // SetOperationError sets an error to return for a specific operation.
-// Operations: "CreateTemp", "Write", "Sync", "Close", "Rename", "Chmod", "Remove"
+// Operations: "CreateTemp", "Write", "Sync", "Close", "Rename", "Chmod", "Remove", "ListDir"
 func (f *MockFileSystem) SetOperationError(operation string, err error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -427,6 +427,57 @@ func (f *MockFileSystem) Remove(name string) error {
 	}
 
 	return os.ErrNotExist
+}
+
+func (f *MockFileSystem) ListDir(path string) ([]models.FileInfo, error) {
+	f.mu.RLock()
+	defer f.mu.RUnlock()
+
+	// Check for operation-level errors
+	if err, ok := f.opErrors["ListDir"]; ok {
+		return nil, err
+	}
+
+	// Check for path-specific errors
+	if err, ok := f.errors[path]; ok {
+		return nil, err
+	}
+
+	// Verify path exists and is a directory
+	info, ok := f.fileInfos[path]
+	if !ok {
+		return nil, os.ErrNotExist
+	}
+
+	if !info.IsDir() {
+		return nil, fmt.Errorf("path is not a directory: %s", path)
+	}
+
+	// Normalise the directory path
+	dirPath := filepath.Clean(path)
+	if dirPath == "." {
+		dirPath = ""
+	}
+
+	// Collect direct children
+	var entries []models.FileInfo
+	for entryPath, entryInfo := range f.fileInfos {
+		// Skip the directory itself
+		if entryPath == path {
+			continue
+		}
+
+		// Get the parent directory of this entry
+		parent := filepath.Dir(entryPath)
+		parent = filepath.Clean(parent)
+
+		// Only include direct children
+		if parent == dirPath {
+			entries = append(entries, entryInfo)
+		}
+	}
+
+	return entries, nil
 }
 
 // GetTempFiles returns all temp file paths (for testing cleanup verification)

@@ -44,6 +44,19 @@ type EditFileResponse struct {
 	FileSize          int64
 }
 
+// DirectoryEntry represents a single entry in a directory listing
+type DirectoryEntry struct {
+	RelativePath string
+	IsDir        bool
+	Size         int64
+}
+
+// ListDirectoryResponse contains the result of a ListDirectory operation
+type ListDirectoryResponse struct {
+	DirectoryPath string
+	Entries       []DirectoryEntry
+}
+
 // Sentinel errors for consistent error handling
 var (
 	ErrOutsideWorkspace = errors.New("path is outside workspace root")

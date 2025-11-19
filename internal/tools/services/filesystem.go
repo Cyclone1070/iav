@@ -130,3 +130,21 @@ func (r *OSFileSystem) UserHomeDir() (string, error) {
 	return os.UserHomeDir()
 }
 
+func (r *OSFileSystem) ListDir(path string) ([]models.FileInfo, error) {
+	entries, err := os.ReadDir(path)
+	if err != nil {
+		return nil, err
+	}
+
+	infos := make([]models.FileInfo, 0, len(entries))
+	for _, entry := range entries {
+		info, err := entry.Info()
+		if err != nil {
+			return nil, err
+		}
+		infos = append(infos, info)
+	}
+
+	return infos, nil
+}
+
