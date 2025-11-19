@@ -37,11 +37,6 @@ type EditFileResponse struct {
 	FileSize          int64
 }
 
-// FileMetadata stores checksum for a file
-type FileMetadata struct {
-	Checksum string
-}
-
 // Sentinel errors for consistent error handling
 var (
 	ErrOutsideWorkspace = errors.New("path is outside workspace root")
@@ -55,4 +50,3 @@ var (
 	ErrInvalidOffset    = errors.New("offset must be >= 0")
 	ErrInvalidLimit     = errors.New("limit must be >= 0")
 )
-

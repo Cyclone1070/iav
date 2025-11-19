@@ -520,38 +520,36 @@ func (f *MockChecksumComputer) ComputeChecksum(data []byte) string {
 // MockChecksumStore implements ChecksumStore with in-memory storage
 type MockChecksumStore struct {
 	mu    sync.RWMutex
-	store map[string]FileMetadata
+	store map[string]string
 }
 
 // NewMockChecksumStore creates a new mock checksum store
 func NewMockChecksumStore() *MockChecksumStore {
 	return &MockChecksumStore{
-		store: make(map[string]FileMetadata),
+		store: make(map[string]string),
 	}
 }
 
 func (f *MockChecksumStore) Get(path string) (checksum string, ok bool) {
 	f.mu.RLock()
 	defer f.mu.RUnlock()
-	meta, ok := f.store[path]
+	checksum, ok = f.store[path]
 	if !ok {
 		return "", false
 	}
-	return meta.Checksum, true
+	return checksum, true
 }
 
 func (f *MockChecksumStore) Update(path string, checksum string) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	f.store[path] = FileMetadata{
-		Checksum: checksum,
-	}
+	f.store[path] = checksum
 }
 
 func (f *MockChecksumStore) Clear() {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	f.store = make(map[string]FileMetadata)
+	f.store = make(map[string]string)
 }
 
 // MockRootCanonicaliser implements RootCanonicaliser for testing
