@@ -5,6 +5,7 @@ package tools
 // Any changes to these tests must be reviewed against the symlink safety specification.
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"testing"
@@ -334,7 +335,7 @@ func TestEnsureParentDirs(t *testing.T) {
 		}
 
 		err := EnsureParentDirs(ctx, "../outside/file.txt")
-		if err != ErrOutsideWorkspace {
+		if !errors.Is(err, ErrOutsideWorkspace) {
 			t.Errorf("expected ErrOutsideWorkspace, got %v", err)
 		}
 	})

@@ -35,18 +35,17 @@ func (r *SystemBinaryDetector) IsBinaryContent(content []byte) bool {
 	if len(content) >= 2 {
 		if (content[0] == 0xFF && content[1] == 0xFE) ||
 			(content[0] == 0xFE && content[1] == 0xFF) {
-			return false // UTF-16 BOM
+			return false // UTF-16 BOM - treat as text, skip null check
 		}
 	}
 	if len(content) >= 4 {
 		if (content[0] == 0xFF && content[1] == 0xFE && content[2] == 0x00 && content[3] == 0x00) ||
 			(content[0] == 0x00 && content[1] == 0x00 && content[2] == 0xFE && content[3] == 0xFF) {
-			return false // UTF-32 BOM
+			return false // UTF-32 BOM - treat as text, skip null check
 		}
 	}
 
-	// Simple heuristic: check for null bytes in first 4KB
-	// This catches most binary files but may have false positives/negatives
+	// Check for null bytes in first 4KB for files without BOM
 	sampleSize := min(len(content), BinaryDetectionSampleSize)
 	for i := range sampleSize {
 		if content[i] == 0 {

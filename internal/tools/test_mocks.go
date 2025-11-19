@@ -178,8 +178,26 @@ func (f *MockFileSystem) Stat(path string) (FileInfo, error) {
 }
 
 func (f *MockFileSystem) Lstat(path string) (FileInfo, error) {
-	// For mock, Lstat is the same as Stat since we track symlinks explicitly
-	return f.Stat(path)
+	f.mu.RLock()
+	defer f.mu.RUnlock()
+
+	if err, ok := f.errors[path]; ok {
+		return nil, err
+	}
+
+	// Check if it's a symlink first - don't follow it
+	if _, isSymlink := f.symlinks[path]; isSymlink {
+		if info, ok := f.fileInfos[path]; ok {
+			return info, nil
+		}
+	}
+
+	// For non-symlinks, return regular file info
+	if info, ok := f.fileInfos[path]; ok {
+		return info, nil
+	}
+
+	return nil, os.ErrNotExist
 }
 
 func (f *MockFileSystem) ReadFileRange(path string, offset, limit int64) ([]byte, error) {

@@ -31,10 +31,7 @@ func (m *checksumManagerImpl) Get(path string) (checksum string, ok bool) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	checksum, ok = m.store[path]
-	if !ok {
-		return "", false
-	}
-	return checksum, true
+	return checksum, ok
 }
 
 // Update stores or updates checksum for a file path

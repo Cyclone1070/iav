@@ -103,6 +103,148 @@ func Resolve(ctx *WorkspaceContext, path string) (abs string, rel string, err er
 	return abs, rel, nil
 }
 
+// EnsureParentDirs creates parent directories for a given path if they don't exist.
+// It validates that all parent directories remain within the workspace boundary.
+func EnsureParentDirs(ctx *WorkspaceContext, path string) error {
+	abs, _, err := Resolve(ctx, path)
+	if err != nil {
+		return fmt.Errorf("failed to resolve path for parent directories: %w", err)
+	}
+
+	parent := filepath.Dir(abs)
+	if parent == abs {
+		return nil
+	}
+
+	// Validate that parent directory is within workspace using symlink resolution
+	_, err = resolveSymlink(ctx, parent)
+	if err != nil {
+		return fmt.Errorf("failed to validate parent directory: %w", err)
+	}
+
+	if err := ctx.FS.EnsureDirs(parent); err != nil {
+		return fmt.Errorf("failed to create parent directories: %w", err)
+	}
+
+	return nil
+}
+
+// IsDirectory checks if a resolved path points to a directory.
+func IsDirectory(ctx *WorkspaceContext, path string) (bool, error) {
+	abs, _, err := Resolve(ctx, path)
+	if err != nil {
+		return false, fmt.Errorf("failed to resolve path: %w", err)
+	}
+
+	isDir, err := ctx.FS.IsDir(abs)
+	if err != nil {
+		return false, fmt.Errorf("failed to check if path is directory: %w", err)
+	}
+
+	return isDir, nil
+}
+
+// resolveSymlink resolves symlinks by walking each path component.
+// This prevents symlink escape attacks even when the final file doesn't exist.
+// It handles missing intermediate directories gracefully to allow directory creation.
+// It follows symlink chains and validates that every hop stays within the workspace boundary.
+func resolveSymlink(ctx *WorkspaceContext, path string) (string, error) {
+	workspaceRootAbs := filepath.Clean(ctx.WorkspaceRoot)
+	const maxHops = 64
+
+	// Split path into components for component-wise traversal
+	parts := strings.Split(filepath.ToSlash(path), "/")
+	if len(parts) == 0 {
+		return path, nil
+	}
+
+	// Handle absolute paths (first component is empty on Unix)
+	var currentAbs string
+	startIdx := 0
+	if filepath.IsAbs(path) {
+		if len(parts) > 0 && parts[0] == "" {
+			currentAbs = "/"
+			startIdx = 1
+		} else {
+			currentAbs = path
+		}
+	} else {
+		currentAbs = path
+	}
+
+	// Walk each component, resolving symlinks as we go
+	for i := startIdx; i < len(parts); i++ {
+		if parts[i] == "" || parts[i] == "." {
+			continue
+		}
+
+		// Handle ".." by going up one directory level
+		if parts[i] == ".." {
+			// Go up one level
+			if currentAbs == "" || currentAbs == "/" {
+				// Can't go up from root
+				return "", ErrOutsideWorkspace
+			}
+			currentAbs = filepath.Dir(currentAbs)
+			// Validate we're still within workspace after going up
+			if !isWithinWorkspace(currentAbs, workspaceRootAbs) {
+				return "", ErrOutsideWorkspace
+			}
+			continue
+		}
+
+		// Build the next path component
+		next := buildNextPathComponent(currentAbs, parts[i])
+
+		// Follow symlink chain for this component
+		resolved, exists, err := followSymlinkChain(ctx, next, workspaceRootAbs, maxHops)
+		if err != nil {
+			return "", err
+		}
+
+		if !exists {
+			// Component doesn't exist - handle missing directories
+			// Special case: if current equals workspace root, it's okay
+			if resolved == workspaceRootAbs {
+				currentAbs = resolved
+				continue
+			}
+			// If we're not at the final component, this means a directory is missing
+			// Append remaining components and return (caller can create directories)
+			if i < len(parts)-1 {
+				currentAbs = appendRemainingComponents(currentAbs, parts, i)
+				// Validate the complete path is within workspace
+				if !isWithinWorkspace(currentAbs, workspaceRootAbs) {
+					return "", ErrOutsideWorkspace
+				}
+				return currentAbs, nil
+			}
+			// For final component, validate parent is within workspace (if we have one)
+			if currentAbs != "" && currentAbs != workspaceRootAbs {
+				if !isWithinWorkspace(currentAbs, workspaceRootAbs) {
+					return "", ErrOutsideWorkspace
+				}
+			}
+			currentAbs = resolved
+			continue
+		}
+
+		currentAbs = resolved
+
+		// Validate current path is within workspace after each step
+		if !isWithinWorkspace(currentAbs, workspaceRootAbs) {
+			return "", ErrOutsideWorkspace
+		}
+	}
+
+	// Final validation that resolved path is within workspace
+	if !isWithinWorkspace(currentAbs, workspaceRootAbs) {
+		return "", ErrOutsideWorkspace
+	}
+
+	return currentAbs, nil
+}
+
 // followSymlinkChain follows a symlink chain until it reaches a non-symlink.
 // Returns an error if the chain exceeds maxHops or contains a loop.
 // Returns the resolved path and whether the path exists (or error if lstat fails).
@@ -162,127 +304,28 @@ func followSymlinkChain(ctx *WorkspaceContext, path string, workspaceRoot string
 	return "", false, fmt.Errorf("symlink chain too long (max %d hops)", maxHops)
 }
 
-// resolveSymlink resolves symlinks by walking each path component.
-// This prevents symlink escape attacks even when the final file doesn't exist.
-// It handles missing intermediate directories gracefully to allow directory creation.
-// It follows symlink chains and validates that every hop stays within the workspace boundary.
-func resolveSymlink(ctx *WorkspaceContext, path string) (string, error) {
-	workspaceRootAbs := filepath.Clean(ctx.WorkspaceRoot)
-	const maxHops = 64
-
-	// Split path into components for component-wise traversal
-	parts := strings.Split(filepath.ToSlash(path), "/")
-	if len(parts) == 0 {
-		return path, nil
+// buildNextPathComponent builds the next path component by joining current path with a part.
+func buildNextPathComponent(current, part string) string {
+	switch current {
+	case "":
+		return part
+	case "/":
+		return "/" + part
+	default:
+		return filepath.Join(current, part)
 	}
+}
 
-	// Handle absolute paths (first component is empty on Unix)
-	var currentAbs string
-	startIdx := 0
-	if filepath.IsAbs(path) {
-		if len(parts) > 0 && parts[0] == "" {
-			currentAbs = "/"
-			startIdx = 1
-		} else {
-			currentAbs = path
-		}
-	} else {
-		currentAbs = path
-	}
-
-	// Walk each component, resolving symlinks as we go
-	for i := startIdx; i < len(parts); i++ {
-		if parts[i] == "" || parts[i] == "." {
+// appendRemainingComponents appends remaining path components to the current path.
+func appendRemainingComponents(current string, parts []string, start int) string {
+	remaining := parts[start:]
+	for j := range remaining {
+		if remaining[j] == "" || remaining[j] == "." {
 			continue
 		}
-
-		// Handle ".." by going up one directory level
-		if parts[i] == ".." {
-			// Go up one level
-			if currentAbs == "" || currentAbs == "/" {
-				// Can't go up from root
-				return "", ErrOutsideWorkspace
-			}
-			currentAbs = filepath.Dir(currentAbs)
-			// Validate we're still within workspace after going up
-			if !isWithinWorkspace(currentAbs, workspaceRootAbs) {
-				return "", ErrOutsideWorkspace
-			}
-			continue
-		}
-
-		// Build the next path component
-		var next string
-		switch currentAbs {
-		case "":
-			next = parts[i]
-		case "/":
-			next = "/" + parts[i]
-		default:
-			next = filepath.Join(currentAbs, parts[i])
-		}
-
-		// Follow symlink chain for this component
-		resolved, exists, err := followSymlinkChain(ctx, next, workspaceRootAbs, maxHops)
-		if err != nil {
-			return "", err
-		}
-
-		if !exists {
-			// Component doesn't exist - handle missing directories
-			// Special case: if current equals workspace root, it's okay
-			if resolved == workspaceRootAbs {
-				currentAbs = resolved
-				continue
-			}
-			// If we're not at the final component, this means a directory is missing
-			// Append remaining components and return (caller can create directories)
-			if i < len(parts)-1 {
-				// Append current and remaining components
-				remaining := parts[i:]
-				for j := range remaining {
-					if remaining[j] == "" || remaining[j] == "." {
-						continue
-					}
-					switch currentAbs {
-					case "":
-						currentAbs = remaining[j]
-					case "/":
-						currentAbs = "/" + remaining[j]
-					default:
-						currentAbs = filepath.Join(currentAbs, remaining[j])
-					}
-				}
-				// Validate the complete path is within workspace
-				if !isWithinWorkspace(currentAbs, workspaceRootAbs) {
-					return "", ErrOutsideWorkspace
-				}
-				return currentAbs, nil
-			}
-			// For final component, validate parent is within workspace (if we have one)
-			if currentAbs != "" && currentAbs != workspaceRootAbs {
-				if !isWithinWorkspace(currentAbs, workspaceRootAbs) {
-					return "", ErrOutsideWorkspace
-				}
-			}
-			currentAbs = resolved
-			continue
-		}
-
-		currentAbs = resolved
-
-		// Validate current path is within workspace after each step
-		if !isWithinWorkspace(currentAbs, workspaceRootAbs) {
-			return "", ErrOutsideWorkspace
-		}
+		current = buildNextPathComponent(current, remaining[j])
 	}
-
-	// Final validation that resolved path is within workspace
-	if !isWithinWorkspace(currentAbs, workspaceRootAbs) {
-		return "", ErrOutsideWorkspace
-	}
-
-	return currentAbs, nil
+	return current
 }
 
 // isWithinWorkspace checks if a path is within the workspace root.
@@ -308,37 +351,5 @@ func isWithinWorkspace(path, workspaceRoot string) bool {
 
 	// Ensure it's actually within (not just a sibling)
 	workspaceRootWithSep := workspaceRootAbs + string(filepath.Separator)
-	return strings.HasPrefix(pathAbs, workspaceRootWithSep) || pathAbs == workspaceRootAbs
-}
-
-// EnsureParentDirs creates parent directories for a given path if they don't exist.
-// It validates that all parent directories remain within the workspace boundary.
-func EnsureParentDirs(ctx *WorkspaceContext, path string) error {
-	abs, _, err := Resolve(ctx, path)
-	if err != nil {
-		return err
-	}
-
-	parent := filepath.Dir(abs)
-	if parent == abs {
-		return nil
-	}
-
-	// Validate that parent directory is within workspace using symlink resolution
-	_, err = resolveSymlink(ctx, parent)
-	if err != nil {
-		return err
-	}
-
-	return ctx.FS.EnsureDirs(parent)
-}
-
-// IsDirectory checks if a resolved path points to a directory.
-func IsDirectory(ctx *WorkspaceContext, path string) (bool, error) {
-	abs, _, err := Resolve(ctx, path)
-	if err != nil {
-		return false, err
-	}
-
-	return ctx.FS.IsDir(abs)
+	return strings.HasPrefix(pathAbs, workspaceRootWithSep)
 }

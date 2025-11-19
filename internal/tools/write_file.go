@@ -40,8 +40,9 @@ func WriteFile(ctx *WorkspaceContext, path string, content string, perm *os.File
 		return nil, ErrTooLarge
 	}
 
-	// Determine permissions
+	// Default permissions
 	filePerm := os.FileMode(0644)
+	// Determine custom permissions if provided
 	if perm != nil {
 		// Only allow standard permission bits (owner/group/other rwx)
 		if *perm&^os.FileMode(0777) != 0 {
@@ -76,7 +77,7 @@ func writeFileAtomic(ctx *WorkspaceContext, path string, content []byte, perm os
 	// Create temporary file in same directory
 	tmpPath, tmpFile, err := ctx.FS.CreateTemp(dir, ".tmp-*")
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create temp file: %w", err)
 	}
 
 	// Track whether we need to clean up the temp file
@@ -102,12 +103,12 @@ func writeFileAtomic(ctx *WorkspaceContext, path string, content []byte, perm os
 
 	// Write content to temp file
 	if _, err := tmpFile.Write(content); err != nil {
-		return err
+		return fmt.Errorf("failed to write to temp file: %w", err)
 	}
 
 	// Sync to ensure data is written to disk
 	if err := tmpFile.Sync(); err != nil {
-		return err
+		return fmt.Errorf("failed to sync temp file: %w", err)
 	}
 
 	// Close file before rename (required on some systems)
