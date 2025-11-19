@@ -42,4 +42,3 @@ func (c *checksumCache) Clear() {
 	defer c.mu.Unlock()
 	c.store = make(map[string]string)
 }
-
