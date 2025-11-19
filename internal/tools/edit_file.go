@@ -43,10 +43,10 @@ func EditFile(ctx *WorkspaceContext, path string, operations []Operation) (*Edit
 	content := string(contentBytes)
 
 	// Compute current checksum
-	currentChecksum := ctx.ChecksumComputer.ComputeChecksum(contentBytes)
+	currentChecksum := ctx.ChecksumManager.Compute(contentBytes)
 
 	// Check for conflicts with cached version
-	priorChecksum, ok := ctx.ChecksumCache.Get(abs)
+	priorChecksum, ok := ctx.ChecksumManager.Get(abs)
 	if ok && priorChecksum != currentChecksum {
 		return nil, ErrEditConflict
 	}
@@ -92,7 +92,7 @@ func EditFile(ctx *WorkspaceContext, path string, operations []Operation) (*Edit
 	if err != nil {
 		return nil, fmt.Errorf("failed to revalidate file before write: %w", err)
 	}
-	revalidationChecksum := ctx.ChecksumComputer.ComputeChecksum(revalidationBytes)
+	revalidationChecksum := ctx.ChecksumManager.Compute(revalidationBytes)
 	if revalidationChecksum != currentChecksum {
 		return nil, ErrEditConflict
 	}
@@ -109,8 +109,8 @@ func EditFile(ctx *WorkspaceContext, path string, operations []Operation) (*Edit
 	}
 
 	// Compute new checksum and update cache
-	newChecksum := ctx.ChecksumComputer.ComputeChecksum(newContentBytes)
-	ctx.ChecksumCache.Update(abs, newChecksum)
+	newChecksum := ctx.ChecksumManager.Compute(newContentBytes)
+	ctx.ChecksumManager.Update(abs, newChecksum)
 
 	return &EditFileResponse{
 		AbsolutePath:      abs,

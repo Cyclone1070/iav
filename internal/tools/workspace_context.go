@@ -5,8 +5,7 @@ package tools
 type WorkspaceContext struct {
 	FS               FileSystem
 	BinaryDetector   BinaryDetector
-	ChecksumComputer ChecksumComputer
-	ChecksumCache    ChecksumStore
+	ChecksumManager  ChecksumManager
 	MaxFileSize      int64
 	WorkspaceRoot    string // canonical, symlink-resolved workspace root
 }
@@ -26,12 +25,11 @@ func NewWorkspaceContextWithOptions(workspaceRoot string, maxFileSize int64) (*W
 	}
 
 	return &WorkspaceContext{
-		FS:               NewOSFileSystem(maxFileSize),
-		BinaryDetector:   &SystemBinaryDetector{},
-		ChecksumComputer: &SHA256Checksum{},
-		ChecksumCache:    NewChecksumCache(),
-		MaxFileSize:      maxFileSize,
-		WorkspaceRoot:    canonicalRoot,
+		FS:              NewOSFileSystem(maxFileSize),
+		BinaryDetector:  &SystemBinaryDetector{},
+		ChecksumManager: NewChecksumManager(),
+		MaxFileSize:     maxFileSize,
+		WorkspaceRoot:   canonicalRoot,
 	}, nil
 }
 
@@ -50,11 +48,10 @@ func NewWorkspaceContextWithOptionsDI(workspaceRoot string, maxFileSize int64, c
 	}
 
 	return &WorkspaceContext{
-		FS:               NewOSFileSystem(maxFileSize),
-		BinaryDetector:   &SystemBinaryDetector{},
-		ChecksumComputer: &SHA256Checksum{},
-		ChecksumCache:    NewChecksumCache(),
-		MaxFileSize:      maxFileSize,
-		WorkspaceRoot:    canonicalRoot,
+		FS:              NewOSFileSystem(maxFileSize),
+		BinaryDetector:  &SystemBinaryDetector{},
+		ChecksumManager: NewChecksumManager(),
+		MaxFileSize:     maxFileSize,
+		WorkspaceRoot:   canonicalRoot,
 	}, nil
 }

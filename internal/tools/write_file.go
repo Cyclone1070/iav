@@ -52,8 +52,8 @@ func WriteFile(ctx *WorkspaceContext, path string, content string, perm *os.File
 	}
 
 	// Compute checksum and update cache
-	checksum := ctx.ChecksumComputer.ComputeChecksum(contentBytes)
-	ctx.ChecksumCache.Update(abs, checksum)
+	checksum := ctx.ChecksumManager.Compute(contentBytes)
+	ctx.ChecksumManager.Update(abs, checksum)
 
 	return &WriteFileResponse{
 		AbsolutePath: abs,

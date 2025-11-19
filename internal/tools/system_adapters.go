@@ -1,8 +1,6 @@
 package tools
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"io"
 	"os"
 )
@@ -172,17 +170,4 @@ func (r *SystemBinaryDetector) IsBinaryContent(content []byte) bool {
 	}
 
 	return false
-}
-
-// SHA256Checksum implements ChecksumComputer using SHA-256
-type SHA256Checksum struct{}
-
-func (r *SHA256Checksum) ComputeChecksum(data []byte) string {
-	return computeChecksum(data)
-}
-
-// computeChecksum computes SHA-256 checksum of data
-func computeChecksum(data []byte) string {
-	hash := sha256.Sum256(data)
-	return hex.EncodeToString(hash[:])
 }

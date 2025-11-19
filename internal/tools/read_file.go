@@ -68,10 +68,9 @@ func ReadFile(ctx *WorkspaceContext, path string, offset *int64, limit *int64) (
 	// Only cache checksum if we read the entire file
 	isFullRead := actualOffset == 0 && int64(len(contentBytes)) == info.Size()
 
-	var checksum string
 	if isFullRead {
-		checksum = ctx.ChecksumComputer.ComputeChecksum(contentBytes)
-		ctx.ChecksumCache.Update(abs, checksum)
+		checksum := ctx.ChecksumManager.Compute(contentBytes)
+		ctx.ChecksumManager.Update(abs, checksum)
 	}
 
 	return &ReadFileResponse{

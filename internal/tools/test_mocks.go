@@ -1,8 +1,6 @@
 package tools
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -462,58 +460,10 @@ func (f *MockBinaryDetector) IsBinaryContent(content []byte) bool {
 	return false
 }
 
-// MockChecksumComputer implements ChecksumComputer with deterministic behaviour
-type MockChecksumComputer struct {
-	checksums map[string]string // content -> checksum
-	mu        sync.RWMutex
-}
-
-// NewMockChecksumComputer creates a new mock checksum computer
-func NewMockChecksumComputer() *MockChecksumComputer {
-	return &MockChecksumComputer{
-		checksums: make(map[string]string),
-	}
-}
-
-func (f *MockChecksumComputer) ComputeChecksum(data []byte) string {
-	// Use real SHA-256 implementation for deterministic behaviour
-	hash := sha256.Sum256(data)
-	return hex.EncodeToString(hash[:])
-}
-
-// MockChecksumStore implements ChecksumStore with in-memory storage
-type MockChecksumStore struct {
-	mu    sync.RWMutex
-	store map[string]string
-}
-
-// NewMockChecksumStore creates a new mock checksum store
-func NewMockChecksumStore() *MockChecksumStore {
-	return &MockChecksumStore{
-		store: make(map[string]string),
-	}
-}
-
-func (f *MockChecksumStore) Get(path string) (checksum string, ok bool) {
-	f.mu.RLock()
-	defer f.mu.RUnlock()
-	checksum, ok = f.store[path]
-	if !ok {
-		return "", false
-	}
-	return checksum, true
-}
-
-func (f *MockChecksumStore) Update(path string, checksum string) {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	f.store[path] = checksum
-}
-
-func (f *MockChecksumStore) Clear() {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	f.store = make(map[string]string)
+// MockChecksumManager implements ChecksumManager for testing
+// It uses the real ChecksumManager implementation since there's no need for special mock behavior
+func NewMockChecksumManager() ChecksumManager {
+	return NewChecksumManager()
 }
 
 // MockRootCanonicaliser implements RootCanonicaliser for testing

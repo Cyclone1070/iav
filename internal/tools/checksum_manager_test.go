@@ -5,24 +5,24 @@ import (
 	"testing"
 )
 
-func TestChecksumCache(t *testing.T) {
-	cache := NewChecksumManager()
-	cache.Clear()
+func TestChecksumManager(t *testing.T) {
+	manager := NewChecksumManager()
+	manager.Clear()
 
 	path := "/test/path.txt"
 	checksum := "abc123"
 
 	// Test Get on empty cache
-	_, ok := cache.Get(path)
+	_, ok := manager.Get(path)
 	if ok {
 		t.Error("cache should be empty")
 	}
 
 	// Test Update
-	cache.Update(path, checksum)
+	manager.Update(path, checksum)
 
 	// Test Get after update
-	retrievedChecksum, ok := cache.Get(path)
+	retrievedChecksum, ok := manager.Get(path)
 	if !ok {
 		t.Error("cache should contain the entry")
 	}
@@ -36,14 +36,14 @@ func TestChecksumCache(t *testing.T) {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
-			cache.Update(path, checksum)
-			cache.Get(path)
+			manager.Update(path, checksum)
+			manager.Get(path)
 		}(i)
 	}
 	wg.Wait()
 
 	// Verify final state
-	finalChecksum, ok := cache.Get(path)
+	finalChecksum, ok := manager.Get(path)
 	if !ok {
 		t.Error("cache entry should still exist after concurrent access")
 	}
@@ -52,19 +52,19 @@ func TestChecksumCache(t *testing.T) {
 	}
 }
 
-func TestChecksumCacheClear(t *testing.T) {
-	cache := NewChecksumManager()
-	cache.Clear()
+func TestChecksumManagerClear(t *testing.T) {
+	manager := NewChecksumManager()
+	manager.Clear()
 
 	// Add some entries
-	cache.Update("/file1.txt", "hash1")
-	cache.Update("/file2.txt", "hash2")
+	manager.Update("/file1.txt", "hash1")
+	manager.Update("/file2.txt", "hash2")
 
 	// Clear
-	cache.Clear()
+	manager.Clear()
 
 	// Verify entries are gone
-	_, ok := cache.Get("/file1.txt")
+	_, ok := manager.Get("/file1.txt")
 	if ok {
 		t.Error("cache should be empty after Clear")
 	}

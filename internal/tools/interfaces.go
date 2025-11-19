@@ -62,15 +62,11 @@ type BinaryDetector interface {
 	IsBinaryContent(content []byte) bool
 }
 
-// ChecksumComputer computes checksums
-type ChecksumComputer interface {
-	// ComputeChecksum computes SHA-256 checksum of data
-	ComputeChecksum(data []byte) string
-}
-
-// ChecksumStore provides checksum cache operations.
+// ChecksumManager manages checksum computation and caching.
 // Implementations must be thread-safe.
-type ChecksumStore interface {
+type ChecksumManager interface {
+	// Compute computes SHA-256 checksum of data
+	Compute(data []byte) string
 	// Get retrieves checksum for a file path
 	Get(path string) (checksum string, ok bool)
 	// Update stores or updates checksum for a file path

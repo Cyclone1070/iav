@@ -10,25 +10,23 @@ func TestMultiContextIsolation(t *testing.T) {
 
 	// Create two separate contexts with different workspace roots
 	fs1 := NewMockFileSystem(maxFileSize)
-	cache1 := NewMockChecksumStore()
+	checksumManager1 := NewMockChecksumManager()
 
 	fs2 := NewMockFileSystem(maxFileSize)
-	cache2 := NewMockChecksumStore()
+	checksumManager2 := NewMockChecksumManager()
 
 	ctx1 := &WorkspaceContext{
-		FS:               fs1,
-		BinaryDetector:   NewMockBinaryDetector(),
-		ChecksumComputer: NewMockChecksumComputer(),
-		ChecksumCache:    cache1,
+		FS:              fs1,
+		BinaryDetector:  NewMockBinaryDetector(),
+		ChecksumManager: checksumManager1,
 		MaxFileSize:      maxFileSize,
 		WorkspaceRoot:    "/workspace1",
 	}
 
 	ctx2 := &WorkspaceContext{
-		FS:               fs2,
-		BinaryDetector:   NewMockBinaryDetector(),
-		ChecksumComputer: NewMockChecksumComputer(),
-		ChecksumCache:    cache2,
+		FS:              fs2,
+		BinaryDetector:  NewMockBinaryDetector(),
+		ChecksumManager: checksumManager2,
 		MaxFileSize:      maxFileSize,
 		WorkspaceRoot:    "/workspace2",
 	}
@@ -48,7 +46,7 @@ func TestMultiContextIsolation(t *testing.T) {
 	}
 
 	// Verify caches are isolated
-	checksum1, ok1 := ctx1.ChecksumCache.Get(resp1.AbsolutePath)
+	checksum1, ok1 := ctx1.ChecksumManager.Get(resp1.AbsolutePath)
 	if !ok1 {
 		t.Error("ctx1 cache should contain file1")
 	}
@@ -56,7 +54,7 @@ func TestMultiContextIsolation(t *testing.T) {
 		t.Error("ctx1 cache checksum should not be empty")
 	}
 
-	checksum2, ok2 := ctx2.ChecksumCache.Get(resp2.AbsolutePath)
+	checksum2, ok2 := ctx2.ChecksumManager.Get(resp2.AbsolutePath)
 	if !ok2 {
 		t.Error("ctx2 cache should contain file2")
 	}
@@ -65,13 +63,13 @@ func TestMultiContextIsolation(t *testing.T) {
 	}
 
 	// Verify ctx1 cache doesn't contain ctx2's file
-	_, ok := ctx1.ChecksumCache.Get(resp2.AbsolutePath)
+	_, ok := ctx1.ChecksumManager.Get(resp2.AbsolutePath)
 	if ok {
 		t.Error("ctx1 cache should not contain ctx2's file")
 	}
 
 	// Verify ctx2 cache doesn't contain ctx1's file
-	_, ok = ctx2.ChecksumCache.Get(resp1.AbsolutePath)
+	_, ok = ctx2.ChecksumManager.Get(resp1.AbsolutePath)
 	if ok {
 		t.Error("ctx2 cache should not contain ctx1's file")
 	}
@@ -101,13 +99,12 @@ func TestCustomFileSizeLimit(t *testing.T) {
 
 	t.Run("small limit enforced", func(t *testing.T) {
 		fs := NewMockFileSystem(smallLimit)
-		cache := NewMockChecksumStore()
+		checksumManager := NewMockChecksumManager()
 
 		ctx := &WorkspaceContext{
-			FS:               fs,
-			BinaryDetector:   NewMockBinaryDetector(),
-			ChecksumComputer: NewMockChecksumComputer(),
-			ChecksumCache:    cache,
+			FS:              fs,
+			BinaryDetector:  NewMockBinaryDetector(),
+			ChecksumManager: checksumManager,
 			MaxFileSize:      smallLimit,
 			WorkspaceRoot:    workspaceRoot,
 		}
@@ -126,13 +123,12 @@ func TestCustomFileSizeLimit(t *testing.T) {
 
 	t.Run("large limit allows bigger files", func(t *testing.T) {
 		fs := NewMockFileSystem(largeLimit)
-		cache := NewMockChecksumStore()
+		checksumManager := NewMockChecksumManager()
 
 		ctx := &WorkspaceContext{
-			FS:               fs,
-			BinaryDetector:   NewMockBinaryDetector(),
-			ChecksumComputer: NewMockChecksumComputer(),
-			ChecksumCache:    cache,
+			FS:              fs,
+			BinaryDetector:  NewMockBinaryDetector(),
+			ChecksumManager: checksumManager,
 			MaxFileSize:      largeLimit,
 			WorkspaceRoot:    workspaceRoot,
 		}
@@ -151,25 +147,23 @@ func TestCustomFileSizeLimit(t *testing.T) {
 
 	t.Run("different limits in different contexts", func(t *testing.T) {
 		fs1 := NewMockFileSystem(smallLimit)
-		cache1 := NewMockChecksumStore()
+		checksumManager1 := NewMockChecksumManager()
 
 		fs2 := NewMockFileSystem(largeLimit)
-		cache2 := NewMockChecksumStore()
+		checksumManager2 := NewMockChecksumManager()
 
 		ctx1 := &WorkspaceContext{
-			FS:               fs1,
-			BinaryDetector:   NewMockBinaryDetector(),
-			ChecksumComputer: NewMockChecksumComputer(),
-			ChecksumCache:    cache1,
+			FS:              fs1,
+			BinaryDetector:  NewMockBinaryDetector(),
+			ChecksumManager: checksumManager1,
 			MaxFileSize:      smallLimit,
 			WorkspaceRoot:    workspaceRoot,
 		}
 
 		ctx2 := &WorkspaceContext{
-			FS:               fs2,
-			BinaryDetector:   NewMockBinaryDetector(),
-			ChecksumComputer: NewMockChecksumComputer(),
-			ChecksumCache:    cache2,
+			FS:              fs2,
+			BinaryDetector:  NewMockBinaryDetector(),
+			ChecksumManager: checksumManager2,
 			MaxFileSize:      largeLimit,
 			WorkspaceRoot:    workspaceRoot,
 		}
@@ -229,11 +223,8 @@ func TestNewWorkspaceContext(t *testing.T) {
 		if ctx.BinaryDetector == nil {
 			t.Error("expected non-nil BinaryDetector")
 		}
-		if ctx.ChecksumComputer == nil {
-			t.Error("expected non-nil ChecksumComputer")
-		}
-		if ctx.ChecksumCache == nil {
-			t.Error("expected non-nil Cache")
+		if ctx.ChecksumManager == nil {
+			t.Error("expected non-nil ChecksumManager")
 		}
 	})
 
@@ -306,11 +297,8 @@ func TestNewWorkspaceContextWithOptions(t *testing.T) {
 		if ctx.BinaryDetector == nil {
 			t.Error("expected non-nil BinaryDetector")
 		}
-		if ctx.ChecksumComputer == nil {
-			t.Error("expected non-nil ChecksumComputer")
-		}
-		if ctx.ChecksumCache == nil {
-			t.Error("expected non-nil Cache")
+		if ctx.ChecksumManager == nil {
+			t.Error("expected non-nil ChecksumManager")
 		}
 	})
 
