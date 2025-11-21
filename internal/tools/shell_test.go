@@ -375,8 +375,8 @@ func TestShellTool_Run_HugeOutput(t *testing.T) {
 	if !resp.Truncated {
 		t.Error("Expected Truncated=true for huge output")
 	}
-	if len(resp.Stdout) > int(models.DefaultMaxFileSize) {
-		t.Errorf("Output size %d exceeds limit %d", len(resp.Stdout), models.DefaultMaxFileSize)
+	if len(resp.Stdout) > int(models.DefaultMaxCommandOutputSize) {
+		t.Errorf("Output size %d exceeds limit %d", len(resp.Stdout), models.DefaultMaxCommandOutputSize)
 	}
 }
 

@@ -2,7 +2,9 @@ package services
 
 import (
 	"context"
+	"io"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/Cyclone1070/deployforme/internal/tools/models"
@@ -37,4 +39,29 @@ func ExecuteWithTimeout(ctx context.Context, timeout time.Duration, proc models.
 			return models.ErrShellTimeout
 		}
 	}
+}
+
+// CollectProcessOutput reads stdout and stderr concurrently and returns them as strings.
+// It enforces a maximum size limit for the collected output.
+func CollectProcessOutput(stdout, stderr io.Reader, maxBytes int) (string, string, bool, error) {
+	stdoutCollector := NewCollector(maxBytes)
+	stderrCollector := NewCollector(maxBytes)
+
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	go func() {
+		defer wg.Done()
+		io.Copy(stdoutCollector, stdout)
+	}()
+
+	go func() {
+		defer wg.Done()
+		io.Copy(stderrCollector, stderr)
+	}()
+
+	wg.Wait()
+
+	truncated := stdoutCollector.Truncated || stderrCollector.Truncated
+	return stdoutCollector.String(), stderrCollector.String(), truncated, nil
 }

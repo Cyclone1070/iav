@@ -3,9 +3,7 @@ package tools
 import (
 	"context"
 	"fmt"
-	"io"
 	"os"
-	"sync"
 	"time"
 
 	"github.com/Cyclone1070/deployforme/internal/tools/models"
@@ -72,20 +70,7 @@ func (t *ShellTool) Run(ctx context.Context, wCtx *models.WorkspaceContext, req 
 	}
 
 	// 6. Output Collection
-	stdoutCollector := services.NewCollector(models.DefaultMaxFileSize) // Use a reasonable limit
-	stderrCollector := services.NewCollector(models.DefaultMaxFileSize)
-
-	// Start copying in background with synchronization
-	var wg sync.WaitGroup
-	wg.Add(2)
-	go func() {
-		defer wg.Done()
-		io.Copy(stdoutCollector, stdout)
-	}()
-	go func() {
-		defer wg.Done()
-		io.Copy(stderrCollector, stderr)
-	}()
+	stdoutStr, stderrStr, truncated, _ := services.CollectProcessOutput(stdout, stderr, int(models.DefaultMaxCommandOutputSize))
 
 	// 7. Run & Wait
 	timeout := time.Duration(req.TimeoutSeconds) * time.Second
@@ -95,15 +80,12 @@ func (t *ShellTool) Run(ctx context.Context, wCtx *models.WorkspaceContext, req 
 
 	execErr := services.ExecuteWithTimeout(ctx, timeout, proc)
 
-	// Wait for output collection to complete
-	wg.Wait()
-
 	// 8. Construct Response
 	resp := &models.ShellResponse{
-		Stdout:     stdoutCollector.String(),
-		Stderr:     stderrCollector.String(),
+		Stdout:     stdoutStr,
+		Stderr:     stderrStr,
 		WorkingDir: wd,
-		Truncated:  stdoutCollector.Truncated || stderrCollector.Truncated,
+		Truncated:  truncated,
 	}
 
 	if execErr != nil {
@@ -177,16 +159,12 @@ func (r *processFactoryRunner) Run(ctx context.Context, command []string) ([]byt
 		return nil, err
 	}
 
-	outCol := services.NewCollector(10 * 1024 * 1024)
-	errCol := services.NewCollector(10 * 1024 * 1024)
-
-	go io.Copy(outCol, stdout)
-	go io.Copy(errCol, stderr)
+	stdoutStr, stderrStr, _, _ := services.CollectProcessOutput(stdout, stderr, int(models.DefaultMaxCommandOutputSize))
 
 	waitErr := proc.Wait()
 
 	// Combine output
-	output := outCol.String() + errCol.String()
+	output := stdoutStr + stderrStr
 
 	return []byte(output), waitErr
 }

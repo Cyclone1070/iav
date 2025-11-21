@@ -32,29 +32,49 @@ func IsDockerComposeUpDetached(command []string) bool {
 		return false
 	}
 
-	// Check for "compose" and "up"
-	// We need to be careful about flags appearing before subcommands, but for now
-	// we'll assume the standard "docker compose up" structure.
-	// A more robust parser would be needed for complex cases, but this covers the happy path.
+	// We need to find "compose" and "up" as subcommands, and "-d" or "--detach" as a flag for "up".
+	// Note: "compose" is a subcommand of "docker". "up" is a subcommand of "compose".
+	// Flags can appear:
+	// 1. After "docker" (global flags)
+	// 2. After "compose" (compose flags)
+	// 3. After "up" (up flags)
+	//
+	// We are looking for the presence of "compose" then "up" then "-d"/"--detach".
+	// However, flags for "compose" can be anywhere between "compose" and "up".
+	// And flags for "up" can be anywhere after "up".
+	// Also, "docker-compose" (hyphenated) is legacy but we might want to support it?
+	// The current IsDockerCommand only checks for "docker".
+	// Let's stick to "docker compose" for now as per the original code.
 
-	// Simple check: does it contain "compose" and "up" in that order?
-	// And does it have -d or --detach?
+	foundCompose := false
+	foundUp := false
+	foundDetach := false
 
-	hasCompose := false
-	hasUp := false
-	hasDetach := false
-
+	// Skip the first element (docker)
 	for _, arg := range command[1:] {
-		if arg == "compose" {
-			hasCompose = true
-		} else if hasCompose && arg == "up" {
-			hasUp = true
-		} else if hasUp && (arg == "-d" || arg == "--detach") {
-			hasDetach = true
+		if !foundCompose {
+			if arg == "compose" {
+				foundCompose = true
+			}
+			continue
+		}
+
+		// We found compose, now looking for up
+		if !foundUp {
+			if arg == "up" {
+				foundUp = true
+			}
+			continue
+		}
+
+		// We found up, now looking for detach
+		if arg == "-d" || arg == "--detach" {
+			foundDetach = true
+			break // We found everything we need
 		}
 	}
 
-	return hasCompose && hasUp && hasDetach
+	return foundCompose && foundUp && foundDetach
 }
 
 // EvaluatePolicy checks if a command is allowed by the given policy.

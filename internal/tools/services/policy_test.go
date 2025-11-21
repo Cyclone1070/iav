@@ -101,19 +101,68 @@ func TestIsDockerCommand(t *testing.T) {
 
 func TestIsDockerComposeUpDetached(t *testing.T) {
 	tests := []struct {
-		cmd  []string
-		want bool
+		name    string
+		command []string
+		want    bool
 	}{
-		{[]string{"docker", "compose", "up", "-d"}, true},
-		{[]string{"docker", "compose", "up", "--detach"}, true},
-		{[]string{"docker", "compose", "up"}, false},
-		{[]string{"docker", "run", "-d"}, false},
+		{
+			name:    "Standard command",
+			command: []string{"docker", "compose", "up", "-d"},
+			want:    true,
+		},
+		{
+			name:    "Long flag",
+			command: []string{"docker", "compose", "up", "--detach"},
+			want:    true,
+		},
+		{
+			name:    "With project directory",
+			command: []string{"docker", "compose", "-f", "docker-compose.yml", "up", "-d"},
+			want:    true,
+		},
+		{
+			name:    "With global flags",
+			command: []string{"docker", "--debug", "compose", "up", "-d"},
+			want:    true,
+		},
+		{
+			name:    "With up flags before detach",
+			command: []string{"docker", "compose", "up", "--build", "-d"},
+			want:    true,
+		},
+		{
+			name:    "Missing detach",
+			command: []string{"docker", "compose", "up"},
+			want:    false,
+		},
+		{
+			name:    "Not docker",
+			command: []string{"echo", "hello"},
+			want:    false,
+		},
+		{
+			name:    "Not compose",
+			command: []string{"docker", "run", "-d", "nginx"},
+			want:    false,
+		},
+		{
+			name:    "Not up",
+			command: []string{"docker", "compose", "down"},
+			want:    false,
+		},
+		{
+			name:    "Detach before up (invalid for this parser)",
+			command: []string{"docker", "compose", "-d", "up"},
+			want:    false,
+		},
 	}
 
 	for _, tt := range tests {
-		if got := IsDockerComposeUpDetached(tt.cmd); got != tt.want {
-			t.Errorf("IsDockerComposeUpDetached(%v) = %v, want %v", tt.cmd, got, tt.want)
-		}
+		t.Run(tt.name, func(t *testing.T) {
+			if got := IsDockerComposeUpDetached(tt.command); got != tt.want {
+				t.Errorf("IsDockerComposeUpDetached() = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }
 

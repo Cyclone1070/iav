@@ -13,6 +13,8 @@ const (
 	DefaultListDirectoryLimit = 1000
 	// MaxListDirectoryLimit is the maximum allowed limit for directory listing pagination
 	MaxListDirectoryLimit = 10000
+	// DefaultMaxCommandOutputSize is the default maximum size for command output (10 MB)
+	DefaultMaxCommandOutputSize = 10 * 1024 * 1024
 )
 
 // Operation represents a single edit operation for EditFile.
