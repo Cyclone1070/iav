@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"io"
 	"os"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -43,14 +45,14 @@ func (m *MockProcess) Signal(sig os.Signal) error {
 
 // MockProcessFactory implements models.ProcessFactory
 type MockProcessFactory struct {
-	StartFunc func(ctx context.Context, command []string, opts models.ProcessOptions) (models.Process, interface{}, interface{}, error)
+	StartFunc func(ctx context.Context, command []string, opts models.ProcessOptions) (models.Process, io.Reader, io.Reader, error)
 }
 
-func (m *MockProcessFactory) Start(ctx context.Context, command []string, opts models.ProcessOptions) (models.Process, interface{}, interface{}, error) {
+func (m *MockProcessFactory) Start(ctx context.Context, command []string, opts models.ProcessOptions) (models.Process, io.Reader, io.Reader, error) {
 	if m.StartFunc != nil {
 		return m.StartFunc(ctx, command, opts)
 	}
-	return nil, nil, nil, errors.New("StartFunc not implemented")
+	return nil, nil, nil, errors.New("StartFunc not set")
 }
 
 func TestShellTool_Run_SimpleCommand(t *testing.T) {
@@ -64,7 +66,7 @@ func TestShellTool_Run_SimpleCommand(t *testing.T) {
 	}
 
 	factory := &MockProcessFactory{
-		StartFunc: func(ctx context.Context, command []string, opts models.ProcessOptions) (models.Process, interface{}, interface{}, error) {
+		StartFunc: func(ctx context.Context, command []string, opts models.ProcessOptions) (models.Process, io.Reader, io.Reader, error) {
 			if command[0] != "echo" {
 				return nil, nil, nil, errors.New("unexpected command")
 			}
@@ -107,7 +109,7 @@ func TestShellTool_Run_WorkingDir(t *testing.T) {
 
 	var capturedDir string
 	factory := &MockProcessFactory{
-		StartFunc: func(ctx context.Context, command []string, opts models.ProcessOptions) (models.Process, interface{}, interface{}, error) {
+		StartFunc: func(ctx context.Context, command []string, opts models.ProcessOptions) (models.Process, io.Reader, io.Reader, error) {
 			capturedDir = opts.Dir
 			proc := &MockProcess{WaitFunc: func() error { return nil }}
 			return proc, strings.NewReader(""), strings.NewReader(""), nil
@@ -143,7 +145,7 @@ func TestShellTool_Run_Env(t *testing.T) {
 
 	var capturedEnv []string
 	factory := &MockProcessFactory{
-		StartFunc: func(ctx context.Context, command []string, opts models.ProcessOptions) (models.Process, interface{}, interface{}, error) {
+		StartFunc: func(ctx context.Context, command []string, opts models.ProcessOptions) (models.Process, io.Reader, io.Reader, error) {
 			capturedEnv = opts.Env
 			proc := &MockProcess{WaitFunc: func() error { return nil }}
 			return proc, strings.NewReader(""), strings.NewReader(""), nil
@@ -254,7 +256,7 @@ func TestShellTool_Run_NonZeroExit(t *testing.T) {
 	}
 
 	factory := &MockProcessFactory{
-		StartFunc: func(ctx context.Context, command []string, opts models.ProcessOptions) (models.Process, interface{}, interface{}, error) {
+		StartFunc: func(ctx context.Context, command []string, opts models.ProcessOptions) (models.Process, io.Reader, io.Reader, error) {
 			proc := &MockProcess{
 				WaitFunc: func() error {
 					return errors.New("exit status 1")
@@ -288,7 +290,7 @@ func TestShellTool_Run_BinaryOutput(t *testing.T) {
 
 	binaryData := []byte{0x00, 0x01, 0x02, 0xFF, 0xFE}
 	factory := &MockProcessFactory{
-		StartFunc: func(ctx context.Context, command []string, opts models.ProcessOptions) (models.Process, interface{}, interface{}, error) {
+		StartFunc: func(ctx context.Context, command []string, opts models.ProcessOptions) (models.Process, io.Reader, io.Reader, error) {
 			proc := &MockProcess{WaitFunc: func() error { return nil }}
 			return proc, bytes.NewReader(binaryData), strings.NewReader(""), nil
 		},
@@ -318,7 +320,7 @@ func TestShellTool_Run_CommandInjection(t *testing.T) {
 
 	var capturedCommand []string
 	factory := &MockProcessFactory{
-		StartFunc: func(ctx context.Context, command []string, opts models.ProcessOptions) (models.Process, interface{}, interface{}, error) {
+		StartFunc: func(ctx context.Context, command []string, opts models.ProcessOptions) (models.Process, io.Reader, io.Reader, error) {
 			capturedCommand = command
 			proc := &MockProcess{WaitFunc: func() error { return nil }}
 			return proc, strings.NewReader(""), strings.NewReader(""), nil
@@ -357,7 +359,7 @@ func TestShellTool_Run_HugeOutput(t *testing.T) {
 	}
 
 	factory := &MockProcessFactory{
-		StartFunc: func(ctx context.Context, command []string, opts models.ProcessOptions) (models.Process, interface{}, interface{}, error) {
+		StartFunc: func(ctx context.Context, command []string, opts models.ProcessOptions) (models.Process, io.Reader, io.Reader, error) {
 			proc := &MockProcess{WaitFunc: func() error { return nil }}
 			return proc, bytes.NewReader(hugeData), strings.NewReader(""), nil
 		},
@@ -389,7 +391,7 @@ func TestShellTool_Run_Timeout(t *testing.T) {
 	}
 
 	factory := &MockProcessFactory{
-		StartFunc: func(ctx context.Context, command []string, opts models.ProcessOptions) (models.Process, interface{}, interface{}, error) {
+		StartFunc: func(ctx context.Context, command []string, opts models.ProcessOptions) (models.Process, io.Reader, io.Reader, error) {
 			proc := &MockProcess{
 				WaitFunc: func() error {
 					select {
@@ -432,7 +434,7 @@ func TestShellTool_Run_DockerCheck(t *testing.T) {
 	}
 
 	factory := &MockProcessFactory{
-		StartFunc: func(ctx context.Context, command []string, opts models.ProcessOptions) (models.Process, interface{}, interface{}, error) {
+		StartFunc: func(ctx context.Context, command []string, opts models.ProcessOptions) (models.Process, io.Reader, io.Reader, error) {
 			if command[0] == "docker" && command[1] == "info" {
 				return &MockProcess{}, strings.NewReader(""), strings.NewReader(""), nil
 			}
@@ -467,7 +469,7 @@ func TestShellTool_Run_EnvInjection(t *testing.T) {
 
 	var capturedEnv []string
 	factory := &MockProcessFactory{
-		StartFunc: func(ctx context.Context, command []string, opts models.ProcessOptions) (models.Process, interface{}, interface{}, error) {
+		StartFunc: func(ctx context.Context, command []string, opts models.ProcessOptions) (models.Process, io.Reader, io.Reader, error) {
 			capturedEnv = opts.Env
 			proc := &MockProcess{WaitFunc: func() error { return nil }}
 			return proc, strings.NewReader(""), strings.NewReader(""), nil
@@ -485,13 +487,7 @@ func TestShellTool_Run_EnvInjection(t *testing.T) {
 		t.Fatalf("Run failed: %v", err)
 	}
 
-	hasEmptyPath := false
-	for _, envVar := range capturedEnv {
-		if envVar == "PATH=" {
-			hasEmptyPath = true
-			break
-		}
-	}
+	hasEmptyPath := slices.Contains(capturedEnv, "PATH=")
 	if !hasEmptyPath {
 		t.Error("Expected PATH= in environment (empty PATH)")
 	}
@@ -508,7 +504,7 @@ func TestShellTool_Run_ContextCancellation(t *testing.T) {
 	}
 
 	factory := &MockProcessFactory{
-		StartFunc: func(ctx context.Context, command []string, opts models.ProcessOptions) (models.Process, interface{}, interface{}, error) {
+		StartFunc: func(ctx context.Context, command []string, opts models.ProcessOptions) (models.Process, io.Reader, io.Reader, error) {
 			proc := &MockProcess{
 				WaitFunc: func() error {
 					<-ctx.Done()
@@ -530,7 +526,6 @@ func TestShellTool_Run_ContextCancellation(t *testing.T) {
 
 	// Test that Run handles context cancellation gracefully (doesn't panic)
 	resp, err := tool.Run(ctx, wCtx, req)
-
 	// Current implementation swallows context cancellation errors and returns nil error
 	// with ExitCode=1. This is a known limitation.
 	if err != nil {

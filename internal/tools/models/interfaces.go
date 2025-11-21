@@ -2,6 +2,7 @@ package models
 
 import (
 	"context"
+	"io"
 	"os"
 )
 
@@ -104,12 +105,11 @@ type Process interface {
 
 // ProcessOptions contains options for starting a process.
 type ProcessOptions struct {
-	Dir    string
-	Env    []string
-	UsePTY bool
+	Dir string
+	Env []string
 }
 
 // ProcessFactory starts a new process.
 type ProcessFactory interface {
-	Start(ctx context.Context, command []string, opts ProcessOptions) (Process, interface{}, interface{}, error)
+	Start(ctx context.Context, command []string, opts ProcessOptions) (Process, io.Reader, io.Reader, error)
 }

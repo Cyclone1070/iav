@@ -62,9 +62,8 @@ func (t *ShellTool) Run(ctx context.Context, wCtx *models.WorkspaceContext, req 
 	}
 
 	opts := models.ProcessOptions{
-		Dir:    wd,
-		Env:    env,
-		UsePTY: req.UsePTY,
+		Dir: wd,
+		Env: env,
 	}
 
 	proc, stdout, stderr, err := t.ProcessFactory.Start(ctx, req.Command, opts)
@@ -73,9 +72,6 @@ func (t *ShellTool) Run(ctx context.Context, wCtx *models.WorkspaceContext, req 
 	}
 
 	// 6. Output Collection
-	outReader, _ := stdout.(io.Reader)
-	errReader, _ := stderr.(io.Reader)
-
 	stdoutCollector := services.NewCollector(models.DefaultMaxFileSize) // Use a reasonable limit
 	stderrCollector := services.NewCollector(models.DefaultMaxFileSize)
 
@@ -84,11 +80,11 @@ func (t *ShellTool) Run(ctx context.Context, wCtx *models.WorkspaceContext, req 
 	wg.Add(2)
 	go func() {
 		defer wg.Done()
-		io.Copy(stdoutCollector, outReader)
+		io.Copy(stdoutCollector, stdout)
 	}()
 	go func() {
 		defer wg.Done()
-		io.Copy(stderrCollector, errReader)
+		io.Copy(stderrCollector, stderr)
 	}()
 
 	// 7. Run & Wait
@@ -181,20 +177,11 @@ func (r *processFactoryRunner) Run(ctx context.Context, command []string) ([]byt
 		return nil, err
 	}
 
-	outReader, _ := stdout.(io.Reader)
-	errReader, _ := stderr.(io.Reader)
-
-	// We need to initialize collector.
-	// But Collector is struct.
-	// services.NewCollector returns *Collector.
-	// Let's just use bytes.Buffer for this internal runner
-	// or use Collector with large limit.
-
 	outCol := services.NewCollector(10 * 1024 * 1024)
 	errCol := services.NewCollector(10 * 1024 * 1024)
 
-	go io.Copy(outCol, outReader)
-	go io.Copy(errCol, errReader)
+	go io.Copy(outCol, stdout)
+	go io.Copy(errCol, stderr)
 
 	waitErr := proc.Wait()
 

@@ -93,7 +93,6 @@ type ShellRequest struct {
 	WorkingDir     string
 	TimeoutSeconds int
 	Env            map[string]string
-	UsePTY         bool
 }
 
 // ShellResponse represents the result of a local command execution.

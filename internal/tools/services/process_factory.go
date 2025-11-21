@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"io"
 	"os"
 	"os/exec"
 
@@ -34,7 +35,7 @@ func (p *OSProcess) Signal(sig os.Signal) error {
 // OSProcessFactory implements models.ProcessFactory using os/exec.
 type OSProcessFactory struct{}
 
-func (f *OSProcessFactory) Start(ctx context.Context, command []string, opts models.ProcessOptions) (models.Process, interface{}, interface{}, error) {
+func (f *OSProcessFactory) Start(ctx context.Context, command []string, opts models.ProcessOptions) (models.Process, io.Reader, io.Reader, error) {
 	if len(command) == 0 {
 		return nil, nil, nil, os.ErrInvalid
 	}
@@ -43,13 +44,8 @@ func (f *OSProcessFactory) Start(ctx context.Context, command []string, opts mod
 	cmd.Dir = opts.Dir
 	cmd.Env = opts.Env
 
-	// PTY handling would go here. For now, we'll just use pipes.
-	// If UsePTY is true, we should use pty.Start.
-	// But pty is a separate library (github.com/creack/pty).
-	// I don't have it in go.mod yet?
-	// The plan mentions `pty.Start(cmd)`.
-	// I should check if I can use it.
-	// For now, let's implement standard pipes.
+	// Explicitly close stdin to prevent interactive hangs
+	cmd.Stdin = nil
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
