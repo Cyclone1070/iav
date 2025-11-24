@@ -10,6 +10,7 @@ type WorkspaceContext struct {
 	WorkspaceRoot    string           // canonical, symlink-resolved workspace root
 	GitignoreService GitignoreService // optional, can be nil
 	CommandExecutor  CommandExecutor  // optional, for executing external commands
+	TodoStore        TodoStore        // optional, for managing todos
 
 	// Shell Configuration
 	CommandPolicy CommandPolicy

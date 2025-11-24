@@ -116,3 +116,15 @@ type CommandExecutor interface {
 	// or manage the process lifecycle (timeout, kill, etc).
 	Start(ctx context.Context, command []string, opts ProcessOptions) (Process, io.Reader, io.Reader, error)
 }
+
+// TodoStore defines the interface for storing and retrieving todos.
+// Implementations must be thread-safe.
+type TodoStore interface {
+	// Read returns the current list of todos.
+	// Returns a copy of the slice to ensure isolation.
+	Read() ([]Todo, error)
+
+	// Write replaces the current list of todos with the provided list.
+	// Stores a copy of the slice to ensure isolation.
+	Write(todos []Todo) error
+}

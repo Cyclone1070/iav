@@ -8,16 +8,15 @@ import (
 )
 
 func TestTodoTools(t *testing.T) {
-	// Helper to reset state between tests
-	resetState := func() {
-		todoMutex.Lock()
-		sessionTodos = nil
-		todoMutex.Unlock()
+	// Helper to create a context with a fresh store
+	createContext := func() *models.WorkspaceContext {
+		return &models.WorkspaceContext{
+			TodoStore: NewInMemoryTodoStore(),
+		}
 	}
 
 	t.Run("Happy Path", func(t *testing.T) {
-		resetState()
-		ctx := &models.WorkspaceContext{}
+		ctx := createContext()
 
 		// 1. Initial Read should be empty
 		readResp, err := ReadTodos(ctx)
@@ -58,8 +57,7 @@ func TestTodoTools(t *testing.T) {
 	})
 
 	t.Run("Overwrite", func(t *testing.T) {
-		resetState()
-		ctx := &models.WorkspaceContext{}
+		ctx := createContext()
 
 		// Write List A
 		listA := []models.Todo{{Description: "A", Status: models.TodoStatusPending}}
@@ -89,8 +87,7 @@ func TestTodoTools(t *testing.T) {
 	})
 
 	t.Run("Empty Write Clears", func(t *testing.T) {
-		resetState()
-		ctx := &models.WorkspaceContext{}
+		ctx := createContext()
 
 		// Write something
 		_, _ = WriteTodos(ctx, []models.Todo{{Description: "Task", Status: models.TodoStatusPending}})
@@ -112,8 +109,7 @@ func TestTodoTools(t *testing.T) {
 	})
 
 	t.Run("Data Isolation", func(t *testing.T) {
-		resetState()
-		ctx := &models.WorkspaceContext{}
+		ctx := createContext()
 
 		// Write initial data
 		initial := []models.Todo{{Description: "Original", Status: models.TodoStatusPending}}
@@ -132,9 +128,26 @@ func TestTodoTools(t *testing.T) {
 		}
 	})
 
+	t.Run("Context Isolation", func(t *testing.T) {
+		// Verify that two different contexts have different stores
+		ctx1 := createContext()
+		ctx2 := createContext()
+
+		// Write to ctx1
+		_, _ = WriteTodos(ctx1, []models.Todo{{Description: "Ctx1", Status: models.TodoStatusPending}})
+
+		// Read from ctx2 - should be empty
+		readResp, err := ReadTodos(ctx2)
+		if err != nil {
+			t.Fatalf("ReadTodos ctx2 failed: %v", err)
+		}
+		if len(readResp.Todos) != 0 {
+			t.Errorf("expected ctx2 to be empty, got %d items", len(readResp.Todos))
+		}
+	})
+
 	t.Run("Concurrency", func(t *testing.T) {
-		resetState()
-		ctx := &models.WorkspaceContext{}
+		ctx := createContext()
 		var wg sync.WaitGroup
 
 		// Launch 100 goroutines reading and writing
@@ -150,5 +163,19 @@ func TestTodoTools(t *testing.T) {
 			}(i)
 		}
 		wg.Wait()
+	})
+
+	t.Run("Missing Store", func(t *testing.T) {
+		ctx := &models.WorkspaceContext{} // No store initialized
+
+		_, err := ReadTodos(ctx)
+		if err == nil {
+			t.Error("expected error when reading with missing store, got nil")
+		}
+
+		_, err = WriteTodos(ctx, []models.Todo{})
+		if err == nil {
+			t.Error("expected error when writing with missing store, got nil")
+		}
 	})
 }
