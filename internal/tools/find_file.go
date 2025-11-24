@@ -57,18 +57,8 @@ func FindFile(ctx *models.WorkspaceContext, pattern string, searchPath string, m
 	// 6. Execute command
 	output, err := ctx.CommandExecutor.Run(context.Background(), cmd)
 	if err != nil {
-		exitCode := services.GetExitCode(err)
-		if exitCode == 1 {
-			// fd returns 1 for no matches (valid case)
-			return &models.FindFileResponse{
-				Matches:    []string{},
-				Offset:     offset,
-				Limit:      limit,
-				TotalCount: 0,
-				Truncated:  false,
-			}, nil
-		}
-		// Exit code 2+ = real error
+		// fd returns 0 even if no matches are found.
+		// Non-zero exit code indicates an actual error (e.g. invalid flag, permission denied).
 		return nil, fmt.Errorf("fd command failed: %w", err)
 	}
 

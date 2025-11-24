@@ -34,7 +34,7 @@ func TestSearchContent_BasicRegex(t *testing.T) {
 		ChecksumManager: services.NewChecksumManager(),
 		MaxFileSize:     maxFileSize,
 		WorkspaceRoot:   workspaceRoot,
-		CommandExecutor:   mockRunner,
+		CommandExecutor: mockRunner,
 	}
 
 	resp, err := SearchContent(ctx, "func .*", "", true, 0, 100)
@@ -79,7 +79,7 @@ func TestSearchContent_CaseInsensitive(t *testing.T) {
 		ChecksumManager: services.NewChecksumManager(),
 		MaxFileSize:     maxFileSize,
 		WorkspaceRoot:   workspaceRoot,
-		CommandExecutor:   mockRunner,
+		CommandExecutor: mockRunner,
 	}
 
 	_, _ = SearchContent(ctx, "pattern", "", false, 0, 100)
@@ -105,7 +105,7 @@ func TestSearchContent_PathOutsideWorkspace(t *testing.T) {
 		ChecksumManager: services.NewChecksumManager(),
 		MaxFileSize:     maxFileSize,
 		WorkspaceRoot:   workspaceRoot,
-		CommandExecutor:   &services.MockCommandExecutor{},
+		CommandExecutor: &services.MockCommandExecutor{},
 	}
 
 	_, err := SearchContent(ctx, "pattern", "../outside", true, 0, 100)
@@ -127,7 +127,7 @@ func TestSearchContent_EmptyQuery(t *testing.T) {
 		ChecksumManager: services.NewChecksumManager(),
 		MaxFileSize:     maxFileSize,
 		WorkspaceRoot:   workspaceRoot,
-		CommandExecutor:   &services.MockCommandExecutor{},
+		CommandExecutor: &services.MockCommandExecutor{},
 	}
 
 	_, err := SearchContent(ctx, "", "", true, 0, 100)
@@ -149,7 +149,7 @@ func TestSearchContent_HugeLimit(t *testing.T) {
 		ChecksumManager: services.NewChecksumManager(),
 		MaxFileSize:     maxFileSize,
 		WorkspaceRoot:   workspaceRoot,
-		CommandExecutor:   &services.MockCommandExecutor{},
+		CommandExecutor: &services.MockCommandExecutor{},
 	}
 
 	_, err := SearchContent(ctx, "pattern", "", true, 0, 1000000)
@@ -181,7 +181,7 @@ func TestSearchContent_VeryLongLine(t *testing.T) {
 		ChecksumManager: services.NewChecksumManager(),
 		MaxFileSize:     maxFileSize,
 		WorkspaceRoot:   workspaceRoot,
-		CommandExecutor:   mockRunner,
+		CommandExecutor: mockRunner,
 	}
 
 	resp, err := SearchContent(ctx, "pattern", "", true, 0, 100)
@@ -224,7 +224,7 @@ func TestSearchContent_CommandInjection(t *testing.T) {
 		ChecksumManager: services.NewChecksumManager(),
 		MaxFileSize:     maxFileSize,
 		WorkspaceRoot:   workspaceRoot,
-		CommandExecutor:   mockRunner,
+		CommandExecutor: mockRunner,
 	}
 
 	query := "foo; rm -rf /"
@@ -258,7 +258,7 @@ func TestSearchContent_NoMatches(t *testing.T) {
 		ChecksumManager: services.NewChecksumManager(),
 		MaxFileSize:     maxFileSize,
 		WorkspaceRoot:   workspaceRoot,
-		CommandExecutor:   mockRunner,
+		CommandExecutor: mockRunner,
 	}
 
 	resp, err := SearchContent(ctx, "nonexistent", "", true, 0, 100)
@@ -301,7 +301,7 @@ func TestSearchContent_Pagination(t *testing.T) {
 		ChecksumManager: services.NewChecksumManager(),
 		MaxFileSize:     maxFileSize,
 		WorkspaceRoot:   workspaceRoot,
-		CommandExecutor:   mockRunner,
+		CommandExecutor: mockRunner,
 	}
 
 	// Request offset=2, limit=2
@@ -352,7 +352,7 @@ func TestSearchContent_MultipleFiles(t *testing.T) {
 		ChecksumManager: services.NewChecksumManager(),
 		MaxFileSize:     maxFileSize,
 		WorkspaceRoot:   workspaceRoot,
-		CommandExecutor:   mockRunner,
+		CommandExecutor: mockRunner,
 	}
 
 	resp, err := SearchContent(ctx, "pattern", "", true, 0, 100)
@@ -401,7 +401,7 @@ invalid json line
 		ChecksumManager: services.NewChecksumManager(),
 		MaxFileSize:     maxFileSize,
 		WorkspaceRoot:   workspaceRoot,
-		CommandExecutor:   mockRunner,
+		CommandExecutor: mockRunner,
 	}
 
 	resp, err := SearchContent(ctx, "pattern", "", true, 0, 100)
@@ -434,7 +434,7 @@ func TestSearchContent_CommandFailure(t *testing.T) {
 		ChecksumManager: services.NewChecksumManager(),
 		MaxFileSize:     maxFileSize,
 		WorkspaceRoot:   workspaceRoot,
-		CommandExecutor:   mockRunner,
+		CommandExecutor: mockRunner,
 	}
 
 	_, err := SearchContent(ctx, "pattern", "", true, 0, 100)

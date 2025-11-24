@@ -72,4 +72,3 @@ func TestLoadGitignore(t *testing.T) {
 		}
 	})
 }
-

@@ -101,4 +101,3 @@ func splitLines(content string) []string {
 	}
 	return lines
 }
-

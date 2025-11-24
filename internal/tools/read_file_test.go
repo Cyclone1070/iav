@@ -21,8 +21,8 @@ func TestReadFile(t *testing.T) {
 			FS:              fs,
 			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: checksumManager,
-			MaxFileSize:      maxFileSize,
-			WorkspaceRoot:    workspaceRoot,
+			MaxFileSize:     maxFileSize,
+			WorkspaceRoot:   workspaceRoot,
 		}
 
 		resp, err := ReadFile(ctx, "test.txt", nil, nil)
@@ -54,8 +54,8 @@ func TestReadFile(t *testing.T) {
 			FS:              fs,
 			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: checksumManager,
-			MaxFileSize:      maxFileSize,
-			WorkspaceRoot:    workspaceRoot,
+			MaxFileSize:     maxFileSize,
+			WorkspaceRoot:   workspaceRoot,
 		}
 
 		offset := int64(5)
@@ -86,11 +86,11 @@ func TestReadFile(t *testing.T) {
 		fs.CreateFile("/workspace/binary.bin", content, 0644)
 
 		ctx := &models.WorkspaceContext{
-			FS:               fs,
-			BinaryDetector:   detector,
+			FS:              fs,
+			BinaryDetector:  detector,
 			ChecksumManager: checksumManager,
-			MaxFileSize:      maxFileSize,
-			WorkspaceRoot:    workspaceRoot,
+			MaxFileSize:     maxFileSize,
+			WorkspaceRoot:   workspaceRoot,
 		}
 
 		_, err := ReadFile(ctx, "binary.bin", nil, nil)
@@ -107,11 +107,11 @@ func TestReadFile(t *testing.T) {
 		fs.CreateFile("/workspace/large.txt", largeContent, 0644)
 
 		ctx := &models.WorkspaceContext{
-			FS:               fs,
-			BinaryDetector:   services.NewMockBinaryDetector(),
+			FS:              fs,
+			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: checksumManager,
-			MaxFileSize:      maxFileSize,
-			WorkspaceRoot:    workspaceRoot,
+			MaxFileSize:     maxFileSize,
+			WorkspaceRoot:   workspaceRoot,
 		}
 
 		_, err := ReadFile(ctx, "large.txt", nil, nil)
@@ -130,8 +130,8 @@ func TestReadFile(t *testing.T) {
 			FS:              fs,
 			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: checksumManager,
-			MaxFileSize:      maxFileSize,
-			WorkspaceRoot:    workspaceRoot,
+			MaxFileSize:     maxFileSize,
+			WorkspaceRoot:   workspaceRoot,
 		}
 
 		offset := int64(-1)
@@ -151,8 +151,8 @@ func TestReadFile(t *testing.T) {
 			FS:              fs,
 			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: checksumManager,
-			MaxFileSize:      maxFileSize,
-			WorkspaceRoot:    workspaceRoot,
+			MaxFileSize:     maxFileSize,
+			WorkspaceRoot:   workspaceRoot,
 		}
 
 		limit := int64(-1)
@@ -169,11 +169,11 @@ func TestReadFile(t *testing.T) {
 		fs.CreateFile("/workspace/test.txt", content, 0644)
 
 		ctx := &models.WorkspaceContext{
-			FS:               fs,
-			BinaryDetector:   services.NewMockBinaryDetector(),
+			FS:              fs,
+			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: checksumManager,
-			MaxFileSize:      maxFileSize,
-			WorkspaceRoot:    workspaceRoot,
+			MaxFileSize:     maxFileSize,
+			WorkspaceRoot:   workspaceRoot,
 		}
 
 		offset := int64(10000)
@@ -192,11 +192,11 @@ func TestReadFile(t *testing.T) {
 		fs.CreateDir("/workspace/subdir")
 
 		ctx := &models.WorkspaceContext{
-			FS:               fs,
-			BinaryDetector:   services.NewMockBinaryDetector(),
+			FS:              fs,
+			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: checksumManager,
-			MaxFileSize:      maxFileSize,
-			WorkspaceRoot:    workspaceRoot,
+			MaxFileSize:     maxFileSize,
+			WorkspaceRoot:   workspaceRoot,
 		}
 
 		_, err := ReadFile(ctx, "subdir", nil, nil)
@@ -212,8 +212,8 @@ func TestReadFile(t *testing.T) {
 			FS:              fs,
 			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: checksumManager,
-			MaxFileSize:      maxFileSize,
-			WorkspaceRoot:    workspaceRoot,
+			MaxFileSize:     maxFileSize,
+			WorkspaceRoot:   workspaceRoot,
 		}
 
 		_, err := ReadFile(ctx, "nonexistent.txt", nil, nil)
@@ -232,8 +232,8 @@ func TestReadFile(t *testing.T) {
 			FS:              fs,
 			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: checksumManager,
-			MaxFileSize:      maxFileSize,
-			WorkspaceRoot:    workspaceRoot,
+			MaxFileSize:     maxFileSize,
+			WorkspaceRoot:   workspaceRoot,
 		}
 
 		limit := int64(4)

@@ -25,11 +25,11 @@ func TestEditFile(t *testing.T) {
 
 		// Read file to populate cache
 		ctx := &models.WorkspaceContext{
-			FS:               fs,
-			BinaryDetector:   services.NewMockBinaryDetector(),
+			FS:              fs,
+			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: checksumManager,
-			MaxFileSize:      maxFileSize,
-			WorkspaceRoot:    workspaceRoot,
+			MaxFileSize:     maxFileSize,
+			WorkspaceRoot:   workspaceRoot,
 		}
 
 		_, err := ReadFile(ctx, "test.txt", nil, nil)
@@ -63,11 +63,11 @@ func TestEditFile(t *testing.T) {
 		fs.CreateFile("/workspace/test.txt", content, 0644)
 
 		ctx := &models.WorkspaceContext{
-			FS:               fs,
-			BinaryDetector:   services.NewMockBinaryDetector(),
+			FS:              fs,
+			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: checksumManager,
-			MaxFileSize:      maxFileSize,
-			WorkspaceRoot:    workspaceRoot,
+			MaxFileSize:     maxFileSize,
+			WorkspaceRoot:   workspaceRoot,
 		}
 
 		// Read first to populate cache
@@ -117,11 +117,11 @@ func TestEditFile(t *testing.T) {
 		fs.CreateFile("/workspace/test.txt", content, 0644)
 
 		ctx := &models.WorkspaceContext{
-			FS:               fs,
-			BinaryDetector:   services.NewMockBinaryDetector(),
+			FS:              fs,
+			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: checksumManager,
-			MaxFileSize:      maxFileSize,
-			WorkspaceRoot:    workspaceRoot,
+			MaxFileSize:     maxFileSize,
+			WorkspaceRoot:   workspaceRoot,
 		}
 
 		_, err := ReadFile(ctx, "test.txt", nil, nil)
@@ -150,11 +150,11 @@ func TestEditFile(t *testing.T) {
 		fs.CreateFile("/workspace/test.txt", content, 0644)
 
 		ctx := &models.WorkspaceContext{
-			FS:               fs,
-			BinaryDetector:   services.NewMockBinaryDetector(),
+			FS:              fs,
+			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: checksumManager,
-			MaxFileSize:      maxFileSize,
-			WorkspaceRoot:    workspaceRoot,
+			MaxFileSize:     maxFileSize,
+			WorkspaceRoot:   workspaceRoot,
 		}
 
 		_, err := ReadFile(ctx, "test.txt", nil, nil)
@@ -186,11 +186,11 @@ func TestEditFile(t *testing.T) {
 		fs.CreateFile("/workspace/binary.bin", content, 0644)
 
 		ctx := &models.WorkspaceContext{
-			FS:               fs,
-			BinaryDetector:   detector,
+			FS:              fs,
+			BinaryDetector:  detector,
 			ChecksumManager: checksumManager,
-			MaxFileSize:      maxFileSize,
-			WorkspaceRoot:    workspaceRoot,
+			MaxFileSize:     maxFileSize,
+			WorkspaceRoot:   workspaceRoot,
 		}
 
 		ops := []models.Operation{
@@ -215,11 +215,11 @@ func TestEditFile(t *testing.T) {
 		fs.CreateFile("/workspace/test.txt", content, originalPerm)
 
 		ctx := &models.WorkspaceContext{
-			FS:               fs,
-			BinaryDetector:   services.NewMockBinaryDetector(),
+			FS:              fs,
+			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: checksumManager,
-			MaxFileSize:      maxFileSize,
-			WorkspaceRoot:    workspaceRoot,
+			MaxFileSize:     maxFileSize,
+			WorkspaceRoot:   workspaceRoot,
 		}
 
 		_, err := ReadFile(ctx, "test.txt", nil, nil)
@@ -258,11 +258,11 @@ func TestEditFile(t *testing.T) {
 		fs.CreateFile("/workspace/test.txt", content, 0644)
 
 		ctx := &models.WorkspaceContext{
-			FS:               fs,
-			BinaryDetector:   services.NewMockBinaryDetector(),
+			FS:              fs,
+			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: checksumManager,
-			MaxFileSize:      maxFileSize,
-			WorkspaceRoot:    workspaceRoot,
+			MaxFileSize:     maxFileSize,
+			WorkspaceRoot:   workspaceRoot,
 		}
 
 		_, err := ReadFile(ctx, "test.txt", nil, nil)
@@ -291,8 +291,8 @@ func TestEditFile(t *testing.T) {
 			FS:              fs,
 			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: checksumManager,
-			MaxFileSize:      maxFileSize,
-			WorkspaceRoot:    workspaceRoot,
+			MaxFileSize:     maxFileSize,
+			WorkspaceRoot:   workspaceRoot,
 		}
 
 		ops := []models.Operation{
@@ -322,11 +322,11 @@ func TestEditFile(t *testing.T) {
 		fs.CreateFile("/workspace/test.txt", content, 0644)
 
 		ctx := &models.WorkspaceContext{
-			FS:               fs,
-			BinaryDetector:   services.NewMockBinaryDetector(),
+			FS:              fs,
+			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: checksumManager,
-			MaxFileSize:      maxFileSize,
-			WorkspaceRoot:    workspaceRoot,
+			MaxFileSize:     maxFileSize,
+			WorkspaceRoot:   workspaceRoot,
 		}
 
 		_, err := ReadFile(ctx, "test.txt", nil, nil)
@@ -361,11 +361,11 @@ func TestEditFile(t *testing.T) {
 		fs.CreateFile("/workspace/test.txt", originalContent, 0o644)
 
 		ctx := &models.WorkspaceContext{
-			FS:               fs,
-			BinaryDetector:   services.NewMockBinaryDetector(),
+			FS:              fs,
+			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: checksumManager,
-			MaxFileSize:      maxFileSize,
-			WorkspaceRoot:    workspaceRoot,
+			MaxFileSize:     maxFileSize,
+			WorkspaceRoot:   workspaceRoot,
 		}
 
 		// Read file to populate cache
@@ -403,11 +403,11 @@ func TestEditFile(t *testing.T) {
 		fs.CreateFile("/workspace/target.txt", content, 0644)
 
 		ctx := &models.WorkspaceContext{
-			FS:               fs,
-			BinaryDetector:   services.NewMockBinaryDetector(),
+			FS:              fs,
+			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: checksumManager,
-			MaxFileSize:      maxFileSize,
-			WorkspaceRoot:    workspaceRoot,
+			MaxFileSize:     maxFileSize,
+			WorkspaceRoot:   workspaceRoot,
 		}
 
 		// Read first to populate cache
@@ -454,11 +454,11 @@ func TestEditFile(t *testing.T) {
 		fs.CreateFile("/tmp/outside/file.txt", []byte("content"), 0644)
 
 		ctx := &models.WorkspaceContext{
-			FS:               fs,
-			BinaryDetector:   services.NewMockBinaryDetector(),
+			FS:              fs,
+			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: checksumManager,
-			MaxFileSize:      maxFileSize,
-			WorkspaceRoot:    workspaceRoot,
+			MaxFileSize:     maxFileSize,
+			WorkspaceRoot:   workspaceRoot,
 		}
 
 		ops := []models.Operation{

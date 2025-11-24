@@ -49,4 +49,3 @@ func (m *checksumManagerImpl) Clear() {
 	defer m.mu.Unlock()
 	m.store = make(map[string]string)
 }
-
