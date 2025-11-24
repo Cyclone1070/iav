@@ -2,6 +2,7 @@ package services
 
 import (
 	"path/filepath"
+	"slices"
 
 	"github.com/Cyclone1070/deployforme/internal/tools/models"
 )
@@ -90,17 +91,13 @@ func EvaluatePolicy(policy models.CommandPolicy, command []string) error {
 	}
 
 	// 2. Check Allow List
-	for _, allowed := range policy.Allow {
-		if allowed == root {
-			return nil
-		}
+	if slices.Contains(policy.Allow, root) {
+		return nil
 	}
 
 	// 3. Check Ask List
-	for _, ask := range policy.Ask {
-		if ask == root {
-			return models.ErrShellApprovalRequired
-		}
+	if slices.Contains(policy.Ask, root) {
+		return models.ErrShellApprovalRequired
 	}
 
 	// 4. Default Deny

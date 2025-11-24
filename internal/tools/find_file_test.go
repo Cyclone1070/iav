@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"fmt"
+	"slices"
 	"testing"
 
 	"github.com/Cyclone1070/deployforme/internal/tools/models"
@@ -60,7 +61,7 @@ func TestFindFile_Pagination(t *testing.T) {
 
 	// Simulate 10 files
 	var output string
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		output += fmt.Sprintf("/workspace/file%d.txt\n", i)
 	}
 
@@ -254,13 +255,7 @@ func TestFindFile_ShellInjection(t *testing.T) {
 	_, _ = FindFile(ctx, pattern, "", 0, 0, 100)
 
 	// Verify pattern is passed as literal argument, not shell-interpreted
-	found := false
-	for _, arg := range capturedCmd {
-		if arg == pattern {
-			found = true
-			break
-		}
-	}
+	found := slices.Contains(capturedCmd, pattern)
 
 	if !found {
 		t.Errorf("expected pattern to be passed as literal argument, got cmd: %v", capturedCmd)
@@ -328,7 +323,7 @@ func TestFindFile_DeeplyNested(t *testing.T) {
 
 	// Simulate path with 100 segments
 	deepPath := "/workspace"
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		deepPath += fmt.Sprintf("/dir%d", i)
 	}
 	deepPath += "/file.txt"

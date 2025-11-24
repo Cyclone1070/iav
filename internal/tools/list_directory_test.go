@@ -753,7 +753,7 @@ func TestListDirectory_LargeDirectory(t *testing.T) {
 		fs := services.NewMockFileSystem(maxFileSize)
 		fs.CreateDir("/workspace")
 		// Create 5000 files
-		for i := 0; i < 5000; i++ {
+		for i := range 5000 {
 			fs.CreateFile(fmt.Sprintf("/workspace/file%d.txt", i), []byte("content"), 0o644)
 		}
 
@@ -816,7 +816,7 @@ func TestListDirectory_OffsetBeyondEnd(t *testing.T) {
 		fs := services.NewMockFileSystem(maxFileSize)
 		fs.CreateDir("/workspace")
 		// Create 10 files
-		for i := 0; i < 10; i++ {
+		for i := range 10 {
 			fs.CreateFile(fmt.Sprintf("/workspace/file%d.txt", i), []byte("content"), 0o644)
 		}
 
@@ -978,11 +978,11 @@ func TestListDirectory_RecursivePagination(t *testing.T) {
 	fs.CreateDir("/workspace")
 
 	// Create 20 files across multiple directories
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		fs.CreateFile(fmt.Sprintf("/workspace/file%d.txt", i), []byte("content"), 0o644)
 	}
 	fs.CreateDir("/workspace/subdir")
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		fs.CreateFile(fmt.Sprintf("/workspace/subdir/file%d.txt", i), []byte("content"), 0o644)
 	}
 

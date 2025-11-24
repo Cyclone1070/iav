@@ -26,7 +26,7 @@ func EnsureDockerReady(ctx context.Context, runner models.CommandRunner, config 
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
 
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
