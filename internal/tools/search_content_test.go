@@ -22,7 +22,7 @@ func TestSearchContent_BasicRegex(t *testing.T) {
 	rgOutput := `{"type":"match","data":{"path":{"text":"/workspace/file.go"},"lines":{"text":"func foo()"},"line_number":10}}
 {"type":"match","data":{"path":{"text":"/workspace/file.go"},"lines":{"text":"func bar()"},"line_number":20}}`
 
-	mockRunner := &services.MockCommandRunner{
+	mockRunner := &services.MockCommandExecutor{
 		RunFunc: func(ctx context.Context, cmd []string) ([]byte, error) {
 			return []byte(rgOutput), nil
 		},
@@ -34,7 +34,7 @@ func TestSearchContent_BasicRegex(t *testing.T) {
 		ChecksumManager: services.NewChecksumManager(),
 		MaxFileSize:     maxFileSize,
 		WorkspaceRoot:   workspaceRoot,
-		CommandRunner:   mockRunner,
+		CommandExecutor:   mockRunner,
 	}
 
 	resp, err := SearchContent(ctx, "func .*", "", true, 0, 100)
@@ -66,7 +66,7 @@ func TestSearchContent_CaseInsensitive(t *testing.T) {
 	fs.CreateDir("/workspace")
 
 	var capturedCmd []string
-	mockRunner := &services.MockCommandRunner{
+	mockRunner := &services.MockCommandExecutor{
 		RunFunc: func(ctx context.Context, cmd []string) ([]byte, error) {
 			capturedCmd = cmd
 			return []byte(""), &services.MockExitError{Code: 1} // No matches
@@ -79,7 +79,7 @@ func TestSearchContent_CaseInsensitive(t *testing.T) {
 		ChecksumManager: services.NewChecksumManager(),
 		MaxFileSize:     maxFileSize,
 		WorkspaceRoot:   workspaceRoot,
-		CommandRunner:   mockRunner,
+		CommandExecutor:   mockRunner,
 	}
 
 	_, _ = SearchContent(ctx, "pattern", "", false, 0, 100)
@@ -105,7 +105,7 @@ func TestSearchContent_PathOutsideWorkspace(t *testing.T) {
 		ChecksumManager: services.NewChecksumManager(),
 		MaxFileSize:     maxFileSize,
 		WorkspaceRoot:   workspaceRoot,
-		CommandRunner:   &services.MockCommandRunner{},
+		CommandExecutor:   &services.MockCommandExecutor{},
 	}
 
 	_, err := SearchContent(ctx, "pattern", "../outside", true, 0, 100)
@@ -127,7 +127,7 @@ func TestSearchContent_EmptyQuery(t *testing.T) {
 		ChecksumManager: services.NewChecksumManager(),
 		MaxFileSize:     maxFileSize,
 		WorkspaceRoot:   workspaceRoot,
-		CommandRunner:   &services.MockCommandRunner{},
+		CommandExecutor:   &services.MockCommandExecutor{},
 	}
 
 	_, err := SearchContent(ctx, "", "", true, 0, 100)
@@ -149,7 +149,7 @@ func TestSearchContent_HugeLimit(t *testing.T) {
 		ChecksumManager: services.NewChecksumManager(),
 		MaxFileSize:     maxFileSize,
 		WorkspaceRoot:   workspaceRoot,
-		CommandRunner:   &services.MockCommandRunner{},
+		CommandExecutor:   &services.MockCommandExecutor{},
 	}
 
 	_, err := SearchContent(ctx, "pattern", "", true, 0, 1000000)
@@ -169,7 +169,7 @@ func TestSearchContent_VeryLongLine(t *testing.T) {
 	longLine := strings.Repeat("a", 1024*1024)
 	rgOutput := fmt.Sprintf(`{"type":"match","data":{"path":{"text":"/workspace/file.txt"},"lines":{"text":"%s"},"line_number":1}}`, longLine)
 
-	mockRunner := &services.MockCommandRunner{
+	mockRunner := &services.MockCommandExecutor{
 		RunFunc: func(ctx context.Context, cmd []string) ([]byte, error) {
 			return []byte(rgOutput), nil
 		},
@@ -181,7 +181,7 @@ func TestSearchContent_VeryLongLine(t *testing.T) {
 		ChecksumManager: services.NewChecksumManager(),
 		MaxFileSize:     maxFileSize,
 		WorkspaceRoot:   workspaceRoot,
-		CommandRunner:   mockRunner,
+		CommandExecutor:   mockRunner,
 	}
 
 	resp, err := SearchContent(ctx, "pattern", "", true, 0, 100)
@@ -211,7 +211,7 @@ func TestSearchContent_CommandInjection(t *testing.T) {
 	fs.CreateDir("/workspace")
 
 	var capturedCmd []string
-	mockRunner := &services.MockCommandRunner{
+	mockRunner := &services.MockCommandExecutor{
 		RunFunc: func(ctx context.Context, cmd []string) ([]byte, error) {
 			capturedCmd = cmd
 			return []byte(""), &services.MockExitError{Code: 1}
@@ -224,7 +224,7 @@ func TestSearchContent_CommandInjection(t *testing.T) {
 		ChecksumManager: services.NewChecksumManager(),
 		MaxFileSize:     maxFileSize,
 		WorkspaceRoot:   workspaceRoot,
-		CommandRunner:   mockRunner,
+		CommandExecutor:   mockRunner,
 	}
 
 	query := "foo; rm -rf /"
@@ -245,7 +245,7 @@ func TestSearchContent_NoMatches(t *testing.T) {
 	fs := services.NewMockFileSystem(maxFileSize)
 	fs.CreateDir("/workspace")
 
-	mockRunner := &services.MockCommandRunner{
+	mockRunner := &services.MockCommandExecutor{
 		RunFunc: func(ctx context.Context, cmd []string) ([]byte, error) {
 			// Simulate rg returning exit code 1 (no matches)
 			return []byte(""), &services.MockExitError{Code: 1}
@@ -258,7 +258,7 @@ func TestSearchContent_NoMatches(t *testing.T) {
 		ChecksumManager: services.NewChecksumManager(),
 		MaxFileSize:     maxFileSize,
 		WorkspaceRoot:   workspaceRoot,
-		CommandRunner:   mockRunner,
+		CommandExecutor:   mockRunner,
 	}
 
 	resp, err := SearchContent(ctx, "nonexistent", "", true, 0, 100)
@@ -289,7 +289,7 @@ func TestSearchContent_Pagination(t *testing.T) {
 `, i, i+1)
 	}
 
-	mockRunner := &services.MockCommandRunner{
+	mockRunner := &services.MockCommandExecutor{
 		RunFunc: func(ctx context.Context, cmd []string) ([]byte, error) {
 			return []byte(rgOutput), nil
 		},
@@ -301,7 +301,7 @@ func TestSearchContent_Pagination(t *testing.T) {
 		ChecksumManager: services.NewChecksumManager(),
 		MaxFileSize:     maxFileSize,
 		WorkspaceRoot:   workspaceRoot,
-		CommandRunner:   mockRunner,
+		CommandExecutor:   mockRunner,
 	}
 
 	// Request offset=2, limit=2
@@ -340,7 +340,7 @@ func TestSearchContent_MultipleFiles(t *testing.T) {
 {"type":"match","data":{"path":{"text":"/workspace/a.txt"},"lines":{"text":"match"},"line_number":10}}
 {"type":"match","data":{"path":{"text":"/workspace/a.txt"},"lines":{"text":"match"},"line_number":5}}`
 
-	mockRunner := &services.MockCommandRunner{
+	mockRunner := &services.MockCommandExecutor{
 		RunFunc: func(ctx context.Context, cmd []string) ([]byte, error) {
 			return []byte(rgOutput), nil
 		},
@@ -352,7 +352,7 @@ func TestSearchContent_MultipleFiles(t *testing.T) {
 		ChecksumManager: services.NewChecksumManager(),
 		MaxFileSize:     maxFileSize,
 		WorkspaceRoot:   workspaceRoot,
-		CommandRunner:   mockRunner,
+		CommandExecutor:   mockRunner,
 	}
 
 	resp, err := SearchContent(ctx, "pattern", "", true, 0, 100)
@@ -389,7 +389,7 @@ func TestSearchContent_InvalidJSON(t *testing.T) {
 invalid json line
 {"type":"match","data":{"path":{"text":"/workspace/file.txt"},"lines":{"text":"also valid"},"line_number":2}}`
 
-	mockRunner := &services.MockCommandRunner{
+	mockRunner := &services.MockCommandExecutor{
 		RunFunc: func(ctx context.Context, cmd []string) ([]byte, error) {
 			return []byte(rgOutput), nil
 		},
@@ -401,7 +401,7 @@ invalid json line
 		ChecksumManager: services.NewChecksumManager(),
 		MaxFileSize:     maxFileSize,
 		WorkspaceRoot:   workspaceRoot,
-		CommandRunner:   mockRunner,
+		CommandExecutor:   mockRunner,
 	}
 
 	resp, err := SearchContent(ctx, "pattern", "", true, 0, 100)
@@ -422,7 +422,7 @@ func TestSearchContent_CommandFailure(t *testing.T) {
 	fs := services.NewMockFileSystem(maxFileSize)
 	fs.CreateDir("/workspace")
 
-	mockRunner := &services.MockCommandRunner{
+	mockRunner := &services.MockCommandExecutor{
 		RunFunc: func(ctx context.Context, cmd []string) ([]byte, error) {
 			return []byte(""), &services.MockExitError{Code: 2}
 		},
@@ -434,7 +434,7 @@ func TestSearchContent_CommandFailure(t *testing.T) {
 		ChecksumManager: services.NewChecksumManager(),
 		MaxFileSize:     maxFileSize,
 		WorkspaceRoot:   workspaceRoot,
-		CommandRunner:   mockRunner,
+		CommandExecutor:   mockRunner,
 	}
 
 	_, err := SearchContent(ctx, "pattern", "", true, 0, 100)

@@ -287,7 +287,7 @@ func handleShell(ctx *models.WorkspaceContext, args []string) {
 	}
 
 	shellTool := &tools.ShellTool{
-		ProcessFactory: &services.OSProcessFactory{},
+		CommandExecutor: &services.OSCommandExecutor{},
 	}
 
 	resp, err := shellTool.Run(context.Background(), ctx, req)

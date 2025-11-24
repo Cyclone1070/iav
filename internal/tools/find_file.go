@@ -55,7 +55,7 @@ func FindFile(ctx *models.WorkspaceContext, pattern string, searchPath string, m
 	cmd = append(cmd, absSearchPath)
 
 	// 6. Execute command
-	output, err := ctx.CommandRunner.Run(context.Background(), cmd)
+	output, err := ctx.CommandExecutor.Run(context.Background(), cmd)
 	if err != nil {
 		exitCode := services.GetExitCode(err)
 		if exitCode == 1 {

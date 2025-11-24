@@ -119,6 +119,7 @@ type ShellRequest struct {
 	WorkingDir     string
 	TimeoutSeconds int
 	Env            map[string]string
+	EnvFiles       []string // Paths to .env files to load (relative to workspace root)
 }
 
 // ShellResponse represents the result of a local command execution.

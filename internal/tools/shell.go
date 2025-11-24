@@ -12,7 +12,7 @@ import (
 
 // ShellTool executes commands on the local machine.
 type ShellTool struct {
-	ProcessFactory models.ProcessFactory
+	CommandExecutor models.CommandExecutor
 }
 
 // Run executes a shell command.
@@ -41,20 +41,37 @@ func (t *ShellTool) Run(ctx context.Context, wCtx *models.WorkspaceContext, req 
 
 	// 4. Docker Readiness
 	if services.IsDockerCommand(req.Command) {
-		// Create a simple runner using our ProcessFactory
-		runner := &processFactoryRunner{
-			ctx:     ctx,
-			factory: t.ProcessFactory,
-			// Docker commands run in workspace root or default
-			dir: wCtx.WorkspaceRoot,
-		}
-		if err := services.EnsureDockerReady(ctx, runner, wCtx.DockerConfig); err != nil {
+		if err := services.EnsureDockerReady(ctx, t.CommandExecutor, wCtx.DockerConfig); err != nil {
 			return nil, err
 		}
 	}
 
 	// 5. Execution Setup
+	// We get the current environment variables and append any custom environment variables from the request.
+	// This allows the command to have access to both the system's environment and any custom environment variables.
 	env := os.Environ()
+
+	// Load environment variables from .env files (if specified)
+	for _, envFile := range req.EnvFiles {
+		// Resolve the env file path relative to workspace root
+		envFilePath, _, err := services.Resolve(wCtx, envFile)
+		if err != nil {
+			return nil, fmt.Errorf("failed to resolve env file %s: %w", envFile, err)
+		}
+
+		// Parse the env file
+		envVars, err := services.ParseEnvFile(envFilePath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse env file %s: %w", envFile, err)
+		}
+
+		// Merge into environment (EnvFiles override system env)
+		for k, v := range envVars {
+			env = append(env, k+"="+v)
+		}
+	}
+
+	// Request.Env overrides everything
 	for k, v := range req.Env {
 		env = append(env, k+"="+v)
 	}
@@ -64,7 +81,7 @@ func (t *ShellTool) Run(ctx context.Context, wCtx *models.WorkspaceContext, req 
 		Env: env,
 	}
 
-	proc, stdout, stderr, err := t.ProcessFactory.Start(ctx, req.Command, opts)
+	proc, stdout, stderr, err := t.CommandExecutor.Start(ctx, req.Command, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -123,54 +140,11 @@ func (t *ShellTool) Run(ctx context.Context, wCtx *models.WorkspaceContext, req 
 		// We need to implement a runner that captures output.
 		// Let's skip this for now or implement a simple one.
 
-		runner := &processFactoryRunner{
-			ctx:     ctx,
-			factory: t.ProcessFactory,
-			dir:     wd,
-		}
-		ids, err := services.CollectComposeContainers(ctx, runner, wd)
+		ids, err := services.CollectComposeContainers(ctx, t.CommandExecutor, wd)
 		if err == nil {
-			resp.Notes = append(resp.Notes, noteDockerContainerStarted(ids))
+			resp.Notes = append(resp.Notes, services.FormatContainerStartedNote(ids))
 		}
 	}
 
 	return resp, nil
-}
-
-// processFactoryRunner implements models.CommandRunner using ProcessFactory
-type processFactoryRunner struct {
-	ctx     context.Context
-	factory models.ProcessFactory
-	dir     string
-}
-
-func (r *processFactoryRunner) Run(ctx context.Context, command []string) ([]byte, error) {
-	opts := models.ProcessOptions{
-		Dir: r.dir,
-	}
-	proc, stdout, stderr, err := r.factory.Start(r.ctx, command, opts)
-	if err != nil {
-		return nil, err
-	}
-
-	stdoutStr, stderrStr, _, _ := services.CollectProcessOutput(stdout, stderr, int(models.DefaultMaxCommandOutputSize))
-
-	waitErr := proc.Wait()
-
-	// Combine output
-	output := stdoutStr + stderrStr
-
-	return []byte(output), waitErr
-}
-
-// noteDockerContainerStarted returns a note about started containers.
-func noteDockerContainerStarted(ids []string) string {
-	if len(ids) == 0 {
-		return ""
-	}
-	count := len(ids)
-	if count == 1 {
-		return fmt.Sprintf("Started 1 Docker container: %s", ids[0])
-	}
-	return fmt.Sprintf("Started %d Docker containers", count)
 }

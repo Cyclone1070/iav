@@ -9,7 +9,7 @@ type WorkspaceContext struct {
 	MaxFileSize      int64
 	WorkspaceRoot    string           // canonical, symlink-resolved workspace root
 	GitignoreService GitignoreService // optional, can be nil
-	CommandRunner    CommandRunner    // optional, for executing external commands
+	CommandExecutor  CommandExecutor  // optional, for executing external commands
 
 	// Shell Configuration
 	CommandPolicy CommandPolicy

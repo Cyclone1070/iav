@@ -43,12 +43,20 @@ func (m *MockProcess) Signal(sig os.Signal) error {
 	return nil
 }
 
-// MockProcessFactory implements models.ProcessFactory
-type MockProcessFactory struct {
+// MockCommandExecutor implements models.CommandExecutor
+type MockCommandExecutor struct {
+	RunFunc   func(ctx context.Context, command []string) ([]byte, error)
 	StartFunc func(ctx context.Context, command []string, opts models.ProcessOptions) (models.Process, io.Reader, io.Reader, error)
 }
 
-func (m *MockProcessFactory) Start(ctx context.Context, command []string, opts models.ProcessOptions) (models.Process, io.Reader, io.Reader, error) {
+func (m *MockCommandExecutor) Run(ctx context.Context, command []string) ([]byte, error) {
+	if m.RunFunc != nil {
+		return m.RunFunc(ctx, command)
+	}
+	return nil, errors.New("RunFunc not set")
+}
+
+func (m *MockCommandExecutor) Start(ctx context.Context, command []string, opts models.ProcessOptions) (models.Process, io.Reader, io.Reader, error) {
 	if m.StartFunc != nil {
 		return m.StartFunc(ctx, command, opts)
 	}
@@ -65,7 +73,7 @@ func TestShellTool_Run_SimpleCommand(t *testing.T) {
 		CommandPolicy: models.CommandPolicy{Allow: []string{"echo"}},
 	}
 
-	factory := &MockProcessFactory{
+	factory := &MockCommandExecutor{
 		StartFunc: func(ctx context.Context, command []string, opts models.ProcessOptions) (models.Process, io.Reader, io.Reader, error) {
 			if command[0] != "echo" {
 				return nil, nil, nil, errors.New("unexpected command")
@@ -79,7 +87,7 @@ func TestShellTool_Run_SimpleCommand(t *testing.T) {
 		},
 	}
 
-	tool := &ShellTool{ProcessFactory: factory}
+	tool := &ShellTool{CommandExecutor: factory}
 	req := models.ShellRequest{
 		Command: []string{"echo", "hello"},
 	}
@@ -108,7 +116,7 @@ func TestShellTool_Run_WorkingDir(t *testing.T) {
 	}
 
 	var capturedDir string
-	factory := &MockProcessFactory{
+	factory := &MockCommandExecutor{
 		StartFunc: func(ctx context.Context, command []string, opts models.ProcessOptions) (models.Process, io.Reader, io.Reader, error) {
 			capturedDir = opts.Dir
 			proc := &MockProcess{WaitFunc: func() error { return nil }}
@@ -116,7 +124,7 @@ func TestShellTool_Run_WorkingDir(t *testing.T) {
 		},
 	}
 
-	tool := &ShellTool{ProcessFactory: factory}
+	tool := &ShellTool{CommandExecutor: factory}
 	req := models.ShellRequest{
 		Command:    []string{"pwd"},
 		WorkingDir: "subdir",
@@ -144,7 +152,7 @@ func TestShellTool_Run_Env(t *testing.T) {
 	}
 
 	var capturedEnv []string
-	factory := &MockProcessFactory{
+	factory := &MockCommandExecutor{
 		StartFunc: func(ctx context.Context, command []string, opts models.ProcessOptions) (models.Process, io.Reader, io.Reader, error) {
 			capturedEnv = opts.Env
 			proc := &MockProcess{WaitFunc: func() error { return nil }}
@@ -152,7 +160,7 @@ func TestShellTool_Run_Env(t *testing.T) {
 		},
 	}
 
-	tool := &ShellTool{ProcessFactory: factory}
+	tool := &ShellTool{CommandExecutor: factory}
 	req := models.ShellRequest{
 		Command: []string{"env"},
 		Env: map[string]string{
@@ -195,7 +203,7 @@ func TestShellTool_Run_EmptyCommand(t *testing.T) {
 		CommandPolicy: models.CommandPolicy{Allow: []string{"*"}},
 	}
 
-	tool := &ShellTool{ProcessFactory: &MockProcessFactory{}}
+	tool := &ShellTool{CommandExecutor: &MockCommandExecutor{}}
 	req := models.ShellRequest{Command: []string{}}
 
 	_, err := tool.Run(context.Background(), wCtx, req)
@@ -214,7 +222,7 @@ func TestShellTool_Run_OutsideWorkspace(t *testing.T) {
 		CommandPolicy: models.CommandPolicy{Allow: []string{"ls"}},
 	}
 
-	tool := &ShellTool{ProcessFactory: &MockProcessFactory{}}
+	tool := &ShellTool{CommandExecutor: &MockCommandExecutor{}}
 	req := models.ShellRequest{
 		Command:    []string{"ls"},
 		WorkingDir: "../outside",
@@ -236,7 +244,7 @@ func TestShellTool_Run_PolicyRejected(t *testing.T) {
 		CommandPolicy: models.CommandPolicy{Allow: []string{"ls"}},
 	}
 
-	tool := &ShellTool{ProcessFactory: &MockProcessFactory{}}
+	tool := &ShellTool{CommandExecutor: &MockCommandExecutor{}}
 	req := models.ShellRequest{Command: []string{"rm", "-rf", "/"}}
 
 	_, err := tool.Run(context.Background(), wCtx, req)
@@ -255,7 +263,7 @@ func TestShellTool_Run_NonZeroExit(t *testing.T) {
 		CommandPolicy: models.CommandPolicy{Allow: []string{"false"}},
 	}
 
-	factory := &MockProcessFactory{
+	factory := &MockCommandExecutor{
 		StartFunc: func(ctx context.Context, command []string, opts models.ProcessOptions) (models.Process, io.Reader, io.Reader, error) {
 			proc := &MockProcess{
 				WaitFunc: func() error {
@@ -266,7 +274,7 @@ func TestShellTool_Run_NonZeroExit(t *testing.T) {
 		},
 	}
 
-	tool := &ShellTool{ProcessFactory: factory}
+	tool := &ShellTool{CommandExecutor: factory}
 	req := models.ShellRequest{Command: []string{"false"}}
 
 	resp, err := tool.Run(context.Background(), wCtx, req)
@@ -289,14 +297,14 @@ func TestShellTool_Run_BinaryOutput(t *testing.T) {
 	}
 
 	binaryData := []byte{0x00, 0x01, 0x02, 0xFF, 0xFE}
-	factory := &MockProcessFactory{
+	factory := &MockCommandExecutor{
 		StartFunc: func(ctx context.Context, command []string, opts models.ProcessOptions) (models.Process, io.Reader, io.Reader, error) {
 			proc := &MockProcess{WaitFunc: func() error { return nil }}
 			return proc, bytes.NewReader(binaryData), strings.NewReader(""), nil
 		},
 	}
 
-	tool := &ShellTool{ProcessFactory: factory}
+	tool := &ShellTool{CommandExecutor: factory}
 	req := models.ShellRequest{Command: []string{"cat", "binary.bin"}}
 
 	resp, err := tool.Run(context.Background(), wCtx, req)
@@ -319,7 +327,7 @@ func TestShellTool_Run_CommandInjection(t *testing.T) {
 	}
 
 	var capturedCommand []string
-	factory := &MockProcessFactory{
+	factory := &MockCommandExecutor{
 		StartFunc: func(ctx context.Context, command []string, opts models.ProcessOptions) (models.Process, io.Reader, io.Reader, error) {
 			capturedCommand = command
 			proc := &MockProcess{WaitFunc: func() error { return nil }}
@@ -327,7 +335,7 @@ func TestShellTool_Run_CommandInjection(t *testing.T) {
 		},
 	}
 
-	tool := &ShellTool{ProcessFactory: factory}
+	tool := &ShellTool{CommandExecutor: factory}
 	req := models.ShellRequest{Command: []string{"echo", "hello; rm -rf /"}}
 
 	_, err := tool.Run(context.Background(), wCtx, req)
@@ -358,14 +366,14 @@ func TestShellTool_Run_HugeOutput(t *testing.T) {
 		hugeData[i] = 'A'
 	}
 
-	factory := &MockProcessFactory{
+	factory := &MockCommandExecutor{
 		StartFunc: func(ctx context.Context, command []string, opts models.ProcessOptions) (models.Process, io.Reader, io.Reader, error) {
 			proc := &MockProcess{WaitFunc: func() error { return nil }}
 			return proc, bytes.NewReader(hugeData), strings.NewReader(""), nil
 		},
 	}
 
-	tool := &ShellTool{ProcessFactory: factory}
+	tool := &ShellTool{CommandExecutor: factory}
 	req := models.ShellRequest{Command: []string{"cat", "huge.txt"}}
 
 	resp, err := tool.Run(context.Background(), wCtx, req)
@@ -390,7 +398,7 @@ func TestShellTool_Run_Timeout(t *testing.T) {
 		CommandPolicy: models.CommandPolicy{Allow: []string{"sleep"}},
 	}
 
-	factory := &MockProcessFactory{
+	factory := &MockCommandExecutor{
 		StartFunc: func(ctx context.Context, command []string, opts models.ProcessOptions) (models.Process, io.Reader, io.Reader, error) {
 			proc := &MockProcess{
 				WaitFunc: func() error {
@@ -408,7 +416,7 @@ func TestShellTool_Run_Timeout(t *testing.T) {
 		},
 	}
 
-	tool := &ShellTool{ProcessFactory: factory}
+	tool := &ShellTool{CommandExecutor: factory}
 	req := models.ShellRequest{
 		Command:        []string{"sleep", "10"},
 		TimeoutSeconds: 1,
@@ -433,11 +441,15 @@ func TestShellTool_Run_DockerCheck(t *testing.T) {
 		},
 	}
 
-	factory := &MockProcessFactory{
-		StartFunc: func(ctx context.Context, command []string, opts models.ProcessOptions) (models.Process, io.Reader, io.Reader, error) {
-			if command[0] == "docker" && command[1] == "info" {
-				return &MockProcess{}, strings.NewReader(""), strings.NewReader(""), nil
+	factory := &MockCommandExecutor{
+		RunFunc: func(ctx context.Context, command []string) ([]byte, error) {
+			// Handle Docker check command
+			if len(command) >= 2 && command[0] == "docker" && command[1] == "info" {
+				return []byte(""), nil
 			}
+			return nil, errors.New("unexpected command in RunFunc")
+		},
+		StartFunc: func(ctx context.Context, command []string, opts models.ProcessOptions) (models.Process, io.Reader, io.Reader, error) {
 			if command[0] == "docker" && command[1] == "run" {
 				return &MockProcess{}, strings.NewReader("container running"), strings.NewReader(""), nil
 			}
@@ -445,7 +457,7 @@ func TestShellTool_Run_DockerCheck(t *testing.T) {
 		},
 	}
 
-	tool := &ShellTool{ProcessFactory: factory}
+	tool := &ShellTool{CommandExecutor: factory}
 	req := models.ShellRequest{Command: []string{"docker", "run", "hello"}}
 
 	resp, err := tool.Run(context.Background(), wCtx, req)
@@ -468,7 +480,7 @@ func TestShellTool_Run_EnvInjection(t *testing.T) {
 	}
 
 	var capturedEnv []string
-	factory := &MockProcessFactory{
+	factory := &MockCommandExecutor{
 		StartFunc: func(ctx context.Context, command []string, opts models.ProcessOptions) (models.Process, io.Reader, io.Reader, error) {
 			capturedEnv = opts.Env
 			proc := &MockProcess{WaitFunc: func() error { return nil }}
@@ -476,7 +488,7 @@ func TestShellTool_Run_EnvInjection(t *testing.T) {
 		},
 	}
 
-	tool := &ShellTool{ProcessFactory: factory}
+	tool := &ShellTool{CommandExecutor: factory}
 	req := models.ShellRequest{
 		Command: []string{"env"},
 		Env:     map[string]string{"PATH": ""},
@@ -503,7 +515,7 @@ func TestShellTool_Run_ContextCancellation(t *testing.T) {
 		CommandPolicy: models.CommandPolicy{Allow: []string{"sleep"}},
 	}
 
-	factory := &MockProcessFactory{
+	factory := &MockCommandExecutor{
 		StartFunc: func(ctx context.Context, command []string, opts models.ProcessOptions) (models.Process, io.Reader, io.Reader, error) {
 			proc := &MockProcess{
 				WaitFunc: func() error {
@@ -515,7 +527,7 @@ func TestShellTool_Run_ContextCancellation(t *testing.T) {
 		},
 	}
 
-	tool := &ShellTool{ProcessFactory: factory}
+	tool := &ShellTool{CommandExecutor: factory}
 	req := models.ShellRequest{
 		Command:        []string{"sleep", "100"},
 		TimeoutSeconds: 10,
@@ -549,7 +561,7 @@ func TestShellTool_Run_SpecificExitCode(t *testing.T) {
 		CommandPolicy: models.CommandPolicy{Allow: []string{"exit42"}},
 	}
 
-	factory := &MockProcessFactory{
+	factory := &MockCommandExecutor{
 		StartFunc: func(ctx context.Context, command []string, opts models.ProcessOptions) (models.Process, io.Reader, io.Reader, error) {
 			proc := &MockProcess{
 				WaitFunc: func() error {
@@ -561,7 +573,7 @@ func TestShellTool_Run_SpecificExitCode(t *testing.T) {
 		},
 	}
 
-	tool := &ShellTool{ProcessFactory: factory}
+	tool := &ShellTool{CommandExecutor: factory}
 	req := models.ShellRequest{Command: []string{"exit42"}}
 
 	resp, err := tool.Run(context.Background(), wCtx, req)

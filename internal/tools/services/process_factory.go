@@ -32,10 +32,25 @@ func (p *OSProcess) Signal(sig os.Signal) error {
 	return nil
 }
 
-// OSProcessFactory implements models.ProcessFactory using os/exec.
-type OSProcessFactory struct{}
+// OSCommandExecutor implements models.CommandExecutor using os/exec.
+type OSCommandExecutor struct{}
 
-func (f *OSProcessFactory) Start(ctx context.Context, command []string, opts models.ProcessOptions) (models.Process, io.Reader, io.Reader, error) {
+// Run executes a command and returns the combined output.
+// This is a convenience method that uses Start internally.
+func (f *OSCommandExecutor) Run(ctx context.Context, command []string) ([]byte, error) {
+	if len(command) == 0 {
+		return nil, os.ErrInvalid
+	}
+
+	cmd := exec.CommandContext(ctx, command[0], command[1:]...)
+	cmd.Stdin = nil
+
+	// CombinedOutput runs the command and returns stdout+stderr
+	return cmd.CombinedOutput()
+}
+
+// Start starts a process and returns control immediately.
+func (f *OSCommandExecutor) Start(ctx context.Context, command []string, opts models.ProcessOptions) (models.Process, io.Reader, io.Reader, error) {
 	if len(command) == 0 {
 		return nil, nil, nil, os.ErrInvalid
 	}

@@ -91,11 +91,6 @@ type FileHandle interface {
 	Close() error
 }
 
-// CommandRunner executes a command and returns stdout/stderr combined.
-type CommandRunner interface {
-	Run(ctx context.Context, command []string) ([]byte, error)
-}
-
 // Process represents a running process that can be waited on and killed.
 type Process interface {
 	Wait() error
@@ -109,7 +104,15 @@ type ProcessOptions struct {
 	Env []string
 }
 
-// ProcessFactory starts a new process.
-type ProcessFactory interface {
+// CommandExecutor provides both simple command execution and complex process management.
+// This unified interface eliminates the need for adapter code between CommandRunner and ProcessFactory.
+type CommandExecutor interface {
+	// Run executes a command and returns the combined output (simple use case).
+	// This is suitable for commands where you just need the output and exit status.
+	Run(ctx context.Context, command []string) ([]byte, error)
+
+	// Start starts a process and returns control immediately (complex use case).
+	// This is suitable for long-running processes where you need to stream output
+	// or manage the process lifecycle (timeout, kill, etc).
 	Start(ctx context.Context, command []string, opts ProcessOptions) (Process, io.Reader, io.Reader, error)
 }

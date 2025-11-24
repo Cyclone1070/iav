@@ -17,7 +17,7 @@ func TestFindFile_BasicGlob(t *testing.T) {
 	fs := services.NewMockFileSystem(maxFileSize)
 	fs.CreateDir("/workspace")
 
-	mockRunner := &services.MockCommandRunner{
+	mockRunner := &services.MockCommandExecutor{
 		RunFunc: func(ctx context.Context, cmd []string) ([]byte, error) {
 			// Simulate fd output
 			output := "/workspace/a/b/file.go\n/workspace/a/file.go\n"
@@ -31,7 +31,7 @@ func TestFindFile_BasicGlob(t *testing.T) {
 		ChecksumManager: services.NewChecksumManager(),
 		MaxFileSize:     maxFileSize,
 		WorkspaceRoot:   workspaceRoot,
-		CommandRunner:   mockRunner,
+		CommandExecutor:   mockRunner,
 	}
 
 	resp, err := FindFile(ctx, "*.go", "", 0, 0, 100)
@@ -65,7 +65,7 @@ func TestFindFile_Pagination(t *testing.T) {
 		output += fmt.Sprintf("/workspace/file%d.txt\n", i)
 	}
 
-	mockRunner := &services.MockCommandRunner{
+	mockRunner := &services.MockCommandExecutor{
 		RunFunc: func(ctx context.Context, cmd []string) ([]byte, error) {
 			return []byte(output), nil
 		},
@@ -77,7 +77,7 @@ func TestFindFile_Pagination(t *testing.T) {
 		ChecksumManager: services.NewChecksumManager(),
 		MaxFileSize:     maxFileSize,
 		WorkspaceRoot:   workspaceRoot,
-		CommandRunner:   mockRunner,
+		CommandExecutor:   mockRunner,
 	}
 
 	// Request offset=2, limit=2
@@ -111,7 +111,7 @@ func TestFindFile_InvalidGlob(t *testing.T) {
 	fs := services.NewMockFileSystem(maxFileSize)
 	fs.CreateDir("/workspace")
 
-	mockRunner := &services.MockCommandRunner{
+	mockRunner := &services.MockCommandExecutor{
 		RunFunc: func(ctx context.Context, cmd []string) ([]byte, error) {
 			// Simulate fd error for invalid glob
 			return []byte(""), &services.MockExitError{Code: 2}
@@ -124,7 +124,7 @@ func TestFindFile_InvalidGlob(t *testing.T) {
 		ChecksumManager: services.NewChecksumManager(),
 		MaxFileSize:     maxFileSize,
 		WorkspaceRoot:   workspaceRoot,
-		CommandRunner:   mockRunner,
+		CommandExecutor:   mockRunner,
 	}
 
 	_, err := FindFile(ctx, "[", "", 0, 0, 100)
@@ -146,7 +146,7 @@ func TestFindFile_PathOutsideWorkspace(t *testing.T) {
 		ChecksumManager: services.NewChecksumManager(),
 		MaxFileSize:     maxFileSize,
 		WorkspaceRoot:   workspaceRoot,
-		CommandRunner:   &services.MockCommandRunner{},
+		CommandExecutor:   &services.MockCommandExecutor{},
 	}
 
 	_, err := FindFile(ctx, "*.go", "../outside", 0, 0, 100)
@@ -168,7 +168,7 @@ func TestFindFile_NonExistentPath(t *testing.T) {
 		ChecksumManager: services.NewChecksumManager(),
 		MaxFileSize:     maxFileSize,
 		WorkspaceRoot:   workspaceRoot,
-		CommandRunner:   &services.MockCommandRunner{},
+		CommandExecutor:   &services.MockCommandExecutor{},
 	}
 
 	_, err := FindFile(ctx, "*.go", "nonexistent/dir", 0, 0, 100)
@@ -190,7 +190,7 @@ func TestFindFile_NegativeLimit(t *testing.T) {
 		ChecksumManager: services.NewChecksumManager(),
 		MaxFileSize:     maxFileSize,
 		WorkspaceRoot:   workspaceRoot,
-		CommandRunner:   &services.MockCommandRunner{},
+		CommandExecutor:   &services.MockCommandExecutor{},
 	}
 
 	_, err := FindFile(ctx, "*.go", "", 0, 0, -1)
@@ -206,7 +206,7 @@ func TestFindFile_CommandFailure(t *testing.T) {
 	fs := services.NewMockFileSystem(maxFileSize)
 	fs.CreateDir("/workspace")
 
-	mockRunner := &services.MockCommandRunner{
+	mockRunner := &services.MockCommandExecutor{
 		RunFunc: func(ctx context.Context, cmd []string) ([]byte, error) {
 			return []byte(""), &services.MockExitError{Code: 2}
 		},
@@ -218,7 +218,7 @@ func TestFindFile_CommandFailure(t *testing.T) {
 		ChecksumManager: services.NewChecksumManager(),
 		MaxFileSize:     maxFileSize,
 		WorkspaceRoot:   workspaceRoot,
-		CommandRunner:   mockRunner,
+		CommandExecutor:   mockRunner,
 	}
 
 	_, err := FindFile(ctx, "*.go", "", 0, 0, 100)
@@ -235,7 +235,7 @@ func TestFindFile_ShellInjection(t *testing.T) {
 	fs.CreateDir("/workspace")
 
 	var capturedCmd []string
-	mockRunner := &services.MockCommandRunner{
+	mockRunner := &services.MockCommandExecutor{
 		RunFunc: func(ctx context.Context, cmd []string) ([]byte, error) {
 			capturedCmd = cmd
 			return []byte(""), nil
@@ -248,7 +248,7 @@ func TestFindFile_ShellInjection(t *testing.T) {
 		ChecksumManager: services.NewChecksumManager(),
 		MaxFileSize:     maxFileSize,
 		WorkspaceRoot:   workspaceRoot,
-		CommandRunner:   mockRunner,
+		CommandExecutor:   mockRunner,
 	}
 
 	pattern := "*.go; rm -rf /"
@@ -269,7 +269,7 @@ func TestFindFile_UnicodeFilenames(t *testing.T) {
 	fs := services.NewMockFileSystem(maxFileSize)
 	fs.CreateDir("/workspace")
 
-	mockRunner := &services.MockCommandRunner{
+	mockRunner := &services.MockCommandExecutor{
 		RunFunc: func(ctx context.Context, cmd []string) ([]byte, error) {
 			output := "/workspace/🚀.txt\n/workspace/文件.txt\n"
 			return []byte(output), nil
@@ -282,7 +282,7 @@ func TestFindFile_UnicodeFilenames(t *testing.T) {
 		ChecksumManager: services.NewChecksumManager(),
 		MaxFileSize:     maxFileSize,
 		WorkspaceRoot:   workspaceRoot,
-		CommandRunner:   mockRunner,
+		CommandExecutor:   mockRunner,
 	}
 
 	resp, err := FindFile(ctx, "*.txt", "", 0, 0, 100)
@@ -328,7 +328,7 @@ func TestFindFile_DeeplyNested(t *testing.T) {
 	}
 	deepPath += "/file.txt"
 
-	mockRunner := &services.MockCommandRunner{
+	mockRunner := &services.MockCommandExecutor{
 		RunFunc: func(ctx context.Context, cmd []string) ([]byte, error) {
 			return []byte(deepPath + "\n"), nil
 		},
@@ -340,7 +340,7 @@ func TestFindFile_DeeplyNested(t *testing.T) {
 		ChecksumManager: services.NewChecksumManager(),
 		MaxFileSize:     maxFileSize,
 		WorkspaceRoot:   workspaceRoot,
-		CommandRunner:   mockRunner,
+		CommandExecutor:   mockRunner,
 	}
 
 	resp, err := FindFile(ctx, "*.txt", "", 0, 0, 100)
@@ -366,7 +366,7 @@ func TestFindFile_PatternTraversal(t *testing.T) {
 		ChecksumManager: services.NewChecksumManager(),
 		MaxFileSize:     maxFileSize,
 		WorkspaceRoot:   workspaceRoot,
-		CommandRunner:   &services.MockCommandRunner{},
+		CommandExecutor:   &services.MockCommandExecutor{},
 	}
 
 	_, err := FindFile(ctx, "../*.go", "", 0, 0, 100)
@@ -388,7 +388,7 @@ func TestFindFile_AbsolutePattern(t *testing.T) {
 		ChecksumManager: services.NewChecksumManager(),
 		MaxFileSize:     maxFileSize,
 		WorkspaceRoot:   workspaceRoot,
-		CommandRunner:   &services.MockCommandRunner{},
+		CommandExecutor:   &services.MockCommandExecutor{},
 	}
 
 	_, err := FindFile(ctx, "/etc/*.conf", "", 0, 0, 100)
@@ -404,7 +404,7 @@ func TestFindFile_NoMatches(t *testing.T) {
 	fs := services.NewMockFileSystem(maxFileSize)
 	fs.CreateDir("/workspace")
 
-	mockRunner := &services.MockCommandRunner{
+	mockRunner := &services.MockCommandExecutor{
 		RunFunc: func(ctx context.Context, cmd []string) ([]byte, error) {
 			// Simulate fd returning exit code 1 (no matches)
 			return []byte(""), &services.MockExitError{Code: 1}
@@ -417,7 +417,7 @@ func TestFindFile_NoMatches(t *testing.T) {
 		ChecksumManager: services.NewChecksumManager(),
 		MaxFileSize:     maxFileSize,
 		WorkspaceRoot:   workspaceRoot,
-		CommandRunner:   mockRunner,
+		CommandExecutor:   mockRunner,
 	}
 
 	resp, err := FindFile(ctx, "*.nonexistent", "", 0, 0, 100)
