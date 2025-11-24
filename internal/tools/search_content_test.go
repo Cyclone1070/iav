@@ -37,7 +37,7 @@ func TestSearchContent_BasicRegex(t *testing.T) {
 		CommandExecutor: mockRunner,
 	}
 
-	resp, err := SearchContent(ctx, "func .*", "", true, 0, 100)
+	resp, err := SearchContent(ctx, "func .*", "", true, false, 0, 100)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -82,7 +82,7 @@ func TestSearchContent_CaseInsensitive(t *testing.T) {
 		CommandExecutor: mockRunner,
 	}
 
-	_, _ = SearchContent(ctx, "pattern", "", false, 0, 100)
+	_, _ = SearchContent(ctx, "pattern", "", false, false, 0, 100)
 
 	// Verify -i flag is present
 	foundFlag := slices.Contains(capturedCmd, "-i")
@@ -108,7 +108,7 @@ func TestSearchContent_PathOutsideWorkspace(t *testing.T) {
 		CommandExecutor: &services.MockCommandExecutor{},
 	}
 
-	_, err := SearchContent(ctx, "pattern", "../outside", true, 0, 100)
+	_, err := SearchContent(ctx, "pattern", "../outside", true, false, 0, 100)
 	if err != models.ErrOutsideWorkspace {
 		t.Errorf("expected ErrOutsideWorkspace, got %v", err)
 	}
@@ -130,7 +130,7 @@ func TestSearchContent_EmptyQuery(t *testing.T) {
 		CommandExecutor: &services.MockCommandExecutor{},
 	}
 
-	_, err := SearchContent(ctx, "", "", true, 0, 100)
+	_, err := SearchContent(ctx, "", "", true, false, 0, 100)
 	if err == nil {
 		t.Fatal("expected error for empty query, got nil")
 	}
@@ -152,7 +152,7 @@ func TestSearchContent_HugeLimit(t *testing.T) {
 		CommandExecutor: &services.MockCommandExecutor{},
 	}
 
-	_, err := SearchContent(ctx, "pattern", "", true, 0, 1000000)
+	_, err := SearchContent(ctx, "pattern", "", true, false, 0, 1000000)
 	if err != models.ErrInvalidPaginationLimit {
 		t.Errorf("expected ErrInvalidPaginationLimit, got %v", err)
 	}
@@ -184,7 +184,7 @@ func TestSearchContent_VeryLongLine(t *testing.T) {
 		CommandExecutor: mockRunner,
 	}
 
-	resp, err := SearchContent(ctx, "pattern", "", true, 0, 100)
+	resp, err := SearchContent(ctx, "pattern", "", true, false, 0, 100)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -228,7 +228,7 @@ func TestSearchContent_CommandInjection(t *testing.T) {
 	}
 
 	query := "foo; rm -rf /"
-	_, _ = SearchContent(ctx, query, "", true, 0, 100)
+	_, _ = SearchContent(ctx, query, "", true, false, 0, 100)
 
 	// Verify query is passed as literal argument
 	found := slices.Contains(capturedCmd, query)
@@ -261,7 +261,7 @@ func TestSearchContent_NoMatches(t *testing.T) {
 		CommandExecutor: mockRunner,
 	}
 
-	resp, err := SearchContent(ctx, "nonexistent", "", true, 0, 100)
+	resp, err := SearchContent(ctx, "nonexistent", "", true, false, 0, 100)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -305,7 +305,7 @@ func TestSearchContent_Pagination(t *testing.T) {
 	}
 
 	// Request offset=2, limit=2
-	resp, err := SearchContent(ctx, "pattern", "", true, 2, 2)
+	resp, err := SearchContent(ctx, "pattern", "", true, false, 2, 2)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -355,7 +355,7 @@ func TestSearchContent_MultipleFiles(t *testing.T) {
 		CommandExecutor: mockRunner,
 	}
 
-	resp, err := SearchContent(ctx, "pattern", "", true, 0, 100)
+	resp, err := SearchContent(ctx, "pattern", "", true, false, 0, 100)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -404,7 +404,7 @@ invalid json line
 		CommandExecutor: mockRunner,
 	}
 
-	resp, err := SearchContent(ctx, "pattern", "", true, 0, 100)
+	resp, err := SearchContent(ctx, "pattern", "", true, false, 0, 100)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -437,8 +437,86 @@ func TestSearchContent_CommandFailure(t *testing.T) {
 		CommandExecutor: mockRunner,
 	}
 
-	_, err := SearchContent(ctx, "pattern", "", true, 0, 100)
+	_, err := SearchContent(ctx, "pattern", "", true, false, 0, 100)
 	if err == nil {
 		t.Fatal("expected error for command failure, got nil")
+	}
+}
+func TestSearchContent_IncludeIgnored(t *testing.T) {
+	workspaceRoot := "/workspace"
+	maxFileSize := int64(1024 * 1024)
+
+	fs := services.NewMockFileSystem(maxFileSize)
+	fs.CreateDir("/workspace")
+
+	// Test with includeIgnored=false (default behavior, should respect gitignore)
+	mockRunner := &services.MockCommandExecutor{
+		RunFunc: func(ctx context.Context, cmd []string) ([]byte, error) {
+			// Verify --no-ignore is NOT present
+			if slices.Contains(cmd, "--no-ignore") {
+				t.Error("expected --no-ignore to NOT be present when includeIgnored=false")
+			}
+			// Simulate rg output without ignored files
+			output := `{"type":"match","data":{"path":{"text":"/workspace/visible.go"},"lines":{"text":"func main()"},"line_number":1}}`
+			return []byte(output), nil
+		},
+	}
+
+	ctx := &models.WorkspaceContext{
+		FS:              fs,
+		BinaryDetector:  services.NewMockBinaryDetector(),
+		ChecksumManager: services.NewChecksumManager(),
+		MaxFileSize:     maxFileSize,
+		WorkspaceRoot:   workspaceRoot,
+		CommandExecutor: mockRunner,
+	}
+
+	resp, err := SearchContent(ctx, "func main", "", true, false, 0, 100)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(resp.Matches) != 1 {
+		t.Fatalf("expected 1 match, got %d", len(resp.Matches))
+	}
+
+	// Test with includeIgnored=true (should include ignored files)
+	mockRunner.RunFunc = func(ctx context.Context, cmd []string) ([]byte, error) {
+		// Verify --no-ignore IS present
+		if !slices.Contains(cmd, "--no-ignore") {
+			t.Error("expected --no-ignore to be present when includeIgnored=true")
+		}
+		// Simulate rg output with ignored files
+		output := `{"type":"match","data":{"path":{"text":"/workspace/ignored.go"},"lines":{"text":"func main()"},"line_number":1}}
+{"type":"match","data":{"path":{"text":"/workspace/visible.go"},"lines":{"text":"func main()"},"line_number":1}}`
+		return []byte(output), nil
+	}
+
+	resp, err = SearchContent(ctx, "func main", "", true, true, 0, 100)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(resp.Matches) != 2 {
+		t.Fatalf("expected 2 matches, got %d", len(resp.Matches))
+	}
+
+	// Verify both files are present
+	foundIgnored := false
+	foundVisible := false
+	for _, match := range resp.Matches {
+		if match.File == "ignored.go" {
+			foundIgnored = true
+		}
+		if match.File == "visible.go" {
+			foundVisible = true
+		}
+	}
+
+	if !foundIgnored {
+		t.Error("expected to find match in ignored.go when includeIgnored=true")
+	}
+	if !foundVisible {
+		t.Error("expected to find match in visible.go when includeIgnored=true")
 	}
 }

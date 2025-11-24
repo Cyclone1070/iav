@@ -21,7 +21,8 @@ const (
 
 // SearchContent searches for content matching a regex pattern within files.
 // It uses `ripgrep` (preferred) or `grep` (fallback) for efficient searching.
-func SearchContent(ctx *models.WorkspaceContext, query string, searchPath string, caseSensitive bool, offset int, limit int) (*models.SearchContentResponse, error) {
+// If includeIgnored is true, searches will include files that match .gitignore patterns.
+func SearchContent(ctx *models.WorkspaceContext, query string, searchPath string, caseSensitive bool, includeIgnored bool, offset int, limit int) (*models.SearchContentResponse, error) {
 	// 1. Validate pagination
 	if offset < 0 {
 		return nil, models.ErrInvalidPaginationOffset
@@ -48,10 +49,13 @@ func SearchContent(ctx *models.WorkspaceContext, query string, searchPath string
 	}
 
 	// 5. Build ripgrep command
-	// rg --json "query" searchPath
+	// rg --json "query" searchPath [--no-ignore]
 	cmd := []string{"rg", "--json"}
 	if !caseSensitive {
 		cmd = append(cmd, "-i")
+	}
+	if includeIgnored {
+		cmd = append(cmd, "--no-ignore")
 	}
 	cmd = append(cmd, query, absSearchPath)
 

@@ -47,8 +47,9 @@ func main() {
 		MaxFileSize:      models.DefaultMaxFileSize,
 		WorkspaceRoot:    workspaceRoot,
 		GitignoreService: gitignoreSvc,
+		CommandExecutor:  &services.OSCommandExecutor{},
 		CommandPolicy: models.CommandPolicy{
-			Allow:        []string{"git", "docker", "npm", "go", "python", "bash", "sh", "ls"},
+			Allow:        []string{"git", "docker", "npm", "go", "python", "bash", "sh", "ls", "fd", "rg"},
 			Ask:          []string{},
 			SessionAllow: make(map[string]bool),
 		},
@@ -77,6 +78,10 @@ func main() {
 		handleList(ctx, os.Args[2:])
 	case "shell":
 		handleShell(ctx, os.Args[2:])
+	case "search":
+		handleSearch(ctx, os.Args[2:])
+	case "find":
+		handleFindFile(ctx, os.Args[2:])
 	default:
 		fmt.Fprintf(os.Stderr, "unknown command: %s\n", command)
 		printUsage()
@@ -94,6 +99,8 @@ Commands:
   edit <path> <ops_json>                    Edit a file with operations
   list <path> [offset] [limit]              List directory contents
   shell <cmd> [args...]                     Execute a shell command
+  search <query> <path> [caseSensitive] [offset] [limit]    Search file contents
+  find <pattern> <path> [maxDepth] [offset] [limit]        Find files by pattern
 
 Examples:
   deployagent read README.md
@@ -102,6 +109,8 @@ Examples:
   deployagent list .
   deployagent list . 0 10
   deployagent shell echo hello
+  deployagent search "func main" . false 0 10
+  deployagent find "*.go" . 2 0 50
 `)
 }
 
@@ -310,6 +319,108 @@ func handleShell(ctx *models.WorkspaceContext, args []string) {
 			fmt.Printf("stdout: %s\n", resp.Stdout)
 			fmt.Printf("stderr: %s\n", resp.Stderr)
 		}
+		os.Exit(1)
+	}
+
+	output, _ := json.MarshalIndent(resp, "", "  ")
+	fmt.Println(string(output))
+}
+
+// handleSearch handles the 'search' command to search file contents.
+// Supports optional caseSensitive, offset, and limit parameters.
+func handleSearch(ctx *models.WorkspaceContext, args []string) {
+	if len(args) < 2 {
+		fmt.Fprintf(os.Stderr, "search: query and path required\n")
+		os.Exit(1)
+	}
+
+	query := args[0]
+	searchPath := args[1]
+	caseSensitive := false
+	offset := 0
+	limit := 100
+
+	if len(args) > 2 {
+		cs, err := strconv.ParseBool(args[2])
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "invalid caseSensitive: %v\n", err)
+			os.Exit(1)
+		}
+		caseSensitive = cs
+	}
+
+	if len(args) > 3 {
+		o, err := strconv.Atoi(args[3])
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "invalid offset: %v\n", err)
+			os.Exit(1)
+		}
+		offset = o
+	}
+
+	if len(args) > 4 {
+		l, err := strconv.Atoi(args[4])
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "invalid limit: %v\n", err)
+			os.Exit(1)
+		}
+		limit = l
+	}
+
+	resp, err := tools.SearchContent(ctx, query, searchPath, caseSensitive, false, offset, limit)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		os.Exit(1)
+	}
+
+	output, _ := json.MarshalIndent(resp, "", "  ")
+	fmt.Println(string(output))
+}
+
+// handleFindFile handles the 'find' command to search for files by pattern.
+// Supports optional maxDepth, offset, and limit parameters.
+func handleFindFile(ctx *models.WorkspaceContext, args []string) {
+	if len(args) < 2 {
+		fmt.Fprintf(os.Stderr, "find: pattern and path required\n")
+		os.Exit(1)
+	}
+
+	pattern := args[0]
+	searchPath := args[1]
+	maxDepth := -1
+	offset := 0
+	limit := 100
+
+	if len(args) > 2 {
+		md, err := strconv.Atoi(args[2])
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "invalid maxDepth: %v\n", err)
+			os.Exit(1)
+		}
+		maxDepth = md
+	}
+
+	if len(args) > 3 {
+		o, err := strconv.Atoi(args[3])
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "invalid offset: %v\n", err)
+			os.Exit(1)
+		}
+		offset = o
+	}
+
+	if len(args) > 4 {
+		l, err := strconv.Atoi(args[4])
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "invalid limit: %v\n", err)
+			os.Exit(1)
+		}
+		limit = l
+	}
+
+	resp, err := tools.FindFile(ctx, pattern, searchPath, maxDepth, false, offset, limit)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}
 

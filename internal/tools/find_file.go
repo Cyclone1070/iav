@@ -18,7 +18,8 @@ const (
 
 // FindFile searches for files matching a glob pattern within the workspace.
 // It uses `fd` (preferred) or `find` (fallback) for efficient searching.
-func FindFile(ctx *models.WorkspaceContext, pattern string, searchPath string, maxDepth int, offset int, limit int) (*models.FindFileResponse, error) {
+// If includeIgnored is true, searches will include files that match .gitignore patterns.
+func FindFile(ctx *models.WorkspaceContext, pattern string, searchPath string, maxDepth int, includeIgnored bool, offset int, limit int) (*models.FindFileResponse, error) {
 	// 1. Validate pagination
 	if offset < 0 {
 		return nil, models.ErrInvalidPaginationOffset
@@ -48,10 +49,13 @@ func FindFile(ctx *models.WorkspaceContext, pattern string, searchPath string, m
 	}
 
 	// 5. Build fd command
-	// fd -p -g "pattern" searchPath --max-depth N
+	// fd -p -g "pattern" searchPath --max-depth N [--no-ignore]
 	cmd := []string{"fd", "-p", "-g", pattern}
 	if maxDepth > 0 {
 		cmd = append(cmd, "--max-depth", fmt.Sprintf("%d", maxDepth))
+	}
+	if includeIgnored {
+		cmd = append(cmd, "--no-ignore")
 	}
 	cmd = append(cmd, absSearchPath)
 

@@ -34,7 +34,7 @@ func TestFindFile_BasicGlob(t *testing.T) {
 		CommandExecutor: mockRunner,
 	}
 
-	resp, err := FindFile(ctx, "*.go", "", 0, 0, 100)
+	resp, err := FindFile(ctx, "*.go", "", 0, false, 0, 100)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -81,7 +81,7 @@ func TestFindFile_Pagination(t *testing.T) {
 	}
 
 	// Request offset=2, limit=2
-	resp, err := FindFile(ctx, "*.txt", "", 0, 2, 2)
+	resp, err := FindFile(ctx, "*.txt", "", 0, false, 2, 2)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -127,7 +127,7 @@ func TestFindFile_InvalidGlob(t *testing.T) {
 		CommandExecutor: mockRunner,
 	}
 
-	_, err := FindFile(ctx, "[", "", 0, 0, 100)
+	_, err := FindFile(ctx, "[", "", 0, false, 0, 100)
 	if err == nil {
 		t.Fatal("expected error for invalid glob, got nil")
 	}
@@ -149,7 +149,7 @@ func TestFindFile_PathOutsideWorkspace(t *testing.T) {
 		CommandExecutor: &services.MockCommandExecutor{},
 	}
 
-	_, err := FindFile(ctx, "*.go", "../outside", 0, 0, 100)
+	_, err := FindFile(ctx, "*.go", "../outside", 0, false, 0, 100)
 	if err != models.ErrOutsideWorkspace {
 		t.Errorf("expected ErrOutsideWorkspace, got %v", err)
 	}
@@ -171,7 +171,7 @@ func TestFindFile_NonExistentPath(t *testing.T) {
 		CommandExecutor: &services.MockCommandExecutor{},
 	}
 
-	_, err := FindFile(ctx, "*.go", "nonexistent/dir", 0, 0, 100)
+	_, err := FindFile(ctx, "*.go", "nonexistent/dir", 0, false, 0, 100)
 	if err != models.ErrFileMissing {
 		t.Errorf("expected ErrFileMissing, got %v", err)
 	}
@@ -193,7 +193,7 @@ func TestFindFile_NegativeLimit(t *testing.T) {
 		CommandExecutor: &services.MockCommandExecutor{},
 	}
 
-	_, err := FindFile(ctx, "*.go", "", 0, 0, -1)
+	_, err := FindFile(ctx, "*.go", "", 0, false, 0, -1)
 	if err != models.ErrInvalidPaginationLimit {
 		t.Errorf("expected ErrInvalidPaginationLimit, got %v", err)
 	}
@@ -221,7 +221,7 @@ func TestFindFile_CommandFailure(t *testing.T) {
 		CommandExecutor: mockRunner,
 	}
 
-	_, err := FindFile(ctx, "*.go", "", 0, 0, 100)
+	_, err := FindFile(ctx, "*.go", "", 0, false, 0, 100)
 	if err == nil {
 		t.Fatal("expected error for command failure, got nil")
 	}
@@ -252,7 +252,7 @@ func TestFindFile_ShellInjection(t *testing.T) {
 	}
 
 	pattern := "*.go; rm -rf /"
-	_, _ = FindFile(ctx, pattern, "", 0, 0, 100)
+	_, _ = FindFile(ctx, pattern, "", 0, false, 0, 100)
 
 	// Verify pattern is passed as literal argument, not shell-interpreted
 	found := slices.Contains(capturedCmd, pattern)
@@ -285,7 +285,7 @@ func TestFindFile_UnicodeFilenames(t *testing.T) {
 		CommandExecutor: mockRunner,
 	}
 
-	resp, err := FindFile(ctx, "*.txt", "", 0, 0, 100)
+	resp, err := FindFile(ctx, "*.txt", "", 0, false, 0, 100)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -343,7 +343,7 @@ func TestFindFile_DeeplyNested(t *testing.T) {
 		CommandExecutor: mockRunner,
 	}
 
-	resp, err := FindFile(ctx, "*.txt", "", 0, 0, 100)
+	resp, err := FindFile(ctx, "*.txt", "", 0, false, 0, 100)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -369,7 +369,7 @@ func TestFindFile_PatternTraversal(t *testing.T) {
 		CommandExecutor: &services.MockCommandExecutor{},
 	}
 
-	_, err := FindFile(ctx, "../*.go", "", 0, 0, 100)
+	_, err := FindFile(ctx, "../*.go", "", 0, false, 0, 100)
 	if err == nil {
 		t.Fatal("expected error for pattern with path traversal, got nil")
 	}
@@ -391,7 +391,7 @@ func TestFindFile_AbsolutePattern(t *testing.T) {
 		CommandExecutor: &services.MockCommandExecutor{},
 	}
 
-	_, err := FindFile(ctx, "/etc/*.conf", "", 0, 0, 100)
+	_, err := FindFile(ctx, "/etc/*.conf", "", 0, false, 0, 100)
 	if err == nil {
 		t.Fatal("expected error for absolute pattern, got nil")
 	}
@@ -420,7 +420,7 @@ func TestFindFile_NoMatches(t *testing.T) {
 		CommandExecutor: mockRunner,
 	}
 
-	resp, err := FindFile(ctx, "*.nonexistent", "", 0, 0, 100)
+	resp, err := FindFile(ctx, "*.nonexistent", "", 0, false, 0, 100)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -431,5 +431,82 @@ func TestFindFile_NoMatches(t *testing.T) {
 
 	if resp.Truncated {
 		t.Error("expected Truncated=false for no matches")
+	}
+}
+func TestFindFile_IncludeIgnored(t *testing.T) {
+	workspaceRoot := "/workspace"
+	maxFileSize := int64(1024 * 1024)
+
+	fs := services.NewMockFileSystem(maxFileSize)
+	fs.CreateDir("/workspace")
+
+	// Test with includeIgnored=false (default behavior, should respect gitignore)
+	mockRunner := &services.MockCommandExecutor{
+		RunFunc: func(ctx context.Context, cmd []string) ([]byte, error) {
+			// Verify --no-ignore is NOT present
+			if slices.Contains(cmd, "--no-ignore") {
+				t.Error("expected --no-ignore to NOT be present when includeIgnored=false")
+			}
+			// Simulate fd output without ignored files
+			output := "/workspace/visible.go\n"
+			return []byte(output), nil
+		},
+	}
+
+	ctx := &models.WorkspaceContext{
+		FS:              fs,
+		BinaryDetector:  services.NewMockBinaryDetector(),
+		ChecksumManager: services.NewChecksumManager(),
+		MaxFileSize:     maxFileSize,
+		WorkspaceRoot:   workspaceRoot,
+		CommandExecutor: mockRunner,
+	}
+
+	resp, err := FindFile(ctx, "*.go", "", 0, false, 0, 100)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(resp.Matches) != 1 {
+		t.Fatalf("expected 1 match, got %d", len(resp.Matches))
+	}
+
+	// Test with includeIgnored=true (should include ignored files)
+	mockRunner.RunFunc = func(ctx context.Context, cmd []string) ([]byte, error) {
+		// Verify --no-ignore IS present
+		if !slices.Contains(cmd, "--no-ignore") {
+			t.Error("expected --no-ignore to be present when includeIgnored=true")
+		}
+		// Simulate fd output with ignored files
+		output := "/workspace/ignored.go\n/workspace/visible.go\n"
+		return []byte(output), nil
+	}
+
+	resp, err = FindFile(ctx, "*.go", "", 0, true, 0, 100)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(resp.Matches) != 2 {
+		t.Fatalf("expected 2 matches, got %d", len(resp.Matches))
+	}
+
+	// Verify both files are present
+	foundIgnored := false
+	foundVisible := false
+	for _, match := range resp.Matches {
+		if match == "ignored.go" {
+			foundIgnored = true
+		}
+		if match == "visible.go" {
+			foundVisible = true
+		}
+	}
+
+	if !foundIgnored {
+		t.Error("expected to find ignored.go when includeIgnored=true")
+	}
+	if !foundVisible {
+		t.Error("expected to find visible.go when includeIgnored=true")
 	}
 }
