@@ -50,7 +50,7 @@ func main() {
 		CommandExecutor:  &services.OSCommandExecutor{},
 		CommandPolicy: models.CommandPolicy{
 			Allow:        []string{"git", "docker", "npm", "go", "python", "bash", "sh", "ls", "fd", "rg"},
-			Ask:          []string{},
+			Deny:         []string{},
 			SessionAllow: make(map[string]bool),
 		},
 		DockerConfig: models.DockerConfig{

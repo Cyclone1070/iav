@@ -26,28 +26,34 @@ func TestEvaluatePolicy(t *testing.T) {
 			wantErr: nil,
 		},
 		{
-			name:    "Ask list - Approval Required",
-			policy:  models.CommandPolicy{Ask: []string{"deploy"}},
-			command: []string{"deploy", "prod"},
-			wantErr: models.ErrShellApprovalRequired,
-		},
-		{
-			name:    "Ask list - Session Allowed",
-			policy:  models.CommandPolicy{Ask: []string{"deploy"}, SessionAllow: map[string]bool{"deploy": true}},
-			command: []string{"deploy", "prod"},
-			wantErr: nil,
-		},
-		{
-			name:    "Default Deny",
-			policy:  models.CommandPolicy{},
-			command: []string{"unknown"},
+			name:    "Deny list - Rejected",
+			policy:  models.CommandPolicy{Deny: []string{"rm"}},
+			command: []string{"rm", "-rf", "/"},
 			wantErr: models.ErrShellRejected,
 		},
 		{
-			name:    "Empty Command",
+			name:    "Deny list - Session Allowed (override)",
+			policy:  models.CommandPolicy{Deny: []string{"rm"}, SessionAllow: map[string]bool{"rm": true}},
+			command: []string{"rm", "-rf", "/"},
+			wantErr: nil,
+		},
+		{
+			name:    "Default Ask - not in any list",
+			policy:  models.CommandPolicy{},
+			command: []string{"unknown"},
+			wantErr: models.ErrShellApprovalRequired,
+		},
+		{
+			name:    "Empty Command - Rejected",
 			policy:  models.CommandPolicy{},
 			command: []string{},
-			wantErr: models.ErrShellRejected, // Or specific error if parser fails first
+			wantErr: models.ErrShellRejected,
+		},
+		{
+			name:    "Unknown command defaults to Ask",
+			policy:  models.CommandPolicy{Allow: []string{"echo"}, Deny: []string{"rm"}},
+			command: []string{"ls"},
+			wantErr: models.ErrShellApprovalRequired,
 		},
 	}
 

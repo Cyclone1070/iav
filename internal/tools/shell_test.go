@@ -241,7 +241,7 @@ func TestShellTool_Run_PolicyRejected(t *testing.T) {
 	wCtx := &models.WorkspaceContext{
 		WorkspaceRoot: "/workspace",
 		FS:            mockFS,
-		CommandPolicy: models.CommandPolicy{Allow: []string{"ls"}},
+		CommandPolicy: models.CommandPolicy{Allow: []string{"ls"}, Deny: []string{"rm"}},
 	}
 
 	tool := &ShellTool{CommandExecutor: &MockCommandExecutor{}}

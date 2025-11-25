@@ -135,9 +135,10 @@ type ShellResponse struct {
 }
 
 // CommandPolicy defines allowed and denied commands.
+// Default behavior: commands not in Allow or Deny lists require approval (ask).
 type CommandPolicy struct {
 	Allow        []string
-	Ask          []string
+	Deny         []string
 	SessionAllow map[string]bool // command roots approved for this session
 }
 

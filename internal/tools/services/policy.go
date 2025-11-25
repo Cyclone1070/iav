@@ -19,8 +19,9 @@ func GetCommandRoot(command []string) string {
 }
 
 // EvaluatePolicy checks if a command is allowed by the given policy.
-// It checks session-allowed commands first, then the allow list, then the ask list.
+// It checks session-allowed commands first, then the allow list, then the deny list.
 // Returns ErrShellApprovalRequired if the command needs approval, or ErrShellRejected if denied.
+// Default behavior: commands not in Allow or Deny lists require approval (ask).
 func EvaluatePolicy(policy models.CommandPolicy, command []string) error {
 	root := GetCommandRoot(command)
 	if root == "" {
@@ -37,11 +38,11 @@ func EvaluatePolicy(policy models.CommandPolicy, command []string) error {
 		return nil
 	}
 
-	// 3. Check Ask List
-	if slices.Contains(policy.Ask, root) {
-		return models.ErrShellApprovalRequired
+	// 3. Check Deny List
+	if slices.Contains(policy.Deny, root) {
+		return models.ErrShellRejected
 	}
 
-	// 4. Default Deny
-	return models.ErrShellRejected
+	// 4. Default Ask (commands not in any list require approval)
+	return models.ErrShellApprovalRequired
 }

@@ -5,7 +5,11 @@ The Shell Tool (`internal/tools/shell.go`) allows the agent to execute commands 
 ## Features
 
 - **Workspace Confinement**: Commands are executed within the defined workspace root. Attempts to access files outside the workspace (e.g., via `../` or symlinks) are blocked.
-- **Policy Enforcement**: Commands are validated against a strict allowlist/blocklist policy (`CommandPolicy`).
+- **Policy Enforcement**: Commands are validated against a configurable policy (`CommandPolicy`):
+  - **Allow list**: Commands automatically approved for execution
+  - **Deny list**: Commands automatically rejected
+  - **Default**: Commands not in either list require user approval (ask)
+  - **SessionAllow**: Runtime overrides that allow previously-approved commands for the session
 - **Docker Readiness**: Automatically checks if Docker is running before executing Docker commands, and attempts to start it if configured.
 - **Output Collection**: Captures stdout and stderr with size limits (`MaxBytes`) to prevent memory exhaustion. Detects binary output and truncates it.
 - **Timeout Management**: Enforces execution time limits (`TimeoutSeconds`) and ensures processes are killed (SIGTERM -> SIGKILL) on timeout.
