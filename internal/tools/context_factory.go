@@ -24,10 +24,10 @@ func NewWorkspaceContextWithOptions(workspaceRoot string, maxFileSize int64) (*m
 	// Initialize gitignore service (handles missing .gitignore gracefully)
 	gitignoreSvc, err := services.NewGitignoreService(canonicalRoot, fs)
 	if err != nil {
-		// Log warning but continue with nil service
+		// Log warning but continue with no-op service
 		// In production code, you might want to use a proper logger here
 		// For now, we just ignore the error as missing .gitignore is common
-		gitignoreSvc = nil
+		gitignoreSvc = &services.NoOpGitignoreService{}
 	}
 
 	return &models.WorkspaceContext{

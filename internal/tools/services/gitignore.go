@@ -104,3 +104,12 @@ func splitLines(content string) []string {
 	}
 	return lines
 }
+
+// NoOpGitignoreService is a gitignore service that never ignores any files.
+// It is used when gitignore functionality is disabled or fails to initialize.
+type NoOpGitignoreService struct{}
+
+// ShouldIgnore always returns false for NoOpGitignoreService.
+func (s *NoOpGitignoreService) ShouldIgnore(relativePath string) bool {
+	return false
+}
