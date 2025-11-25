@@ -3,36 +3,12 @@ package services
 import (
 	"bytes"
 	"context"
-	"os"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/Cyclone1070/deployforme/internal/tools/models"
 )
-
-// MockProcess for testing ExecuteWithTimeout
-type MockProcess struct {
-	WaitDelay    time.Duration
-	WaitError    error
-	KillCalled   bool
-	SignalCalled bool
-}
-
-func (m *MockProcess) Wait() error {
-	time.Sleep(m.WaitDelay)
-	return m.WaitError
-}
-
-func (m *MockProcess) Kill() error {
-	m.KillCalled = true
-	return nil
-}
-
-func (m *MockProcess) Signal(sig os.Signal) error {
-	m.SignalCalled = true
-	return nil
-}
 
 func TestExecuteWithTimeout_Success(t *testing.T) {
 	mock := &MockProcess{

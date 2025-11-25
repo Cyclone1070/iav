@@ -45,7 +45,7 @@ func (o *Orchestrator) Run(ctx context.Context, goal string) error {
 	})
 
 	maxTurns := 50 // Prevent infinite loops
-	for turn := 0; turn < maxTurns; turn++ {
+	for range maxTurns {
 		// Check for context cancellation
 		select {
 		case <-ctx.Done():

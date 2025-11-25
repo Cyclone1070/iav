@@ -66,10 +66,7 @@ func FindFile(ctx *models.WorkspaceContext, req models.FindFileRequest) (*models
 		return nil, models.ErrInvalidPaginationLimit
 	}
 
-	offset := req.Offset
-	if offset < 0 {
-		offset = 0
-	}
+	offset := max(req.Offset, 0)
 
 	// Build fd command
 	// fd -g "pattern" searchPath --max-depth N [--no-ignore]

@@ -58,10 +58,7 @@ func SearchContent(ctx *models.WorkspaceContext, req models.SearchContentRequest
 		limit = models.MaxListDirectoryLimit
 	}
 
-	offset := req.Offset
-	if offset < 0 {
-		offset = 0
-	}
+	offset := max(req.Offset, 0)
 
 	// Final pagination validation
 	if limit <= 0 || limit > 1000 { // Keep 1000 as a hard upper limit for search results
