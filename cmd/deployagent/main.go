@@ -48,11 +48,6 @@ func main() {
 		WorkspaceRoot:    workspaceRoot,
 		GitignoreService: gitignoreSvc,
 		CommandExecutor:  &services.OSCommandExecutor{},
-		CommandPolicy: models.CommandPolicy{
-			Allow:        []string{"git", "docker", "npm", "go", "python", "bash", "sh", "ls", "fd", "rg"},
-			Deny:         []string{},
-			SessionAllow: make(map[string]bool),
-		},
 		DockerConfig: models.DockerConfig{
 			CheckCommand: []string{"docker", "info"},
 			StartCommand: []string{"docker", "desktop", "start"},
@@ -122,16 +117,16 @@ Examples:
 `)
 }
 
-// handleRead handles the 'read' command to read file contents.
-// Supports optional offset and limit parameters for partial file reads.
+// handleRead handles the 'read' command to read files.
 func handleRead(ctx *models.WorkspaceContext, args []string) {
 	if len(args) < 1 {
-		fmt.Fprintf(os.Stderr, "read: path required\n")
+		fmt.Fprintf(os.Stderr, "usage: read <path> [offset] [limit]\n")
 		os.Exit(1)
 	}
 
-	path := args[0]
-	var offset, limit *int64
+	req := models.ReadFileRequest{
+		Path: args[0],
+	}
 
 	if len(args) > 1 {
 		o, err := strconv.ParseInt(args[1], 10, 64)
@@ -139,7 +134,7 @@ func handleRead(ctx *models.WorkspaceContext, args []string) {
 			fmt.Fprintf(os.Stderr, "invalid offset: %v\n", err)
 			os.Exit(1)
 		}
-		offset = &o
+		req.Offset = &o
 	}
 
 	if len(args) > 2 {
@@ -148,10 +143,10 @@ func handleRead(ctx *models.WorkspaceContext, args []string) {
 			fmt.Fprintf(os.Stderr, "invalid limit: %v\n", err)
 			os.Exit(1)
 		}
-		limit = &l
+		req.Limit = &l
 	}
 
-	resp, err := tools.ReadFile(ctx, path, offset, limit)
+	resp, err := tools.ReadFile(ctx, req)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
@@ -162,16 +157,17 @@ func handleRead(ctx *models.WorkspaceContext, args []string) {
 }
 
 // handleWrite handles the 'write' command to create new files.
-// Supports optional file permission parameter (octal format).
+// Supports optional file permission// handleWrite handles the 'write' command to create new files.
 func handleWrite(ctx *models.WorkspaceContext, args []string) {
 	if len(args) < 2 {
-		fmt.Fprintf(os.Stderr, "write: path and content required\n")
+		fmt.Fprintf(os.Stderr, "usage: write <path> <content> [perm]\n")
 		os.Exit(1)
 	}
 
-	path := args[0]
-	content := args[1]
-	var perm *os.FileMode
+	req := models.WriteFileRequest{
+		Path:    args[0],
+		Content: args[1],
+	}
 
 	if len(args) > 2 {
 		p, err := strconv.ParseUint(args[2], 8, 32)
@@ -180,10 +176,10 @@ func handleWrite(ctx *models.WorkspaceContext, args []string) {
 			os.Exit(1)
 		}
 		mode := os.FileMode(p)
-		perm = &mode
+		req.Perm = &mode
 	}
 
-	resp, err := tools.WriteFile(ctx, path, content, perm)
+	resp, err := tools.WriteFile(ctx, req)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
@@ -210,7 +206,7 @@ func handleEdit(ctx *models.WorkspaceContext, args []string) {
 		os.Exit(1)
 	}
 
-	resp, err := tools.EditFile(ctx, path, ops)
+	resp, err := tools.EditFile(ctx, models.EditFileRequest{Path: path, Operations: ops})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
@@ -249,7 +245,7 @@ func handleList(ctx *models.WorkspaceContext, args []string) {
 		limit = l
 	}
 
-	resp, err := tools.ListDirectory(ctx, path, -1, offset, limit)
+	resp, err := tools.ListDirectory(ctx, models.ListDirectoryRequest{Path: path, MaxDepth: -1, Offset: offset, Limit: limit})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
@@ -375,7 +371,7 @@ func handleSearch(ctx *models.WorkspaceContext, args []string) {
 		limit = l
 	}
 
-	resp, err := tools.SearchContent(ctx, query, searchPath, caseSensitive, false, offset, limit)
+	resp, err := tools.SearchContent(ctx, models.SearchContentRequest{Query: query, SearchPath: searchPath, CaseSensitive: caseSensitive, IncludeIgnored: false, Offset: offset, Limit: limit})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
@@ -426,7 +422,7 @@ func handleFindFile(ctx *models.WorkspaceContext, args []string) {
 		limit = l
 	}
 
-	resp, err := tools.FindFile(ctx, pattern, searchPath, maxDepth, false, offset, limit)
+	resp, err := tools.FindFile(ctx, models.FindFileRequest{Pattern: pattern, SearchPath: searchPath, MaxDepth: maxDepth, IncludeIgnored: false, Offset: offset, Limit: limit})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
@@ -438,7 +434,7 @@ func handleFindFile(ctx *models.WorkspaceContext, args []string) {
 
 // handleTodoRead handles the 'todoread' command to read all todos.
 func handleTodoRead(ctx *models.WorkspaceContext, args []string) {
-	resp, err := tools.ReadTodos(ctx)
+	resp, err := tools.ReadTodos(ctx, models.ReadTodosRequest{})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
@@ -463,7 +459,7 @@ func handleTodoWrite(ctx *models.WorkspaceContext, args []string) {
 		os.Exit(1)
 	}
 
-	resp, err := tools.WriteTodos(ctx, todos)
+	resp, err := tools.WriteTodos(ctx, models.WriteTodosRequest{Todos: todos})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)

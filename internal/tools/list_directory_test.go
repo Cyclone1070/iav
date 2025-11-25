@@ -30,7 +30,7 @@ func TestListDirectory(t *testing.T) {
 			WorkspaceRoot:   workspaceRoot,
 		}
 
-		resp, err := ListDirectory(ctx, "", -1, 0, 1000)
+		resp, err := ListDirectory(ctx, models.ListDirectoryRequest{Path: "", MaxDepth: -1, Offset: 0, Limit: 1000})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -81,7 +81,7 @@ func TestListDirectory(t *testing.T) {
 			WorkspaceRoot:   workspaceRoot,
 		}
 
-		resp, err := ListDirectory(ctx, "src", -1, 0, 1000)
+		resp, err := ListDirectory(ctx, models.ListDirectoryRequest{Path: "src", MaxDepth: -1, Offset: 0, Limit: 1000})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -117,7 +117,7 @@ func TestListDirectory(t *testing.T) {
 			WorkspaceRoot:   workspaceRoot,
 		}
 
-		resp, err := ListDirectory(ctx, "empty", -1, 0, 1000)
+		resp, err := ListDirectory(ctx, models.ListDirectoryRequest{Path: "empty", MaxDepth: -1, Offset: 0, Limit: 1000})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -140,7 +140,7 @@ func TestListDirectory(t *testing.T) {
 			WorkspaceRoot:   workspaceRoot,
 		}
 
-		_, err := ListDirectory(ctx, "file.txt", -1, 0, 1000)
+		_, err := ListDirectory(ctx, models.ListDirectoryRequest{Path: "file.txt", MaxDepth: -1, Offset: 0, Limit: 1000})
 		if err == nil {
 			t.Fatal("expected error when listing a file, got nil")
 		}
@@ -164,7 +164,7 @@ func TestListDirectory(t *testing.T) {
 			WorkspaceRoot:   workspaceRoot,
 		}
 
-		_, err := ListDirectory(ctx, "../outside", -1, 0, 1000)
+		_, err := ListDirectory(ctx, models.ListDirectoryRequest{Path: "../outside", MaxDepth: -1, Offset: 0, Limit: 1000})
 		if err != models.ErrOutsideWorkspace {
 			t.Errorf("expected ErrOutsideWorkspace, got %v", err)
 		}
@@ -182,7 +182,7 @@ func TestListDirectory(t *testing.T) {
 			WorkspaceRoot:   workspaceRoot,
 		}
 
-		_, err := ListDirectory(ctx, "nonexistent", -1, 0, 1000)
+		_, err := ListDirectory(ctx, models.ListDirectoryRequest{Path: "nonexistent", MaxDepth: -1, Offset: 0, Limit: 1000})
 		if err == nil {
 			t.Fatal("expected error for nonexistent directory, got nil")
 		}
@@ -207,7 +207,7 @@ func TestListDirectory(t *testing.T) {
 			WorkspaceRoot:   workspaceRoot,
 		}
 
-		_, err := ListDirectory(ctx, "testdir", -1, 0, 1000)
+		_, err := ListDirectory(ctx, models.ListDirectoryRequest{Path: "testdir", MaxDepth: -1, Offset: 0, Limit: 1000})
 		if err == nil {
 			t.Fatal("expected error from filesystem, got nil")
 		}
@@ -230,7 +230,7 @@ func TestListDirectory(t *testing.T) {
 			WorkspaceRoot:   workspaceRoot,
 		}
 
-		resp, err := ListDirectory(ctx, "src", -1, 0, 1000)
+		resp, err := ListDirectory(ctx, models.ListDirectoryRequest{Path: "src", MaxDepth: -1, Offset: 0, Limit: 1000})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -254,7 +254,7 @@ func TestListDirectory(t *testing.T) {
 			WorkspaceRoot:   workspaceRoot,
 		}
 
-		resp, err := ListDirectory(ctx, "/workspace/src", -1, 0, 1000)
+		resp, err := ListDirectory(ctx, models.ListDirectoryRequest{Path: "/workspace/src", MaxDepth: -1, Offset: 0, Limit: 1000})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -277,7 +277,7 @@ func TestListDirectory(t *testing.T) {
 			WorkspaceRoot:   workspaceRoot,
 		}
 
-		resp, err := ListDirectory(ctx, ".", -1, 0, 1000)
+		resp, err := ListDirectory(ctx, models.ListDirectoryRequest{Path: ".", MaxDepth: -1, Offset: 0, Limit: 1000})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -301,7 +301,7 @@ func TestListDirectory(t *testing.T) {
 			WorkspaceRoot:   workspaceRoot,
 		}
 
-		resp, err := ListDirectory(ctx, "", -1, 0, 1000)
+		resp, err := ListDirectory(ctx, models.ListDirectoryRequest{Path: "", MaxDepth: -1, Offset: 0, Limit: 1000})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -360,7 +360,7 @@ func TestListDirectory(t *testing.T) {
 			WorkspaceRoot:   workspaceRoot,
 		}
 
-		resp, err := ListDirectory(ctx, "", -1, 0, 1000)
+		resp, err := ListDirectory(ctx, models.ListDirectoryRequest{Path: "", MaxDepth: -1, Offset: 0, Limit: 1000})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -402,7 +402,7 @@ func TestListDirectory(t *testing.T) {
 			WorkspaceRoot:   workspaceRoot,
 		}
 
-		resp, err := ListDirectory(ctx, "src/app", -1, 0, 1000)
+		resp, err := ListDirectory(ctx, models.ListDirectoryRequest{Path: "src/app", MaxDepth: -1, Offset: 0, Limit: 1000})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -442,7 +442,7 @@ func TestListDirectory_Pagination(t *testing.T) {
 		}
 
 		// First page: offset=0, limit=50
-		resp1, err := ListDirectory(ctx, "", -1, 0, 50)
+		resp1, err := ListDirectory(ctx, models.ListDirectoryRequest{Path: "", MaxDepth: -1, Offset: 0, Limit: 50})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -460,7 +460,7 @@ func TestListDirectory_Pagination(t *testing.T) {
 		}
 
 		// Second page: offset=50, limit=50
-		resp2, err := ListDirectory(ctx, "", -1, 50, 50)
+		resp2, err := ListDirectory(ctx, models.ListDirectoryRequest{Path: "", MaxDepth: -1, Offset: 50, Limit: 50})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -475,7 +475,7 @@ func TestListDirectory_Pagination(t *testing.T) {
 		}
 
 		// Third page: offset=100, limit=50 (should have 50 entries, no truncation)
-		resp3, err := ListDirectory(ctx, "", -1, 100, 50)
+		resp3, err := ListDirectory(ctx, models.ListDirectoryRequest{Path: "", MaxDepth: -1, Offset: 100, Limit: 50})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -518,21 +518,21 @@ func TestListDirectory_InvalidPagination(t *testing.T) {
 	}
 
 	t.Run("negative offset", func(t *testing.T) {
-		_, err := ListDirectory(ctx, "", -1, -1, 1000)
+		_, err := ListDirectory(ctx, models.ListDirectoryRequest{Path: "", MaxDepth: -1, Offset: -1, Limit: 1000})
 		if err != models.ErrInvalidPaginationOffset {
 			t.Errorf("expected ErrInvalidPaginationOffset, got %v", err)
 		}
 	})
 
 	t.Run("zero limit", func(t *testing.T) {
-		_, err := ListDirectory(ctx, "", -1, 0, 0)
+		_, err := ListDirectory(ctx, models.ListDirectoryRequest{Path: "", MaxDepth: -1, Offset: 0, Limit: 0})
 		if err != models.ErrInvalidPaginationLimit {
 			t.Errorf("expected ErrInvalidPaginationLimit, got %v", err)
 		}
 	})
 
 	t.Run("limit exceeds maximum", func(t *testing.T) {
-		_, err := ListDirectory(ctx, "", -1, 0, 11000)
+		_, err := ListDirectory(ctx, models.ListDirectoryRequest{Path: "", MaxDepth: -1, Offset: 0, Limit: 11000})
 		if err != models.ErrInvalidPaginationLimit {
 			t.Errorf("expected ErrInvalidPaginationLimit, got %v", err)
 		}
@@ -558,7 +558,7 @@ func TestListDirectory_WithSymlinks(t *testing.T) {
 			WorkspaceRoot:   workspaceRoot,
 		}
 
-		resp, err := ListDirectory(ctx, "", -1, 0, 1000)
+		resp, err := ListDirectory(ctx, models.ListDirectoryRequest{Path: "", MaxDepth: -1, Offset: 0, Limit: 1000})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -602,7 +602,7 @@ func TestListDirectory_UnicodeFilenames(t *testing.T) {
 			WorkspaceRoot:   workspaceRoot,
 		}
 
-		resp, err := ListDirectory(ctx, "", -1, 0, 1000)
+		resp, err := ListDirectory(ctx, models.ListDirectoryRequest{Path: "", MaxDepth: -1, Offset: 0, Limit: 1000})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -664,7 +664,7 @@ func TestListDirectory_DotfilesWithGitignore(t *testing.T) {
 			GitignoreService: gitignoreService,
 		}
 
-		resp, err := ListDirectory(ctx, "", -1, 0, 1000)
+		resp, err := ListDirectory(ctx, models.ListDirectoryRequest{Path: "", MaxDepth: -1, Offset: 0, Limit: 1000})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -718,7 +718,7 @@ func TestListDirectory_DotfilesWithoutGitignore(t *testing.T) {
 			GitignoreService: nil, // No gitignore service
 		}
 
-		resp, err := ListDirectory(ctx, "", -1, 0, 1000)
+		resp, err := ListDirectory(ctx, models.ListDirectoryRequest{Path: "", MaxDepth: -1, Offset: 0, Limit: 1000})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -772,7 +772,7 @@ func TestListDirectory_LargeDirectory(t *testing.T) {
 		pageCount := 0
 
 		for {
-			resp, err := ListDirectory(ctx, "", -1, offset, limit)
+			resp, err := ListDirectory(ctx, models.ListDirectoryRequest{Path: "", MaxDepth: -1, Offset: offset, Limit: limit})
 			if err != nil {
 				t.Fatalf("unexpected error at offset %d: %v", offset, err)
 			}
@@ -828,7 +828,7 @@ func TestListDirectory_OffsetBeyondEnd(t *testing.T) {
 			WorkspaceRoot:   workspaceRoot,
 		}
 
-		resp, err := ListDirectory(ctx, "", -1, 100, 10)
+		resp, err := ListDirectory(ctx, models.ListDirectoryRequest{Path: "", MaxDepth: -1, Offset: 100, Limit: 10})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -865,7 +865,7 @@ func TestListDirectory_Recursive(t *testing.T) {
 		WorkspaceRoot:   workspaceRoot,
 	}
 
-	resp, err := ListDirectory(ctx, "", -1, 0, 1000)
+	resp, err := ListDirectory(ctx, models.ListDirectoryRequest{Path: "", MaxDepth: -1, Offset: 0, Limit: 1000})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -918,7 +918,7 @@ func TestListDirectory_RecursiveWithDepthLimit(t *testing.T) {
 	}
 
 	// Depth limit of 2 should go 2 levels deep from root
-	resp, err := ListDirectory(ctx, "", 2, 0, 1000)
+	resp, err := ListDirectory(ctx, models.ListDirectoryRequest{Path: "", MaxDepth: 2, Offset: 0, Limit: 1000})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -959,7 +959,7 @@ func TestListDirectory_SymlinkLoop(t *testing.T) {
 	}
 
 	// Should detect loop and not hang
-	resp, err := ListDirectory(ctx, "", -1, 0, 1000)
+	resp, err := ListDirectory(ctx, models.ListDirectoryRequest{Path: "", MaxDepth: -1, Offset: 0, Limit: 1000})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -995,7 +995,7 @@ func TestListDirectory_RecursivePagination(t *testing.T) {
 	}
 
 	// Request offset=5, limit=5
-	resp, err := ListDirectory(ctx, "", -1, 5, 5)
+	resp, err := ListDirectory(ctx, models.ListDirectoryRequest{Path: "", MaxDepth: -1, Offset: 5, Limit: 5})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -1033,7 +1033,7 @@ func TestListDirectory_NonRecursive(t *testing.T) {
 	}
 
 	// Depth 0 means only list immediate children (non-recursive)
-	resp, err := ListDirectory(ctx, "", 0, 0, 1000)
+	resp, err := ListDirectory(ctx, models.ListDirectoryRequest{Path: "", MaxDepth: 0, Offset: 0, Limit: 1000})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

@@ -25,7 +25,7 @@ func TestReadFile(t *testing.T) {
 			WorkspaceRoot:   workspaceRoot,
 		}
 
-		resp, err := ReadFile(ctx, "test.txt", nil, nil)
+		resp, err := ReadFile(ctx, models.ReadFileRequest{Path: "test.txt"})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -59,7 +59,7 @@ func TestReadFile(t *testing.T) {
 		}
 
 		offset := int64(5)
-		resp, err := ReadFile(ctx, "test.txt", &offset, nil)
+		resp, err := ReadFile(ctx, models.ReadFileRequest{Path: "test.txt", Offset: &offset})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -93,7 +93,7 @@ func TestReadFile(t *testing.T) {
 			WorkspaceRoot:   workspaceRoot,
 		}
 
-		_, err := ReadFile(ctx, "binary.bin", nil, nil)
+		_, err := ReadFile(ctx, models.ReadFileRequest{Path: "binary.bin"})
 		if err != models.ErrBinaryFile {
 			t.Errorf("expected ErrBinaryFile, got %v", err)
 		}
@@ -114,7 +114,7 @@ func TestReadFile(t *testing.T) {
 			WorkspaceRoot:   workspaceRoot,
 		}
 
-		_, err := ReadFile(ctx, "large.txt", nil, nil)
+		_, err := ReadFile(ctx, models.ReadFileRequest{Path: "large.txt"})
 		if err != models.ErrTooLarge {
 			t.Errorf("expected ErrTooLarge, got %v", err)
 		}
@@ -135,7 +135,7 @@ func TestReadFile(t *testing.T) {
 		}
 
 		offset := int64(-1)
-		_, err := ReadFile(ctx, "test.txt", &offset, nil)
+		_, err := ReadFile(ctx, models.ReadFileRequest{Path: "test.txt", Offset: &offset})
 		if err != models.ErrInvalidOffset {
 			t.Errorf("expected ErrInvalidOffset, got %v", err)
 		}
@@ -156,7 +156,7 @@ func TestReadFile(t *testing.T) {
 		}
 
 		limit := int64(-1)
-		_, err := ReadFile(ctx, "test.txt", nil, &limit)
+		_, err := ReadFile(ctx, models.ReadFileRequest{Path: "test.txt", Limit: &limit})
 		if err != models.ErrInvalidLimit {
 			t.Errorf("expected ErrInvalidLimit, got %v", err)
 		}
@@ -177,7 +177,7 @@ func TestReadFile(t *testing.T) {
 		}
 
 		offset := int64(10000)
-		resp, err := ReadFile(ctx, "test.txt", &offset, nil)
+		resp, err := ReadFile(ctx, models.ReadFileRequest{Path: "test.txt", Offset: &offset})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -199,7 +199,7 @@ func TestReadFile(t *testing.T) {
 			WorkspaceRoot:   workspaceRoot,
 		}
 
-		_, err := ReadFile(ctx, "subdir", nil, nil)
+		_, err := ReadFile(ctx, models.ReadFileRequest{Path: "subdir"})
 		if err == nil {
 			t.Error("expected error when reading directory")
 		}
@@ -216,7 +216,7 @@ func TestReadFile(t *testing.T) {
 			WorkspaceRoot:   workspaceRoot,
 		}
 
-		_, err := ReadFile(ctx, "nonexistent.txt", nil, nil)
+		_, err := ReadFile(ctx, models.ReadFileRequest{Path: "nonexistent.txt"})
 		if err == nil {
 			t.Error("expected error for nonexistent file")
 		}
@@ -237,7 +237,7 @@ func TestReadFile(t *testing.T) {
 		}
 
 		limit := int64(4)
-		resp, err := ReadFile(ctx, "test.txt", nil, &limit)
+		resp, err := ReadFile(ctx, models.ReadFileRequest{Path: "test.txt", Limit: &limit})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}

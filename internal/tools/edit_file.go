@@ -15,9 +15,9 @@ import (
 //
 // Note: There is a narrow race condition window between checksum validation and write.
 // For guaranteed conflict-free edits, external file locking would be required.
-func EditFile(ctx *models.WorkspaceContext, path string, operations []models.Operation) (*models.EditFileResponse, error) {
+func EditFile(ctx *models.WorkspaceContext, req models.EditFileRequest) (*models.EditFileResponse, error) {
 	// Resolve path
-	abs, rel, err := services.Resolve(ctx, path)
+	abs, rel, err := services.Resolve(ctx, req.Path)
 	if err != nil {
 		return nil, err
 	}
@@ -58,7 +58,7 @@ func EditFile(ctx *models.WorkspaceContext, path string, operations []models.Ope
 
 	// Apply operations sequentially
 	operationsApplied := 0
-	for i, op := range operations {
+	for i, op := range req.Operations {
 		if op.Before == "" {
 			return nil, fmt.Errorf("operation %d: Before must be non-empty, include nearest meaningful context for append-style edits", i+1)
 		}

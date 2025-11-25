@@ -19,7 +19,7 @@ func TestTodoTools(t *testing.T) {
 		ctx := createContext()
 
 		// 1. Initial Read should be empty
-		readResp, err := ReadTodos(ctx)
+		readResp, err := ReadTodos(ctx, models.ReadTodosRequest{})
 		if err != nil {
 			t.Fatalf("ReadTodos failed: %v", err)
 		}
@@ -32,7 +32,7 @@ func TestTodoTools(t *testing.T) {
 			{Description: "Task 1", Status: models.TodoStatusPending},
 			{Description: "Task 2", Status: models.TodoStatusInProgress},
 		}
-		writeResp, err := WriteTodos(ctx, todos)
+		writeResp, err := WriteTodos(ctx, models.WriteTodosRequest{Todos: todos})
 		if err != nil {
 			t.Fatalf("WriteTodos failed: %v", err)
 		}
@@ -41,7 +41,7 @@ func TestTodoTools(t *testing.T) {
 		}
 
 		// 3. Read back and verify
-		readResp, err = ReadTodos(ctx)
+		readResp, err = ReadTodos(ctx, models.ReadTodosRequest{})
 		if err != nil {
 			t.Fatalf("ReadTodos failed: %v", err)
 		}
@@ -61,20 +61,20 @@ func TestTodoTools(t *testing.T) {
 
 		// Write List A
 		listA := []models.Todo{{Description: "A", Status: models.TodoStatusPending}}
-		_, err := WriteTodos(ctx, listA)
+		_, err := WriteTodos(ctx, models.WriteTodosRequest{Todos: listA})
 		if err != nil {
 			t.Fatalf("WriteTodos A failed: %v", err)
 		}
 
 		// Write List B
 		listB := []models.Todo{{Description: "B", Status: models.TodoStatusCompleted}}
-		_, err = WriteTodos(ctx, listB)
+		_, err = WriteTodos(ctx, models.WriteTodosRequest{Todos: listB})
 		if err != nil {
 			t.Fatalf("WriteTodos B failed: %v", err)
 		}
 
 		// Read should return List B
-		readResp, err := ReadTodos(ctx)
+		readResp, err := ReadTodos(ctx, models.ReadTodosRequest{})
 		if err != nil {
 			t.Fatalf("ReadTodos failed: %v", err)
 		}
@@ -90,16 +90,16 @@ func TestTodoTools(t *testing.T) {
 		ctx := createContext()
 
 		// Write something
-		_, _ = WriteTodos(ctx, []models.Todo{{Description: "Task", Status: models.TodoStatusPending}})
+		_, _ = WriteTodos(ctx, models.WriteTodosRequest{Todos: []models.Todo{{Description: "Task", Status: models.TodoStatusPending}}})
 
 		// Write empty
-		_, err := WriteTodos(ctx, []models.Todo{})
+		_, err := WriteTodos(ctx, models.WriteTodosRequest{Todos: []models.Todo{}})
 		if err != nil {
 			t.Fatalf("WriteTodos empty failed: %v", err)
 		}
 
 		// Read should be empty
-		readResp, err := ReadTodos(ctx)
+		readResp, err := ReadTodos(ctx, models.ReadTodosRequest{})
 		if err != nil {
 			t.Fatalf("ReadTodos failed: %v", err)
 		}
@@ -113,16 +113,16 @@ func TestTodoTools(t *testing.T) {
 
 		// Write initial data
 		initial := []models.Todo{{Description: "Original", Status: models.TodoStatusPending}}
-		_, _ = WriteTodos(ctx, initial)
+		_, _ = WriteTodos(ctx, models.WriteTodosRequest{Todos: initial})
 
 		// Read data
-		readResp, _ := ReadTodos(ctx)
+		readResp, _ := ReadTodos(ctx, models.ReadTodosRequest{})
 
 		// Modify returned slice
 		readResp.Todos[0].Description = "Modified"
 
 		// Read again - should be original
-		readResp2, _ := ReadTodos(ctx)
+		readResp2, _ := ReadTodos(ctx, models.ReadTodosRequest{})
 		if readResp2.Todos[0].Description != "Original" {
 			t.Error("ReadTodos returned a reference to internal state, not a copy")
 		}
@@ -134,10 +134,12 @@ func TestTodoTools(t *testing.T) {
 		ctx2 := createContext()
 
 		// Write to ctx1
-		_, _ = WriteTodos(ctx1, []models.Todo{{Description: "Ctx1", Status: models.TodoStatusPending}})
+		_, err := WriteTodos(ctx1, models.WriteTodosRequest{Todos: []models.Todo{
+			{Description: "Ctx1", Status: models.TodoStatusPending},
+		}})
 
 		// Read from ctx2 - should be empty
-		readResp, err := ReadTodos(ctx2)
+		readResp, err := ReadTodos(ctx2, models.ReadTodosRequest{})
 		if err != nil {
 			t.Fatalf("ReadTodos ctx2 failed: %v", err)
 		}
@@ -156,9 +158,9 @@ func TestTodoTools(t *testing.T) {
 			go func(id int) {
 				defer wg.Done()
 				if id%2 == 0 {
-					_, _ = WriteTodos(ctx, []models.Todo{{Description: "Concurrent", Status: models.TodoStatusPending}})
+					_, _ = WriteTodos(ctx, models.WriteTodosRequest{Todos: []models.Todo{{Description: "Concurrent", Status: models.TodoStatusPending}}})
 				} else {
-					_, _ = ReadTodos(ctx)
+					_, _ = ReadTodos(ctx, models.ReadTodosRequest{})
 				}
 			}(i)
 		}
@@ -168,12 +170,12 @@ func TestTodoTools(t *testing.T) {
 	t.Run("Missing Store", func(t *testing.T) {
 		ctx := &models.WorkspaceContext{} // No store initialized
 
-		_, err := ReadTodos(ctx)
+		_, err := ReadTodos(ctx, models.ReadTodosRequest{})
 		if err == nil {
 			t.Error("expected error when reading with missing store, got nil")
 		}
 
-		_, err = WriteTodos(ctx, []models.Todo{})
+		_, err = WriteTodos(ctx, models.WriteTodosRequest{Todos: []models.Todo{}})
 		if err == nil {
 			t.Error("expected error when writing with missing store, got nil")
 		}

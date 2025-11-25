@@ -1,8 +1,10 @@
 package tools
 
 import (
+	"bufio"
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -19,94 +21,131 @@ const (
 // FindFile searches for files matching a glob pattern within the workspace.
 // It uses `fd` (preferred) or `find` (fallback) for efficient searching.
 // If includeIgnored is true, searches will include files that match .gitignore patterns.
-func FindFile(ctx *models.WorkspaceContext, pattern string, searchPath string, maxDepth int, includeIgnored bool, offset int, limit int) (*models.FindFileResponse, error) {
-	// 1. Validate pagination
-	if offset < 0 {
-		return nil, models.ErrInvalidPaginationOffset
-	}
-	if limit <= 0 || limit > 1000 {
-		return nil, models.ErrInvalidPaginationLimit
-	}
-
-	// 2. Validate pattern (reject path traversal attempts)
-	if strings.Contains(pattern, "..") || strings.HasPrefix(pattern, "/") {
+// FindFile searches for files matching a glob pattern using the fd command.
+// It validates the search path is within workspace boundaries, respects gitignore rules
+// (unless includeIgnored is true), and returns matches with pagination support.
+func FindFile(ctx *models.WorkspaceContext, req models.FindFileRequest) (*models.FindFileResponse, error) {
+	// Validate pattern (reject path traversal attempts)
+	if strings.Contains(req.Pattern, "..") || strings.HasPrefix(req.Pattern, "/") {
 		return nil, fmt.Errorf("invalid pattern: path traversal not allowed")
 	}
 
-	// 3. Resolve search path
-	absSearchPath, _, err := services.Resolve(ctx, searchPath)
+	// Resolve search path
+	absSearchPath, _, err := services.Resolve(ctx, req.SearchPath)
 	if err != nil {
 		return nil, err
 	}
 
-	// 4. Verify search path exists and is a directory
+	// Check if search path exists and is a directory
 	info, err := ctx.FS.Stat(absSearchPath)
 	if err != nil {
-		return nil, models.ErrFileMissing
-	}
-	if !info.IsDir() {
-		return nil, fmt.Errorf("search path must be a directory")
+		if os.IsNotExist(err) {
+			return nil, models.ErrFileMissing
+		}
+		return nil, fmt.Errorf("failed to stat search path: %w", err)
 	}
 
-	// 5. Build fd command
-	// fd -g "pattern" searchPath --max-depth N [--no-ignore]
-	cmd := []string{"fd", "-g", pattern}
-	if maxDepth > 0 {
-		cmd = append(cmd, "--max-depth", fmt.Sprintf("%d", maxDepth))
+	if !info.IsDir() {
+		return nil, fmt.Errorf("search path is not a directory")
 	}
-	if includeIgnored {
+
+	// Validate pattern
+	if req.Pattern == "" {
+		return nil, fmt.Errorf("pattern cannot be empty")
+	}
+
+	// Validate and set defaults for pagination
+	limit := req.Limit
+	if limit == 0 {
+		limit = models.DefaultListDirectoryLimit
+	}
+	if limit > models.MaxListDirectoryLimit {
+		limit = models.MaxListDirectoryLimit
+	}
+	if limit < 0 {
+		return nil, models.ErrInvalidPaginationLimit
+	}
+
+	offset := req.Offset
+	if offset < 0 {
+		offset = 0
+	}
+
+	// Build fd command
+	// fd -g "pattern" searchPath --max-depth N [--no-ignore]
+	cmd := []string{"fd", "-g", req.Pattern}
+	if req.MaxDepth > 0 {
+		cmd = append(cmd, "--max-depth", fmt.Sprintf("%d", req.MaxDepth))
+	}
+	if req.IncludeIgnored {
 		cmd = append(cmd, "--no-ignore")
 	}
 	cmd = append(cmd, absSearchPath)
 
-	// 6. Execute command
-	output, err := ctx.CommandExecutor.Run(context.Background(), cmd)
+	// Execute command with streaming
+	proc, stdout, _, err := ctx.CommandExecutor.Start(context.Background(), cmd, models.ProcessOptions{Dir: absSearchPath})
 	if err != nil {
-		// fd returns 0 even if no matches are found.
-		// Non-zero exit code indicates an actual error (e.g. invalid flag, permission denied).
-		return nil, fmt.Errorf("fd command failed: %w", err)
+		return nil, fmt.Errorf("failed to start fd command: %w", err)
 	}
+	defer proc.Wait()
 
-	// 7. Parse output (newline-separated paths)
-	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
-	var matches []string
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
+	// Stream and process output line by line
+	var allMatches []string
+	scanner := bufio.NewScanner(stdout)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
 		if line == "" {
 			continue
 		}
 
-		// Convert absolute path to relative (from workspace root)
+		// Convert to relative path
 		relPath, err := filepath.Rel(ctx.WorkspaceRoot, line)
 		if err != nil {
-			// Skip if we can't make it relative
+			// Skip paths that can't be made relative (shouldn't happen with fd)
 			continue
 		}
 
-		matches = append(matches, relPath)
+		// Normalize to forward slashes
+		relPath = filepath.ToSlash(relPath)
 
-		// Hard limit to prevent resource exhaustion
-		if len(matches) >= maxFindFileResults {
+		allMatches = append(allMatches, relPath)
+
+		// Safety limit to prevent unbounded growth
+		if len(allMatches) >= maxFindFileResults {
 			break
 		}
 	}
 
-	// 8. Sort results for consistency
-	sort.Strings(matches)
-
-	// 9. Apply pagination
-	totalCount := len(matches)
-	start := min(offset, totalCount)
-	end := start + limit
-	truncated := end < totalCount
-	if end > totalCount {
-		end = totalCount
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("error reading fd output: %w", err)
 	}
 
-	paginatedMatches := matches[start:end]
+	// Wait for command to complete
+	if err := proc.Wait(); err != nil {
+		// fd returns 0 even if no matches are found.
+		// Non-zero exit code indicates an actual error
+		return nil, fmt.Errorf("fd command failed: %w", err)
+	}
+
+	// Sort matches alphabetically
+	sort.Strings(allMatches)
+
+	// Apply pagination
+	totalCount := len(allMatches)
+	truncated := false
+
+	if offset >= totalCount {
+		allMatches = []string{}
+	} else {
+		allMatches = allMatches[offset:]
+		if len(allMatches) > limit {
+			allMatches = allMatches[:limit]
+			truncated = true
+		}
+	}
 
 	return &models.FindFileResponse{
-		Matches:    paginatedMatches,
+		Matches:    allMatches,
 		Offset:     offset,
 		Limit:      limit,
 		TotalCount: totalCount,

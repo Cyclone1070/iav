@@ -13,9 +13,9 @@ import (
 // It validates the path is within workspace boundaries, checks for binary content,
 // enforces size limits, and writes atomically using a temp file + rename pattern.
 // Returns an error if the file already exists, is binary, too large, or outside the workspace.
-func WriteFile(ctx *models.WorkspaceContext, path string, content string, perm *os.FileMode) (*models.WriteFileResponse, error) {
+func WriteFile(ctx *models.WorkspaceContext, req models.WriteFileRequest) (*models.WriteFileResponse, error) {
 	// Resolve path
-	abs, rel, err := services.Resolve(ctx, path)
+	abs, rel, err := services.Resolve(ctx, req.Path)
 	if err != nil {
 		return nil, err
 	}
@@ -34,7 +34,7 @@ func WriteFile(ctx *models.WorkspaceContext, path string, content string, perm *
 		return nil, fmt.Errorf("failed to create parent directories: %w", err)
 	}
 
-	contentBytes := []byte(content)
+	contentBytes := []byte(req.Content)
 
 	if ctx.BinaryDetector.IsBinaryContent(contentBytes) {
 		return nil, models.ErrBinaryFile
@@ -45,12 +45,12 @@ func WriteFile(ctx *models.WorkspaceContext, path string, content string, perm *
 	}
 
 	filePerm := os.FileMode(0644)
-	if perm != nil {
+	if req.Perm != nil {
 		// Only allow standard permission bits (owner/group/other rwx)
-		if *perm&^os.FileMode(0777) != 0 {
-			return nil, fmt.Errorf("invalid file permissions: only standard permission bits (0-0777) allowed, got %o", *perm)
+		if *req.Perm&^os.FileMode(0777) != 0 {
+			return nil, fmt.Errorf("invalid file permissions: only standard permission bits (0-0777) allowed, got %o", *req.Perm)
 		}
-		filePerm = *perm & 0777
+		filePerm = *req.Perm & 0777
 	}
 
 	// Write the file atomically

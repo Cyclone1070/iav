@@ -3,6 +3,7 @@ package tools
 import (
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -12,39 +13,46 @@ import (
 )
 
 // ListDirectory lists the contents of a directory within the workspace.
-// If path is empty, lists the workspace root.
-// Returns a sorted list of entries (directories first, then files alphabetically).
-// Pagination is supported via offset and limit parameters.
-// Dotfiles are included but respect .gitignore if GitignoreService is configured.
-// By default, lists recursively with unlimited depth. Set maxDepth to limit depth (-1 = unlimited).
-func ListDirectory(ctx *models.WorkspaceContext, path string, maxDepth int, offset int, limit int) (*models.ListDirectoryResponse, error) {
+// ListDirectory lists the contents of a directory with optional recursion and pagination.
+// It validates the path is within workspace boundaries, respects gitignore rules,
+// and returns entries sorted by path with pagination support.
+func ListDirectory(ctx *models.WorkspaceContext, req models.ListDirectoryRequest) (*models.ListDirectoryResponse, error) {
 	// Validate pagination parameters
-	if offset < 0 {
+	if req.Offset < 0 {
 		return nil, models.ErrInvalidPaginationOffset
 	}
-	if limit < 1 || limit > models.MaxListDirectoryLimit {
+	if req.Limit < 1 || req.Limit > models.MaxListDirectoryLimit {
 		return nil, models.ErrInvalidPaginationLimit
 	}
 
 	// Default to workspace root if path is empty
-	if path == "" {
-		path = "."
+	if req.Path == "" {
+		req.Path = "."
 	}
 
-	// Resolve path once
-	abs, rel, err := services.Resolve(ctx, path)
+	// Resolve path
+	abs, rel, err := services.Resolve(ctx, req.Path)
 	if err != nil {
 		return nil, err
 	}
 
-	// Get file info to check if it's a directory (single stat syscall)
+	// Check if path exists and is a directory
 	info, err := ctx.FS.Stat(abs)
 	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, models.ErrFileMissing
+		}
 		return nil, fmt.Errorf("failed to stat path: %w", err)
 	}
 
 	if !info.IsDir() {
-		return nil, fmt.Errorf("path is not a directory: %s", rel)
+		return nil, fmt.Errorf("path is not a directory")
+	}
+
+	// Set maxDepth: 0 = non-recursive (only immediate children), -1 or negative = unlimited
+	maxDepth := req.MaxDepth
+	if maxDepth < 0 {
+		maxDepth = -1 // unlimited
 	}
 
 	// Collect entries recursively
@@ -72,14 +80,14 @@ func ListDirectory(ctx *models.WorkspaceContext, path string, maxDepth int, offs
 	truncated := false
 
 	// Handle offset
-	if offset >= totalCount {
+	if req.Offset >= totalCount {
 		directoryEntries = []models.DirectoryEntry{}
 	} else {
-		directoryEntries = directoryEntries[offset:]
+		directoryEntries = directoryEntries[req.Offset:]
 
 		// Handle limit
-		if len(directoryEntries) > limit {
-			directoryEntries = directoryEntries[:limit]
+		if len(directoryEntries) > req.Limit {
+			directoryEntries = directoryEntries[:req.Limit]
 			truncated = true
 		}
 	}
@@ -87,8 +95,8 @@ func ListDirectory(ctx *models.WorkspaceContext, path string, maxDepth int, offs
 	return &models.ListDirectoryResponse{
 		DirectoryPath: rel,
 		Entries:       directoryEntries,
-		Offset:        offset,
-		Limit:         limit,
+		Offset:        req.Offset,
+		Limit:         req.Limit,
 		TotalCount:    totalCount,
 		Truncated:     truncated,
 	}, nil

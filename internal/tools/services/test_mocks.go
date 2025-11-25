@@ -543,3 +543,31 @@ func (e *MockExitError) Error() string {
 func (e *MockExitError) ExitCode() int {
 	return e.Code
 }
+
+// MockProcess implements models.Process for testing
+type MockProcess struct {
+	WaitFunc   func() error
+	KillFunc   func() error
+	SignalFunc func(sig os.Signal) error
+}
+
+func (p *MockProcess) Wait() error {
+	if p.WaitFunc != nil {
+		return p.WaitFunc()
+	}
+	return nil
+}
+
+func (p *MockProcess) Kill() error {
+	if p.KillFunc != nil {
+		return p.KillFunc()
+	}
+	return nil
+}
+
+func (p *MockProcess) Signal(sig os.Signal) error {
+	if p.SignalFunc != nil {
+		return p.SignalFunc(sig)
+	}
+	return nil
+}

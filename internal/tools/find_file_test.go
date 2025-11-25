@@ -3,7 +3,9 @@ package tools
 import (
 	"context"
 	"fmt"
+	"io"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/Cyclone1070/deployforme/internal/tools/models"
@@ -18,10 +20,10 @@ func TestFindFile_BasicGlob(t *testing.T) {
 	fs.CreateDir("/workspace")
 
 	mockRunner := &services.MockCommandExecutor{
-		RunFunc: func(ctx context.Context, cmd []string) ([]byte, error) {
+		StartFunc: func(ctx context.Context, cmd []string, opts models.ProcessOptions) (models.Process, io.Reader, io.Reader, error) {
 			// Simulate fd output
 			output := "/workspace/a/b/file.go\n/workspace/a/file.go\n"
-			return []byte(output), nil
+			return &services.MockProcess{}, strings.NewReader(output), strings.NewReader(""), nil
 		},
 	}
 
@@ -34,7 +36,7 @@ func TestFindFile_BasicGlob(t *testing.T) {
 		CommandExecutor: mockRunner,
 	}
 
-	resp, err := FindFile(ctx, "*.go", "", 0, false, 0, 100)
+	resp, err := FindFile(ctx, models.FindFileRequest{Pattern: "*.go", SearchPath: "", MaxDepth: 0, IncludeIgnored: false, Offset: 0, Limit: 100})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -66,8 +68,8 @@ func TestFindFile_Pagination(t *testing.T) {
 	}
 
 	mockRunner := &services.MockCommandExecutor{
-		RunFunc: func(ctx context.Context, cmd []string) ([]byte, error) {
-			return []byte(output), nil
+		StartFunc: func(ctx context.Context, cmd []string, opts models.ProcessOptions) (models.Process, io.Reader, io.Reader, error) {
+			return &services.MockProcess{}, strings.NewReader(output), strings.NewReader(""), nil
 		},
 	}
 
@@ -81,7 +83,7 @@ func TestFindFile_Pagination(t *testing.T) {
 	}
 
 	// Request offset=2, limit=2
-	resp, err := FindFile(ctx, "*.txt", "", 0, false, 2, 2)
+	resp, err := FindFile(ctx, models.FindFileRequest{Pattern: "*.txt", SearchPath: "", MaxDepth: 0, IncludeIgnored: false, Offset: 2, Limit: 2})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -112,9 +114,13 @@ func TestFindFile_InvalidGlob(t *testing.T) {
 	fs.CreateDir("/workspace")
 
 	mockRunner := &services.MockCommandExecutor{
-		RunFunc: func(ctx context.Context, cmd []string) ([]byte, error) {
+		StartFunc: func(ctx context.Context, cmd []string, opts models.ProcessOptions) (models.Process, io.Reader, io.Reader, error) {
 			// Simulate fd error for invalid glob
-			return []byte(""), &services.MockExitError{Code: 2}
+			return &services.MockProcess{
+				WaitFunc: func() error {
+					return &services.MockExitError{Code: 2}
+				},
+			}, strings.NewReader(""), strings.NewReader(""), nil
 		},
 	}
 
@@ -127,7 +133,7 @@ func TestFindFile_InvalidGlob(t *testing.T) {
 		CommandExecutor: mockRunner,
 	}
 
-	_, err := FindFile(ctx, "[", "", 0, false, 0, 100)
+	_, err := FindFile(ctx, models.FindFileRequest{Pattern: "[", SearchPath: "", MaxDepth: 0, IncludeIgnored: false, Offset: 0, Limit: 100})
 	if err == nil {
 		t.Fatal("expected error for invalid glob, got nil")
 	}
@@ -149,7 +155,7 @@ func TestFindFile_PathOutsideWorkspace(t *testing.T) {
 		CommandExecutor: &services.MockCommandExecutor{},
 	}
 
-	_, err := FindFile(ctx, "*.go", "../outside", 0, false, 0, 100)
+	_, err := FindFile(ctx, models.FindFileRequest{Pattern: "*.go", SearchPath: "../outside", MaxDepth: 0, IncludeIgnored: false, Offset: 0, Limit: 100})
 	if err != models.ErrOutsideWorkspace {
 		t.Errorf("expected ErrOutsideWorkspace, got %v", err)
 	}
@@ -171,7 +177,7 @@ func TestFindFile_NonExistentPath(t *testing.T) {
 		CommandExecutor: &services.MockCommandExecutor{},
 	}
 
-	_, err := FindFile(ctx, "*.go", "nonexistent/dir", 0, false, 0, 100)
+	_, err := FindFile(ctx, models.FindFileRequest{Pattern: "*.go", SearchPath: "nonexistent/dir", MaxDepth: 0, IncludeIgnored: false, Offset: 0, Limit: 100})
 	if err != models.ErrFileMissing {
 		t.Errorf("expected ErrFileMissing, got %v", err)
 	}
@@ -193,7 +199,7 @@ func TestFindFile_NegativeLimit(t *testing.T) {
 		CommandExecutor: &services.MockCommandExecutor{},
 	}
 
-	_, err := FindFile(ctx, "*.go", "", 0, false, 0, -1)
+	_, err := FindFile(ctx, models.FindFileRequest{Pattern: "*.go", SearchPath: "", MaxDepth: 0, IncludeIgnored: false, Offset: 0, Limit: -1})
 	if err != models.ErrInvalidPaginationLimit {
 		t.Errorf("expected ErrInvalidPaginationLimit, got %v", err)
 	}
@@ -207,8 +213,12 @@ func TestFindFile_CommandFailure(t *testing.T) {
 	fs.CreateDir("/workspace")
 
 	mockRunner := &services.MockCommandExecutor{
-		RunFunc: func(ctx context.Context, cmd []string) ([]byte, error) {
-			return []byte(""), &services.MockExitError{Code: 2}
+		StartFunc: func(ctx context.Context, cmd []string, opts models.ProcessOptions) (models.Process, io.Reader, io.Reader, error) {
+			return &services.MockProcess{
+				WaitFunc: func() error {
+					return &services.MockExitError{Code: 2}
+				},
+			}, strings.NewReader(""), strings.NewReader(""), nil
 		},
 	}
 
@@ -221,7 +231,7 @@ func TestFindFile_CommandFailure(t *testing.T) {
 		CommandExecutor: mockRunner,
 	}
 
-	_, err := FindFile(ctx, "*.go", "", 0, false, 0, 100)
+	_, err := FindFile(ctx, models.FindFileRequest{Pattern: "*.go", SearchPath: "", MaxDepth: 0, IncludeIgnored: false, Offset: 0, Limit: 100})
 	if err == nil {
 		t.Fatal("expected error for command failure, got nil")
 	}
@@ -236,9 +246,9 @@ func TestFindFile_ShellInjection(t *testing.T) {
 
 	var capturedCmd []string
 	mockRunner := &services.MockCommandExecutor{
-		RunFunc: func(ctx context.Context, cmd []string) ([]byte, error) {
+		StartFunc: func(ctx context.Context, cmd []string, opts models.ProcessOptions) (models.Process, io.Reader, io.Reader, error) {
 			capturedCmd = cmd
-			return []byte(""), nil
+			return &services.MockProcess{}, strings.NewReader(""), strings.NewReader(""), nil
 		},
 	}
 
@@ -252,7 +262,7 @@ func TestFindFile_ShellInjection(t *testing.T) {
 	}
 
 	pattern := "*.go; rm -rf /"
-	_, _ = FindFile(ctx, pattern, "", 0, false, 0, 100)
+	_, _ = FindFile(ctx, models.FindFileRequest{Pattern: pattern, SearchPath: "", MaxDepth: 0, IncludeIgnored: false, Offset: 0, Limit: 100})
 
 	// Verify pattern is passed as literal argument, not shell-interpreted
 	found := slices.Contains(capturedCmd, pattern)
@@ -270,9 +280,9 @@ func TestFindFile_UnicodeFilenames(t *testing.T) {
 	fs.CreateDir("/workspace")
 
 	mockRunner := &services.MockCommandExecutor{
-		RunFunc: func(ctx context.Context, cmd []string) ([]byte, error) {
+		StartFunc: func(ctx context.Context, cmd []string, opts models.ProcessOptions) (models.Process, io.Reader, io.Reader, error) {
 			output := "/workspace/🚀.txt\n/workspace/文件.txt\n"
-			return []byte(output), nil
+			return &services.MockProcess{}, strings.NewReader(output), strings.NewReader(""), nil
 		},
 	}
 
@@ -285,7 +295,7 @@ func TestFindFile_UnicodeFilenames(t *testing.T) {
 		CommandExecutor: mockRunner,
 	}
 
-	resp, err := FindFile(ctx, "*.txt", "", 0, false, 0, 100)
+	resp, err := FindFile(ctx, models.FindFileRequest{Pattern: "*.txt", SearchPath: "", MaxDepth: 0, IncludeIgnored: false, Offset: 0, Limit: 100})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -329,8 +339,8 @@ func TestFindFile_DeeplyNested(t *testing.T) {
 	deepPath += "/file.txt"
 
 	mockRunner := &services.MockCommandExecutor{
-		RunFunc: func(ctx context.Context, cmd []string) ([]byte, error) {
-			return []byte(deepPath + "\n"), nil
+		StartFunc: func(ctx context.Context, cmd []string, opts models.ProcessOptions) (models.Process, io.Reader, io.Reader, error) {
+			return &services.MockProcess{}, strings.NewReader(deepPath + "\n"), strings.NewReader(""), nil
 		},
 	}
 
@@ -343,7 +353,7 @@ func TestFindFile_DeeplyNested(t *testing.T) {
 		CommandExecutor: mockRunner,
 	}
 
-	resp, err := FindFile(ctx, "*.txt", "", 0, false, 0, 100)
+	resp, err := FindFile(ctx, models.FindFileRequest{Pattern: "*.txt", SearchPath: "", MaxDepth: 0, IncludeIgnored: false, Offset: 0, Limit: 100})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -369,7 +379,7 @@ func TestFindFile_PatternTraversal(t *testing.T) {
 		CommandExecutor: &services.MockCommandExecutor{},
 	}
 
-	_, err := FindFile(ctx, "../*.go", "", 0, false, 0, 100)
+	_, err := FindFile(ctx, models.FindFileRequest{Pattern: "../*.go", SearchPath: "", MaxDepth: 0, IncludeIgnored: false, Offset: 0, Limit: 100})
 	if err == nil {
 		t.Fatal("expected error for pattern with path traversal, got nil")
 	}
@@ -391,7 +401,7 @@ func TestFindFile_AbsolutePattern(t *testing.T) {
 		CommandExecutor: &services.MockCommandExecutor{},
 	}
 
-	_, err := FindFile(ctx, "/etc/*.conf", "", 0, false, 0, 100)
+	_, err := FindFile(ctx, models.FindFileRequest{Pattern: "/etc/*.conf", SearchPath: "", MaxDepth: 0, IncludeIgnored: false, Offset: 0, Limit: 100})
 	if err == nil {
 		t.Fatal("expected error for absolute pattern, got nil")
 	}
@@ -405,9 +415,9 @@ func TestFindFile_NoMatches(t *testing.T) {
 	fs.CreateDir("/workspace")
 
 	mockRunner := &services.MockCommandExecutor{
-		RunFunc: func(ctx context.Context, cmd []string) ([]byte, error) {
+		StartFunc: func(ctx context.Context, cmd []string, opts models.ProcessOptions) (models.Process, io.Reader, io.Reader, error) {
 			// Simulate fd returning exit code 0 (no matches, empty output)
-			return []byte(""), nil
+			return &services.MockProcess{}, strings.NewReader(""), strings.NewReader(""), nil
 		},
 	}
 
@@ -420,7 +430,7 @@ func TestFindFile_NoMatches(t *testing.T) {
 		CommandExecutor: mockRunner,
 	}
 
-	resp, err := FindFile(ctx, "*.nonexistent", "", 0, false, 0, 100)
+	resp, err := FindFile(ctx, models.FindFileRequest{Pattern: "*.nonexistent", SearchPath: "", MaxDepth: 0, IncludeIgnored: false, Offset: 0, Limit: 100})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -442,14 +452,14 @@ func TestFindFile_IncludeIgnored(t *testing.T) {
 
 	// Test with includeIgnored=false (default behavior, should respect gitignore)
 	mockRunner := &services.MockCommandExecutor{
-		RunFunc: func(ctx context.Context, cmd []string) ([]byte, error) {
+		StartFunc: func(ctx context.Context, cmd []string, opts models.ProcessOptions) (models.Process, io.Reader, io.Reader, error) {
 			// Verify --no-ignore is NOT present
 			if slices.Contains(cmd, "--no-ignore") {
 				t.Error("expected --no-ignore to NOT be present when includeIgnored=false")
 			}
 			// Simulate fd output without ignored files
 			output := "/workspace/visible.go\n"
-			return []byte(output), nil
+			return &services.MockProcess{}, strings.NewReader(output), strings.NewReader(""), nil
 		},
 	}
 
@@ -462,7 +472,7 @@ func TestFindFile_IncludeIgnored(t *testing.T) {
 		CommandExecutor: mockRunner,
 	}
 
-	resp, err := FindFile(ctx, "*.go", "", 0, false, 0, 100)
+	resp, err := FindFile(ctx, models.FindFileRequest{Pattern: "*.go", SearchPath: "", MaxDepth: 0, IncludeIgnored: false, Offset: 0, Limit: 100})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -472,17 +482,17 @@ func TestFindFile_IncludeIgnored(t *testing.T) {
 	}
 
 	// Test with includeIgnored=true (should include ignored files)
-	mockRunner.RunFunc = func(ctx context.Context, cmd []string) ([]byte, error) {
+	mockRunner.StartFunc = func(ctx context.Context, cmd []string, opts models.ProcessOptions) (models.Process, io.Reader, io.Reader, error) {
 		// Verify --no-ignore IS present
 		if !slices.Contains(cmd, "--no-ignore") {
 			t.Error("expected --no-ignore to be present when includeIgnored=true")
 		}
 		// Simulate fd output with ignored files
 		output := "/workspace/ignored.go\n/workspace/visible.go\n"
-		return []byte(output), nil
+		return &services.MockProcess{}, strings.NewReader(output), strings.NewReader(""), nil
 	}
 
-	resp, err = FindFile(ctx, "*.go", "", 0, true, 0, 100)
+	resp, err = FindFile(ctx, models.FindFileRequest{Pattern: "*.go", SearchPath: "", MaxDepth: 0, IncludeIgnored: true, Offset: 0, Limit: 100})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

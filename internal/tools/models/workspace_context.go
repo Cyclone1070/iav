@@ -13,6 +13,5 @@ type WorkspaceContext struct {
 	TodoStore        TodoStore        // optional, for managing todos
 
 	// Shell Configuration
-	CommandPolicy CommandPolicy
-	DockerConfig  DockerConfig
+	DockerConfig DockerConfig
 }

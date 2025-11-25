@@ -1,7 +1,7 @@
 package tools
 
 import (
-	"errors"
+	"fmt"
 	"sync"
 
 	"github.com/Cyclone1070/deployforme/internal/tools/models"
@@ -42,15 +42,16 @@ func (s *InMemoryTodoStore) Write(todos []models.Todo) error {
 	return nil
 }
 
-// ReadTodos returns the current list of todos from the context's store.
-func ReadTodos(ctx *models.WorkspaceContext) (*models.ReadTodosResponse, error) {
+// ReadTodos retrieves all todos from the in-memory store.
+// Returns an empty list if no todos exist.
+func ReadTodos(ctx *models.WorkspaceContext, req models.ReadTodosRequest) (*models.ReadTodosResponse, error) {
 	if ctx.TodoStore == nil {
-		return nil, errors.New("todo store not initialized in context")
+		return nil, fmt.Errorf("todo store not configured")
 	}
 
 	todos, err := ctx.TodoStore.Read()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to read todos: %w", err)
 	}
 
 	return &models.ReadTodosResponse{
@@ -58,17 +59,18 @@ func ReadTodos(ctx *models.WorkspaceContext) (*models.ReadTodosResponse, error) 
 	}, nil
 }
 
-// WriteTodos replaces the current list of todos in the context's store.
-func WriteTodos(ctx *models.WorkspaceContext, todos []models.Todo) (*models.WriteTodosResponse, error) {
+// WriteTodos replaces all todos in the in-memory store.
+// This is an atomic operation that completely replaces the todo list.
+func WriteTodos(ctx *models.WorkspaceContext, req models.WriteTodosRequest) (*models.WriteTodosResponse, error) {
 	if ctx.TodoStore == nil {
-		return nil, errors.New("todo store not initialized in context")
+		return nil, fmt.Errorf("todo store not configured")
 	}
 
-	if err := ctx.TodoStore.Write(todos); err != nil {
-		return nil, err
+	if err := ctx.TodoStore.Write(req.Todos); err != nil {
+		return nil, fmt.Errorf("failed to write todos: %w", err)
 	}
 
 	return &models.WriteTodosResponse{
-		Count: len(todos),
+		Count: len(req.Todos),
 	}, nil
 }

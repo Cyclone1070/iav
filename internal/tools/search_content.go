@@ -1,9 +1,11 @@
 package tools
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -19,30 +21,62 @@ const (
 	maxLineLength = 10000
 )
 
-// SearchContent searches for content matching a regex pattern within files.
-// It uses `ripgrep` (preferred) or `grep` (fallback) for efficient searching.
-// If includeIgnored is true, searches will include files that match .gitignore patterns.
-func SearchContent(ctx *models.WorkspaceContext, query string, searchPath string, caseSensitive bool, includeIgnored bool, offset int, limit int) (*models.SearchContentResponse, error) {
-	// 1. Validate pagination
-	if offset < 0 {
-		return nil, models.ErrInvalidPaginationOffset
-	}
-	if limit <= 0 || limit > 1000 {
-		return nil, models.ErrInvalidPaginationLimit
-	}
-
-	// 2. Validate query
-	if query == "" {
-		return nil, fmt.Errorf("query cannot be empty")
-	}
-
-	// 3. Resolve search path
-	absSearchPath, _, err := services.Resolve(ctx, searchPath)
+// SearchContent searches for content matching a regex pattern using ripgrep.
+// It validates the search path is within workspace boundaries, respects gitignore rules
+// (unless includeIgnored is true), and returns matches with pagination support.
+func SearchContent(ctx *models.WorkspaceContext, req models.SearchContentRequest) (*models.SearchContentResponse, error) {
+	// Resolve search path
+	absSearchPath, _, err := services.Resolve(ctx, req.SearchPath)
 	if err != nil {
 		return nil, err
 	}
 
-	// 4. Verify search path exists
+	// Check if search path exists
+	info, err := ctx.FS.Stat(absSearchPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, models.ErrFileMissing
+		}
+		return nil, fmt.Errorf("failed to stat search path: %w", err)
+	}
+
+	if !info.IsDir() {
+		return nil, fmt.Errorf("search path is not a directory")
+	}
+
+	// Validate query
+	if req.Query == "" {
+		return nil, fmt.Errorf("query cannot be empty")
+	}
+
+	// Validate and set defaults for pagination
+	limit := req.Limit
+	if limit == 0 {
+		limit = models.DefaultListDirectoryLimit
+	}
+	if limit > models.MaxListDirectoryLimit {
+		limit = models.MaxListDirectoryLimit
+	}
+
+	offset := req.Offset
+	if offset < 0 {
+		offset = 0
+	}
+
+	// Final pagination validation
+	if limit <= 0 || limit > 1000 { // Keep 1000 as a hard upper limit for search results
+		return nil, models.ErrInvalidPaginationLimit
+	}
+
+	// 2. Validate query (This was already done above, but keeping the comment structure from the original)
+	if req.Query == "" {
+		return nil, fmt.Errorf("query cannot be empty")
+	}
+
+	// 3. Resolve search path (This was already done above, but keeping the comment structure from the original)
+	// The path is already resolved in absSearchPath. We just need to ensure it exists.
+	// The initial stat check already covers this. This redundant check can be removed or kept for clarity.
+	// For now, aligning with the user's instruction to keep the stat check here.
 	_, err = ctx.FS.Stat(absSearchPath)
 	if err != nil {
 		return nil, models.ErrFileMissing
@@ -51,38 +85,32 @@ func SearchContent(ctx *models.WorkspaceContext, query string, searchPath string
 	// 5. Build ripgrep command
 	// rg --json "query" searchPath [--no-ignore]
 	cmd := []string{"rg", "--json"}
-	if !caseSensitive {
+	if !req.CaseSensitive {
 		cmd = append(cmd, "-i")
 	}
-	if includeIgnored {
+	if req.IncludeIgnored {
 		cmd = append(cmd, "--no-ignore")
 	}
-	cmd = append(cmd, query, absSearchPath)
+	cmd = append(cmd, req.Query, absSearchPath)
 
 	// 6. Execute command
-	output, err := ctx.CommandExecutor.Run(context.Background(), cmd)
+	// 6. Execute command with streaming
+	proc, stdout, _, err := ctx.CommandExecutor.Start(context.Background(), cmd, models.ProcessOptions{Dir: absSearchPath})
 	if err != nil {
-		exitCode := services.GetExitCode(err)
-		if exitCode == 1 {
-			// rg returns 1 for no matches (valid case)
-			return &models.SearchContentResponse{
-				Matches:    []models.SearchContentMatch{},
-				Offset:     offset,
-				Limit:      limit,
-				TotalCount: 0,
-				Truncated:  false,
-			}, nil
-		}
-		// Exit code 2+ = real error
-		return nil, fmt.Errorf("rg command failed: %w", err)
+		return nil, fmt.Errorf("failed to start rg command: %w", err)
 	}
+	defer proc.Wait()
 
-	// 7. Parse JSON output
-	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
+	// 7. Stream and process JSON output line by line
 	var matches []models.SearchContentMatch
+	scanner := bufio.NewScanner(stdout)
+	// Increase buffer size to handle very long lines (e.g. minified JS)
+	const maxScanTokenSize = 10 * 1024 * 1024 // 10MB
+	buf := make([]byte, 0, 64*1024)
+	scanner.Buffer(buf, maxScanTokenSize)
 
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
 		if line == "" {
 			continue
 		}
@@ -118,6 +146,9 @@ func SearchContent(ctx *models.WorkspaceContext, query string, searchPath string
 			continue
 		}
 
+		// Normalize to forward slashes
+		relPath = filepath.ToSlash(relPath)
+
 		// Truncate very long lines
 		lineContent := rgMatch.Data.Lines.Text
 		if len(lineContent) > maxLineLength {
@@ -133,6 +164,22 @@ func SearchContent(ctx *models.WorkspaceContext, query string, searchPath string
 		// Hard limit to prevent resource exhaustion
 		if len(matches) >= maxSearchContentResults {
 			break
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("error reading rg output: %w", err)
+	}
+
+	// Wait for command to complete
+	if err := proc.Wait(); err != nil {
+		exitCode := services.GetExitCode(err)
+		if exitCode == 1 {
+			// rg returns 1 for no matches (valid case)
+			// We just continue with empty matches
+		} else {
+			// Exit code 2+ = real error
+			return nil, fmt.Errorf("rg command failed: %w", err)
 		}
 	}
 

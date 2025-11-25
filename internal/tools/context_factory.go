@@ -19,12 +19,29 @@ func NewWorkspaceContextWithOptions(workspaceRoot string, maxFileSize int64) (*m
 		return nil, err
 	}
 
+	fs := services.NewOSFileSystem(maxFileSize)
+
+	// Initialize gitignore service (handles missing .gitignore gracefully)
+	gitignoreSvc, err := services.NewGitignoreService(canonicalRoot, fs)
+	if err != nil {
+		// Log warning but continue with nil service
+		// In production code, you might want to use a proper logger here
+		// For now, we just ignore the error as missing .gitignore is common
+		gitignoreSvc = nil
+	}
+
 	return &models.WorkspaceContext{
-		FS:              services.NewOSFileSystem(maxFileSize),
-		BinaryDetector:  &services.SystemBinaryDetector{},
-		ChecksumManager: services.NewChecksumManager(),
-		MaxFileSize:     maxFileSize,
-		WorkspaceRoot:   canonicalRoot,
-		// CommandPolicy and DockerConfig are zero-valued by default
+		FS:               fs,
+		BinaryDetector:   &services.SystemBinaryDetector{},
+		ChecksumManager:  services.NewChecksumManager(),
+		MaxFileSize:      maxFileSize,
+		WorkspaceRoot:    canonicalRoot,
+		GitignoreService: gitignoreSvc,
+		CommandExecutor:  &services.OSCommandExecutor{},
+		TodoStore:        NewInMemoryTodoStore(),
+		DockerConfig: models.DockerConfig{
+			CheckCommand: []string{"docker", "info"},
+			StartCommand: []string{"docker", "desktop", "start"},
+		},
 	}, nil
 }

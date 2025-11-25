@@ -11,9 +11,9 @@ import (
 // It validates the path is within workspace boundaries, checks for binary content,
 // enforces size limits, and caches checksums for full file reads.
 // Returns an error if the file is binary, too large, or outside the workspace.
-func ReadFile(ctx *models.WorkspaceContext, path string, offset *int64, limit *int64) (*models.ReadFileResponse, error) {
+func ReadFile(ctx *models.WorkspaceContext, req models.ReadFileRequest) (*models.ReadFileResponse, error) {
 	// Resolve path
-	abs, rel, err := services.Resolve(ctx, path)
+	abs, rel, err := services.Resolve(ctx, req.Path)
 	if err != nil {
 		return nil, err
 	}
@@ -36,14 +36,14 @@ func ReadFile(ctx *models.WorkspaceContext, path string, offset *int64, limit *i
 
 	// Derive offset and limit
 	var actualOffset, actualLimit int64
-	if offset != nil {
-		actualOffset = *offset
+	if req.Offset != nil {
+		actualOffset = *req.Offset
 		if actualOffset < 0 {
 			return nil, models.ErrInvalidOffset
 		}
 	}
-	if limit != nil {
-		actualLimit = *limit
+	if req.Limit != nil {
+		actualLimit = *req.Limit
 		if actualLimit < 0 {
 			return nil, models.ErrInvalidLimit
 		}

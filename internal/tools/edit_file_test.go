@@ -32,7 +32,7 @@ func TestEditFile(t *testing.T) {
 			WorkspaceRoot:   workspaceRoot,
 		}
 
-		_, err := ReadFile(ctx, "test.txt", nil, nil)
+		_, err := ReadFile(ctx, models.ReadFileRequest{Path: "test.txt"})
 		if err != nil {
 			t.Fatalf("failed to read file: %v", err)
 		}
@@ -50,7 +50,7 @@ func TestEditFile(t *testing.T) {
 			},
 		}
 
-		_, err = EditFile(ctx, "test.txt", ops)
+		_, err = EditFile(ctx, models.EditFileRequest{Path: "test.txt", Operations: ops})
 		if err != models.ErrEditConflict {
 			t.Errorf("expected ErrEditConflict, got %v", err)
 		}
@@ -71,7 +71,7 @@ func TestEditFile(t *testing.T) {
 		}
 
 		// Read first to populate cache
-		_, err := ReadFile(ctx, "test.txt", nil, nil)
+		_, err := ReadFile(ctx, models.ReadFileRequest{Path: "test.txt"})
 		if err != nil {
 			t.Fatalf("failed to read file: %v", err)
 		}
@@ -89,7 +89,7 @@ func TestEditFile(t *testing.T) {
 			},
 		}
 
-		resp, err := EditFile(ctx, "test.txt", ops)
+		resp, err := EditFile(ctx, models.EditFileRequest{Path: "test.txt", Operations: ops})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -124,7 +124,7 @@ func TestEditFile(t *testing.T) {
 			WorkspaceRoot:   workspaceRoot,
 		}
 
-		_, err := ReadFile(ctx, "test.txt", nil, nil)
+		_, err := ReadFile(ctx, models.ReadFileRequest{Path: "test.txt"})
 		if err != nil {
 			t.Fatalf("failed to read file: %v", err)
 		}
@@ -137,7 +137,7 @@ func TestEditFile(t *testing.T) {
 			},
 		}
 
-		_, err = EditFile(ctx, "test.txt", ops)
+		_, err = EditFile(ctx, models.EditFileRequest{Path: "test.txt", Operations: ops})
 		if err != models.ErrSnippetNotFound {
 			t.Errorf("expected ErrSnippetNotFound, got %v", err)
 		}
@@ -157,7 +157,7 @@ func TestEditFile(t *testing.T) {
 			WorkspaceRoot:   workspaceRoot,
 		}
 
-		_, err := ReadFile(ctx, "test.txt", nil, nil)
+		_, err := ReadFile(ctx, models.ReadFileRequest{Path: "test.txt"})
 		if err != nil {
 			t.Fatalf("failed to read file: %v", err)
 		}
@@ -170,7 +170,7 @@ func TestEditFile(t *testing.T) {
 			},
 		}
 
-		_, err = EditFile(ctx, "test.txt", ops)
+		_, err = EditFile(ctx, models.EditFileRequest{Path: "test.txt", Operations: ops})
 		if err != models.ErrSnippetAmbiguous {
 			t.Errorf("expected ErrSnippetAmbiguous, got %v", err)
 		}
@@ -201,7 +201,7 @@ func TestEditFile(t *testing.T) {
 			},
 		}
 
-		_, err := EditFile(ctx, "binary.bin", ops)
+		_, err := EditFile(ctx, models.EditFileRequest{Path: "binary.bin", Operations: ops})
 		if err != models.ErrBinaryFile {
 			t.Errorf("expected ErrBinaryFile, got %v", err)
 		}
@@ -222,7 +222,7 @@ func TestEditFile(t *testing.T) {
 			WorkspaceRoot:   workspaceRoot,
 		}
 
-		_, err := ReadFile(ctx, "test.txt", nil, nil)
+		_, err := ReadFile(ctx, models.ReadFileRequest{Path: "test.txt"})
 		if err != nil {
 			t.Fatalf("failed to read file: %v", err)
 		}
@@ -235,7 +235,7 @@ func TestEditFile(t *testing.T) {
 			},
 		}
 
-		_, err = EditFile(ctx, "test.txt", ops)
+		_, err = EditFile(ctx, models.EditFileRequest{Path: "test.txt", Operations: ops})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -265,7 +265,7 @@ func TestEditFile(t *testing.T) {
 			WorkspaceRoot:   workspaceRoot,
 		}
 
-		_, err := ReadFile(ctx, "test.txt", nil, nil)
+		_, err := ReadFile(ctx, models.ReadFileRequest{Path: "test.txt"})
 		if err != nil {
 			t.Fatalf("failed to read file: %v", err)
 		}
@@ -278,7 +278,7 @@ func TestEditFile(t *testing.T) {
 			},
 		}
 
-		_, err = EditFile(ctx, "test.txt", ops)
+		_, err = EditFile(ctx, models.EditFileRequest{Path: "test.txt", Operations: ops})
 		if err == nil {
 			t.Error("expected error for empty Before string")
 		}
@@ -303,7 +303,7 @@ func TestEditFile(t *testing.T) {
 			},
 		}
 
-		_, err := EditFile(ctx, "nonexistent.txt", ops)
+		_, err := EditFile(ctx, models.EditFileRequest{Path: "nonexistent.txt", Operations: ops})
 		if err != models.ErrFileMissing {
 			t.Errorf("expected ErrFileMissing, got %v", err)
 		}
@@ -329,7 +329,7 @@ func TestEditFile(t *testing.T) {
 			WorkspaceRoot:   workspaceRoot,
 		}
 
-		_, err := ReadFile(ctx, "test.txt", nil, nil)
+		_, err := ReadFile(ctx, models.ReadFileRequest{Path: "test.txt"})
 		if err != nil {
 			t.Fatalf("failed to read file: %v", err)
 		}
@@ -348,7 +348,7 @@ func TestEditFile(t *testing.T) {
 			},
 		}
 
-		_, err = EditFile(ctx, "test.txt", ops)
+		_, err = EditFile(ctx, models.EditFileRequest{Path: "test.txt", Operations: ops})
 		if err != models.ErrTooLarge {
 			t.Errorf("expected ErrTooLarge, got %v", err)
 		}
@@ -369,7 +369,7 @@ func TestEditFile(t *testing.T) {
 		}
 
 		// Read file to populate cache
-		_, err := ReadFile(ctx, "test.txt", nil, nil)
+		_, err := ReadFile(ctx, models.ReadFileRequest{Path: "test.txt"})
 		if err != nil {
 			t.Fatalf("failed to read file: %v", err)
 		}
@@ -387,7 +387,7 @@ func TestEditFile(t *testing.T) {
 			},
 		}
 
-		_, err = EditFile(ctx, "test.txt", ops)
+		_, err = EditFile(ctx, models.EditFileRequest{Path: "test.txt", Operations: ops})
 		if err != models.ErrEditConflict {
 			t.Errorf("expected ErrEditConflict due to race condition, got %v", err)
 		}
@@ -411,7 +411,7 @@ func TestEditFile(t *testing.T) {
 		}
 
 		// Read first to populate cache
-		_, err := ReadFile(ctx, "link1", nil, nil)
+		_, err := ReadFile(ctx, models.ReadFileRequest{Path: "link1"})
 		if err != nil {
 			t.Fatalf("failed to read file through symlink chain: %v", err)
 		}
@@ -424,7 +424,7 @@ func TestEditFile(t *testing.T) {
 			},
 		}
 
-		resp, err := EditFile(ctx, "link1", ops)
+		resp, err := EditFile(ctx, models.EditFileRequest{Path: "link1", Operations: ops})
 		if err != nil {
 			t.Fatalf("unexpected error editing through symlink chain: %v", err)
 		}
@@ -470,7 +470,7 @@ func TestEditFile(t *testing.T) {
 		}
 
 		// Try to edit through escaping chain - should fail
-		_, err := EditFile(ctx, "link1", ops)
+		_, err := EditFile(ctx, models.EditFileRequest{Path: "link1", Operations: ops})
 		if err != models.ErrOutsideWorkspace {
 			t.Errorf("expected ErrOutsideWorkspace for escaping symlink chain, got %v", err)
 		}

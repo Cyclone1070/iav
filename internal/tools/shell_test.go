@@ -70,7 +70,6 @@ func TestShellTool_Run_SimpleCommand(t *testing.T) {
 	wCtx := &models.WorkspaceContext{
 		WorkspaceRoot: "/workspace",
 		FS:            mockFS,
-		CommandPolicy: models.CommandPolicy{Allow: []string{"echo"}},
 	}
 
 	factory := &MockCommandExecutor{
@@ -112,7 +111,6 @@ func TestShellTool_Run_WorkingDir(t *testing.T) {
 	wCtx := &models.WorkspaceContext{
 		WorkspaceRoot: "/workspace",
 		FS:            mockFS,
-		CommandPolicy: models.CommandPolicy{Allow: []string{"pwd"}},
 	}
 
 	var capturedDir string
@@ -148,7 +146,6 @@ func TestShellTool_Run_Env(t *testing.T) {
 	wCtx := &models.WorkspaceContext{
 		WorkspaceRoot: "/workspace",
 		FS:            mockFS,
-		CommandPolicy: models.CommandPolicy{Allow: []string{"env"}},
 	}
 
 	var capturedEnv []string
@@ -200,7 +197,6 @@ func TestShellTool_Run_EmptyCommand(t *testing.T) {
 	wCtx := &models.WorkspaceContext{
 		WorkspaceRoot: "/workspace",
 		FS:            mockFS,
-		CommandPolicy: models.CommandPolicy{Allow: []string{"*"}},
 	}
 
 	tool := &ShellTool{CommandExecutor: &MockCommandExecutor{}}
@@ -212,6 +208,156 @@ func TestShellTool_Run_EmptyCommand(t *testing.T) {
 	}
 }
 
+func TestShellTool_Run_EnvFiles(t *testing.T) {
+	mockFS := services.NewMockFileSystem(models.DefaultMaxFileSize)
+	mockFS.CreateDir("/workspace")
+
+	// Create env files
+	envFile1Content := `DB_HOST=localhost
+DB_PORT=5432
+API_KEY=secret123`
+	mockFS.CreateFile("/workspace/.env", []byte(envFile1Content), 0644)
+
+	envFile2Content := `DB_PORT=3306
+CACHE_URL=redis://localhost`
+	mockFS.CreateFile("/workspace/.env.local", []byte(envFile2Content), 0644)
+
+	wCtx := &models.WorkspaceContext{
+		WorkspaceRoot: "/workspace",
+		FS:            mockFS,
+	}
+
+	var capturedEnv []string
+	factory := &MockCommandExecutor{
+		StartFunc: func(ctx context.Context, command []string, opts models.ProcessOptions) (models.Process, io.Reader, io.Reader, error) {
+			capturedEnv = opts.Env
+			proc := &MockProcess{WaitFunc: func() error { return nil }}
+			return proc, strings.NewReader(""), strings.NewReader(""), nil
+		},
+	}
+
+	tool := &ShellTool{CommandExecutor: factory}
+
+	t.Run("Single env file", func(t *testing.T) {
+		req := models.ShellRequest{
+			Command:  []string{"env"},
+			EnvFiles: []string{".env"},
+		}
+
+		_, err := tool.Run(context.Background(), wCtx, req)
+		if err != nil {
+			t.Fatalf("Run failed: %v", err)
+		}
+
+		// Check that env vars from file are present
+		hasDBHost := false
+		hasDBPort := false
+		hasAPIKey := false
+		for _, envVar := range capturedEnv {
+			if envVar == "DB_HOST=localhost" {
+				hasDBHost = true
+			}
+			if envVar == "DB_PORT=5432" {
+				hasDBPort = true
+			}
+			if envVar == "API_KEY=secret123" {
+				hasAPIKey = true
+			}
+		}
+
+		if !hasDBHost {
+			t.Error("Expected DB_HOST=localhost in environment")
+		}
+		if !hasDBPort {
+			t.Error("Expected DB_PORT=5432 in environment")
+		}
+		if !hasAPIKey {
+			t.Error("Expected API_KEY=secret123 in environment")
+		}
+	})
+
+	t.Run("Multiple env files with override", func(t *testing.T) {
+		req := models.ShellRequest{
+			Command:  []string{"env"},
+			EnvFiles: []string{".env", ".env.local"},
+		}
+
+		_, err := tool.Run(context.Background(), wCtx, req)
+		if err != nil {
+			t.Fatalf("Run failed: %v", err)
+		}
+
+		// .env.local should override DB_PORT from .env
+		dbPortCount := 0
+		var dbPortValue string
+		for _, envVar := range capturedEnv {
+			if strings.HasPrefix(envVar, "DB_PORT=") {
+				dbPortCount++
+				dbPortValue = envVar
+			}
+		}
+
+		// Should have DB_PORT=3306 from .env.local (last one wins)
+		if !strings.Contains(dbPortValue, "3306") {
+			t.Errorf("Expected DB_PORT=3306 from .env.local, got %s", dbPortValue)
+		}
+	})
+
+	t.Run("Request.Env overrides EnvFiles", func(t *testing.T) {
+		req := models.ShellRequest{
+			Command:  []string{"env"},
+			EnvFiles: []string{".env"},
+			Env: map[string]string{
+				"DB_HOST": "production.example.com",
+			},
+		}
+
+		_, err := tool.Run(context.Background(), wCtx, req)
+		if err != nil {
+			t.Fatalf("Run failed: %v", err)
+		}
+
+		// Request.Env should override EnvFiles
+		var dbHostValue string
+		for _, envVar := range capturedEnv {
+			if strings.HasPrefix(envVar, "DB_HOST=") {
+				dbHostValue = envVar
+			}
+		}
+
+		if !strings.Contains(dbHostValue, "production.example.com") {
+			t.Errorf("Expected DB_HOST=production.example.com from Request.Env, got %s", dbHostValue)
+		}
+	})
+
+	t.Run("Nonexistent env file", func(t *testing.T) {
+		req := models.ShellRequest{
+			Command:  []string{"env"},
+			EnvFiles: []string{".env.missing"},
+		}
+
+		_, err := tool.Run(context.Background(), wCtx, req)
+		if err == nil {
+			t.Error("Expected error for nonexistent env file, got nil")
+		}
+		if !strings.Contains(err.Error(), ".env.missing") {
+			t.Errorf("Expected error to mention .env.missing, got: %v", err)
+		}
+	})
+
+	t.Run("Env file outside workspace", func(t *testing.T) {
+		req := models.ShellRequest{
+			Command:  []string{"env"},
+			EnvFiles: []string{"../../etc/passwd"},
+		}
+
+		_, err := tool.Run(context.Background(), wCtx, req)
+		if err == nil {
+			t.Error("Expected error for env file outside workspace, got nil")
+		}
+	})
+}
+
 func TestShellTool_Run_OutsideWorkspace(t *testing.T) {
 	mockFS := services.NewMockFileSystem(models.DefaultMaxFileSize)
 	mockFS.CreateDir("/workspace")
@@ -219,7 +365,6 @@ func TestShellTool_Run_OutsideWorkspace(t *testing.T) {
 	wCtx := &models.WorkspaceContext{
 		WorkspaceRoot: "/workspace",
 		FS:            mockFS,
-		CommandPolicy: models.CommandPolicy{Allow: []string{"ls"}},
 	}
 
 	tool := &ShellTool{CommandExecutor: &MockCommandExecutor{}}
@@ -234,25 +379,6 @@ func TestShellTool_Run_OutsideWorkspace(t *testing.T) {
 	}
 }
 
-func TestShellTool_Run_PolicyRejected(t *testing.T) {
-	mockFS := services.NewMockFileSystem(models.DefaultMaxFileSize)
-	mockFS.CreateDir("/workspace")
-
-	wCtx := &models.WorkspaceContext{
-		WorkspaceRoot: "/workspace",
-		FS:            mockFS,
-		CommandPolicy: models.CommandPolicy{Allow: []string{"ls"}, Deny: []string{"rm"}},
-	}
-
-	tool := &ShellTool{CommandExecutor: &MockCommandExecutor{}}
-	req := models.ShellRequest{Command: []string{"rm", "-rf", "/"}}
-
-	_, err := tool.Run(context.Background(), wCtx, req)
-	if err != models.ErrShellRejected {
-		t.Errorf("Error = %v, want ErrShellRejected", err)
-	}
-}
-
 func TestShellTool_Run_NonZeroExit(t *testing.T) {
 	mockFS := services.NewMockFileSystem(models.DefaultMaxFileSize)
 	mockFS.CreateDir("/workspace")
@@ -260,7 +386,6 @@ func TestShellTool_Run_NonZeroExit(t *testing.T) {
 	wCtx := &models.WorkspaceContext{
 		WorkspaceRoot: "/workspace",
 		FS:            mockFS,
-		CommandPolicy: models.CommandPolicy{Allow: []string{"false"}},
 	}
 
 	factory := &MockCommandExecutor{
@@ -293,7 +418,6 @@ func TestShellTool_Run_BinaryOutput(t *testing.T) {
 	wCtx := &models.WorkspaceContext{
 		WorkspaceRoot: "/workspace",
 		FS:            mockFS,
-		CommandPolicy: models.CommandPolicy{Allow: []string{"cat"}},
 	}
 
 	binaryData := []byte{0x00, 0x01, 0x02, 0xFF, 0xFE}
@@ -323,7 +447,6 @@ func TestShellTool_Run_CommandInjection(t *testing.T) {
 	wCtx := &models.WorkspaceContext{
 		WorkspaceRoot: "/workspace",
 		FS:            mockFS,
-		CommandPolicy: models.CommandPolicy{Allow: []string{"echo"}},
 	}
 
 	var capturedCommand []string
@@ -358,7 +481,6 @@ func TestShellTool_Run_HugeOutput(t *testing.T) {
 	wCtx := &models.WorkspaceContext{
 		WorkspaceRoot: "/workspace",
 		FS:            mockFS,
-		CommandPolicy: models.CommandPolicy{Allow: []string{"cat"}},
 	}
 
 	hugeData := make([]byte, 50*1024*1024)
@@ -395,7 +517,6 @@ func TestShellTool_Run_Timeout(t *testing.T) {
 	wCtx := &models.WorkspaceContext{
 		WorkspaceRoot: "/workspace",
 		FS:            mockFS,
-		CommandPolicy: models.CommandPolicy{Allow: []string{"sleep"}},
 	}
 
 	factory := &MockCommandExecutor{
@@ -435,7 +556,6 @@ func TestShellTool_Run_DockerCheck(t *testing.T) {
 	wCtx := &models.WorkspaceContext{
 		WorkspaceRoot: "/workspace",
 		FS:            mockFS,
-		CommandPolicy: models.CommandPolicy{Allow: []string{"docker"}},
 		DockerConfig: models.DockerConfig{
 			CheckCommand: []string{"docker", "info"},
 		},
@@ -476,7 +596,6 @@ func TestShellTool_Run_EnvInjection(t *testing.T) {
 	wCtx := &models.WorkspaceContext{
 		WorkspaceRoot: "/workspace",
 		FS:            mockFS,
-		CommandPolicy: models.CommandPolicy{Allow: []string{"env"}},
 	}
 
 	var capturedEnv []string
@@ -512,7 +631,6 @@ func TestShellTool_Run_ContextCancellation(t *testing.T) {
 	wCtx := &models.WorkspaceContext{
 		WorkspaceRoot: "/workspace",
 		FS:            mockFS,
-		CommandPolicy: models.CommandPolicy{Allow: []string{"sleep"}},
 	}
 
 	factory := &MockCommandExecutor{
@@ -558,7 +676,6 @@ func TestShellTool_Run_SpecificExitCode(t *testing.T) {
 	wCtx := &models.WorkspaceContext{
 		WorkspaceRoot: "/workspace",
 		FS:            mockFS,
-		CommandPolicy: models.CommandPolicy{Allow: []string{"exit42"}},
 	}
 
 	factory := &MockCommandExecutor{

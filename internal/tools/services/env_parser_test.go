@@ -1,25 +1,18 @@
 package services
 
 import (
-	"os"
-	"path/filepath"
 	"testing"
 )
 
 func TestParseEnvFile(t *testing.T) {
-	// Create a temporary directory for test files
-	tmpDir := t.TempDir()
-
 	t.Run("Basic KEY=VALUE parsing", func(t *testing.T) {
-		envFile := filepath.Join(tmpDir, "test1.env")
+		fs := NewMockFileSystem(1024 * 1024)
 		content := `KEY1=value1
 KEY2=value2
 KEY3=value3`
-		if err := os.WriteFile(envFile, []byte(content), 0644); err != nil {
-			t.Fatal(err)
-		}
+		fs.CreateFile("/test1.env", []byte(content), 0644)
 
-		env, err := ParseEnvFile(envFile)
+		env, err := ParseEnvFile(fs, "/test1.env")
 		if err != nil {
 			t.Fatalf("ParseEnvFile failed: %v", err)
 		}
@@ -38,18 +31,16 @@ KEY3=value3`
 	})
 
 	t.Run("Comments and empty lines", func(t *testing.T) {
-		envFile := filepath.Join(tmpDir, "test2.env")
+		fs := NewMockFileSystem(1024 * 1024)
 		content := `# This is a comment
 KEY1=value1
 
 # Another comment
 KEY2=value2
 `
-		if err := os.WriteFile(envFile, []byte(content), 0644); err != nil {
-			t.Fatal(err)
-		}
+		fs.CreateFile("/test2.env", []byte(content), 0644)
 
-		env, err := ParseEnvFile(envFile)
+		env, err := ParseEnvFile(fs, "/test2.env")
 		if err != nil {
 			t.Fatalf("ParseEnvFile failed: %v", err)
 		}
@@ -64,15 +55,13 @@ KEY2=value2
 	})
 
 	t.Run("Quoted values", func(t *testing.T) {
-		envFile := filepath.Join(tmpDir, "test3.env")
+		fs := NewMockFileSystem(1024 * 1024)
 		content := `KEY1="value with spaces"
 KEY2='single quoted'
 KEY3=unquoted`
-		if err := os.WriteFile(envFile, []byte(content), 0644); err != nil {
-			t.Fatal(err)
-		}
+		fs.CreateFile("/test3.env", []byte(content), 0644)
 
-		env, err := ParseEnvFile(envFile)
+		env, err := ParseEnvFile(fs, "/test3.env")
 		if err != nil {
 			t.Fatalf("ParseEnvFile failed: %v", err)
 		}
@@ -89,33 +78,31 @@ KEY3=unquoted`
 	})
 
 	t.Run("Invalid format", func(t *testing.T) {
-		envFile := filepath.Join(tmpDir, "test4.env")
+		fs := NewMockFileSystem(1024 * 1024)
 		content := `INVALID LINE WITHOUT EQUALS`
-		if err := os.WriteFile(envFile, []byte(content), 0644); err != nil {
-			t.Fatal(err)
-		}
+		fs.CreateFile("/test4.env", []byte(content), 0644)
 
-		_, err := ParseEnvFile(envFile)
+		_, err := ParseEnvFile(fs, "/test4.env")
 		if err == nil {
 			t.Error("Expected error for invalid format, got nil")
 		}
 	})
 
 	t.Run("File not found", func(t *testing.T) {
-		_, err := ParseEnvFile("/nonexistent/file.env")
+		fs := NewMockFileSystem(1024 * 1024)
+
+		_, err := ParseEnvFile(fs, "/nonexistent/file.env")
 		if err == nil {
 			t.Error("Expected error for nonexistent file, got nil")
 		}
 	})
 
 	t.Run("Values with equals sign", func(t *testing.T) {
-		envFile := filepath.Join(tmpDir, "test5.env")
+		fs := NewMockFileSystem(1024 * 1024)
 		content := `DATABASE_URL=postgres://user:pass@localhost:5432/db?sslmode=disable`
-		if err := os.WriteFile(envFile, []byte(content), 0644); err != nil {
-			t.Fatal(err)
-		}
+		fs.CreateFile("/test5.env", []byte(content), 0644)
 
-		env, err := ParseEnvFile(envFile)
+		env, err := ParseEnvFile(fs, "/test5.env")
 		if err != nil {
 			t.Fatalf("ParseEnvFile failed: %v", err)
 		}

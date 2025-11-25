@@ -2,6 +2,7 @@ package models
 
 import (
 	"errors"
+	"os"
 )
 
 const (
@@ -25,6 +26,66 @@ type Operation struct {
 	After                string // required
 	ExpectedReplacements int    // required, >=1
 }
+
+// Request structs for tool operations
+
+// ReadFileRequest contains parameters for ReadFile operation
+type ReadFileRequest struct {
+	Path   string `json:"path"`
+	Offset *int64 `json:"offset,omitempty"`
+	Limit  *int64 `json:"limit,omitempty"`
+}
+
+// WriteFileRequest contains parameters for WriteFile operation
+type WriteFileRequest struct {
+	Path    string       `json:"path"`
+	Content string       `json:"content"`
+	Perm    *os.FileMode `json:"perm,omitempty"`
+}
+
+// EditFileRequest contains parameters for EditFile operation
+type EditFileRequest struct {
+	Path       string      `json:"path"`
+	Operations []Operation `json:"operations"`
+}
+
+// ListDirectoryRequest contains parameters for ListDirectory operation
+type ListDirectoryRequest struct {
+	Path     string `json:"path"`
+	MaxDepth int    `json:"max_depth,omitempty"`
+	Offset   int    `json:"offset,omitempty"`
+	Limit    int    `json:"limit,omitempty"`
+}
+
+// FindFileRequest contains parameters for FindFile operation
+type FindFileRequest struct {
+	Pattern        string `json:"pattern"`
+	SearchPath     string `json:"search_path"`
+	MaxDepth       int    `json:"max_depth,omitempty"`
+	IncludeIgnored bool   `json:"include_ignored,omitempty"`
+	Offset         int    `json:"offset,omitempty"`
+	Limit          int    `json:"limit,omitempty"`
+}
+
+// SearchContentRequest contains parameters for SearchContent operation
+type SearchContentRequest struct {
+	Query          string `json:"query"`
+	SearchPath     string `json:"search_path"`
+	CaseSensitive  bool   `json:"case_sensitive,omitempty"`
+	IncludeIgnored bool   `json:"include_ignored,omitempty"`
+	Offset         int    `json:"offset,omitempty"`
+	Limit          int    `json:"limit,omitempty"`
+}
+
+// ReadTodosRequest contains parameters for ReadTodos operation
+type ReadTodosRequest struct{}
+
+// WriteTodosRequest contains parameters for WriteTodos operation
+type WriteTodosRequest struct {
+	Todos []Todo `json:"todos"`
+}
+
+// Response structs for tool operations
 
 // ReadFileResponse contains the result of a ReadFile operation
 type ReadFileResponse struct {
@@ -115,11 +176,11 @@ var (
 
 // ShellRequest represents a request to execute a command on the local machine.
 type ShellRequest struct {
-	Command        []string
-	WorkingDir     string
-	TimeoutSeconds int
-	Env            map[string]string
-	EnvFiles       []string // Paths to .env files to load (relative to workspace root)
+	Command        []string          `json:"command"`
+	WorkingDir     string            `json:"working_dir,omitempty"`
+	TimeoutSeconds int               `json:"timeout_seconds,omitempty"`
+	Env            map[string]string `json:\"env,omitempty\"`
+	EnvFiles       []string          `json:"env_files,omitempty"` // Paths to .env files to load (relative to workspace root)
 }
 
 // ShellResponse represents the result of a local command execution.
@@ -132,14 +193,6 @@ type ShellResponse struct {
 	WorkingDir     string
 	Notes          []string
 	BackgroundPIDs []int
-}
-
-// CommandPolicy defines allowed and denied commands.
-// Default behavior: commands not in Allow or Deny lists require approval (ask).
-type CommandPolicy struct {
-	Allow        []string
-	Deny         []string
-	SessionAllow map[string]bool // command roots approved for this session
 }
 
 // DockerConfig contains configuration for Docker readiness checks.

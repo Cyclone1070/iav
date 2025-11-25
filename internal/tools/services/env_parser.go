@@ -3,8 +3,9 @@ package services
 import (
 	"bufio"
 	"fmt"
-	"os"
 	"strings"
+
+	"github.com/Cyclone1070/deployforme/internal/tools/models"
 )
 
 // ParseEnvFile parses a .env file and returns a map of environment variables.
@@ -18,15 +19,14 @@ import (
 // - Multi-line values
 // - Variable expansion
 // - Complex shell escaping
-func ParseEnvFile(path string) (map[string]string, error) {
-	file, err := os.Open(path)
+func ParseEnvFile(fs models.FileSystem, path string) (map[string]string, error) {
+	content, err := fs.ReadFileRange(path, 0, 0)
 	if err != nil {
-		return nil, fmt.Errorf("failed to open env file: %w", err)
+		return nil, fmt.Errorf("failed to read env file: %w", err)
 	}
-	defer file.Close()
 
 	env := make(map[string]string)
-	scanner := bufio.NewScanner(file)
+	scanner := bufio.NewScanner(strings.NewReader(string(content)))
 	lineNum := 0
 
 	for scanner.Scan() {

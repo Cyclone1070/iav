@@ -15,8 +15,9 @@ type ShellTool struct {
 	CommandExecutor models.CommandExecutor
 }
 
-// Run executes a shell command with policy enforcement, Docker readiness checks,
+// Run executes a shell command with Docker readiness checks,
 // environment variable support, timeout handling, and output collection.
+// NOTE: This tool does NOT enforce policy - the caller is responsible for policy checks.
 func (t *ShellTool) Run(ctx context.Context, wCtx *models.WorkspaceContext, req models.ShellRequest) (*models.ShellResponse, error) {
 	if len(req.Command) == 0 {
 		return nil, fmt.Errorf("command cannot be empty")
@@ -32,9 +33,7 @@ func (t *ShellTool) Run(ctx context.Context, wCtx *models.WorkspaceContext, req 
 		return nil, models.ErrShellWorkingDirOutsideWorkspace
 	}
 
-	if err := services.EvaluatePolicy(wCtx.CommandPolicy, req.Command); err != nil {
-		return nil, err
-	}
+	// Policy check removed - caller is responsible for enforcement
 
 	if services.IsDockerCommand(req.Command) {
 		if err := services.EnsureDockerReady(ctx, t.CommandExecutor, wCtx.DockerConfig); err != nil {
@@ -50,7 +49,7 @@ func (t *ShellTool) Run(ctx context.Context, wCtx *models.WorkspaceContext, req 
 			return nil, fmt.Errorf("failed to resolve env file %s: %w", envFile, err)
 		}
 
-		envVars, err := services.ParseEnvFile(envFilePath)
+		envVars, err := services.ParseEnvFile(wCtx.FS, envFilePath)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse env file %s: %w", envFile, err)
 		}

@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"fmt"
+	"io"
 	"slices"
 	"strings"
 	"testing"
@@ -23,8 +24,8 @@ func TestSearchContent_BasicRegex(t *testing.T) {
 {"type":"match","data":{"path":{"text":"/workspace/file.go"},"lines":{"text":"func bar()"},"line_number":20}}`
 
 	mockRunner := &services.MockCommandExecutor{
-		RunFunc: func(ctx context.Context, cmd []string) ([]byte, error) {
-			return []byte(rgOutput), nil
+		StartFunc: func(ctx context.Context, cmd []string, opts models.ProcessOptions) (models.Process, io.Reader, io.Reader, error) {
+			return &services.MockProcess{}, strings.NewReader(rgOutput), strings.NewReader(""), nil
 		},
 	}
 
@@ -37,7 +38,7 @@ func TestSearchContent_BasicRegex(t *testing.T) {
 		CommandExecutor: mockRunner,
 	}
 
-	resp, err := SearchContent(ctx, "func .*", "", true, false, 0, 100)
+	resp, err := SearchContent(ctx, models.SearchContentRequest{Query: "func .*", SearchPath: "", CaseSensitive: true, IncludeIgnored: false, Offset: 0, Limit: 100})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -67,9 +68,13 @@ func TestSearchContent_CaseInsensitive(t *testing.T) {
 
 	var capturedCmd []string
 	mockRunner := &services.MockCommandExecutor{
-		RunFunc: func(ctx context.Context, cmd []string) ([]byte, error) {
+		StartFunc: func(ctx context.Context, cmd []string, opts models.ProcessOptions) (models.Process, io.Reader, io.Reader, error) {
 			capturedCmd = cmd
-			return []byte(""), &services.MockExitError{Code: 1} // No matches
+			return &services.MockProcess{
+				WaitFunc: func() error {
+					return &services.MockExitError{Code: 1} // No matches
+				},
+			}, strings.NewReader(""), strings.NewReader(""), nil
 		},
 	}
 
@@ -82,7 +87,7 @@ func TestSearchContent_CaseInsensitive(t *testing.T) {
 		CommandExecutor: mockRunner,
 	}
 
-	_, _ = SearchContent(ctx, "pattern", "", false, false, 0, 100)
+	_, _ = SearchContent(ctx, models.SearchContentRequest{Query: "pattern", SearchPath: "", CaseSensitive: false, IncludeIgnored: false, Offset: 0, Limit: 100})
 
 	// Verify -i flag is present
 	foundFlag := slices.Contains(capturedCmd, "-i")
@@ -108,7 +113,7 @@ func TestSearchContent_PathOutsideWorkspace(t *testing.T) {
 		CommandExecutor: &services.MockCommandExecutor{},
 	}
 
-	_, err := SearchContent(ctx, "pattern", "../outside", true, false, 0, 100)
+	_, err := SearchContent(ctx, models.SearchContentRequest{Query: "pattern", SearchPath: "../outside", CaseSensitive: true, IncludeIgnored: false, Offset: 0, Limit: 100})
 	if err != models.ErrOutsideWorkspace {
 		t.Errorf("expected ErrOutsideWorkspace, got %v", err)
 	}
@@ -130,7 +135,7 @@ func TestSearchContent_EmptyQuery(t *testing.T) {
 		CommandExecutor: &services.MockCommandExecutor{},
 	}
 
-	_, err := SearchContent(ctx, "", "", true, false, 0, 100)
+	_, err := SearchContent(ctx, models.SearchContentRequest{Query: "", SearchPath: "", CaseSensitive: true, IncludeIgnored: false, Offset: 0, Limit: 100})
 	if err == nil {
 		t.Fatal("expected error for empty query, got nil")
 	}
@@ -152,7 +157,7 @@ func TestSearchContent_HugeLimit(t *testing.T) {
 		CommandExecutor: &services.MockCommandExecutor{},
 	}
 
-	_, err := SearchContent(ctx, "pattern", "", true, false, 0, 1000000)
+	_, err := SearchContent(ctx, models.SearchContentRequest{Query: "pattern", SearchPath: "", CaseSensitive: true, IncludeIgnored: false, Offset: 0, Limit: 1000000})
 	if err != models.ErrInvalidPaginationLimit {
 		t.Errorf("expected ErrInvalidPaginationLimit, got %v", err)
 	}
@@ -170,8 +175,8 @@ func TestSearchContent_VeryLongLine(t *testing.T) {
 	rgOutput := fmt.Sprintf(`{"type":"match","data":{"path":{"text":"/workspace/file.txt"},"lines":{"text":"%s"},"line_number":1}}`, longLine)
 
 	mockRunner := &services.MockCommandExecutor{
-		RunFunc: func(ctx context.Context, cmd []string) ([]byte, error) {
-			return []byte(rgOutput), nil
+		StartFunc: func(ctx context.Context, cmd []string, opts models.ProcessOptions) (models.Process, io.Reader, io.Reader, error) {
+			return &services.MockProcess{}, strings.NewReader(rgOutput), strings.NewReader(""), nil
 		},
 	}
 
@@ -184,7 +189,7 @@ func TestSearchContent_VeryLongLine(t *testing.T) {
 		CommandExecutor: mockRunner,
 	}
 
-	resp, err := SearchContent(ctx, "pattern", "", true, false, 0, 100)
+	resp, err := SearchContent(ctx, models.SearchContentRequest{Query: "pattern", SearchPath: "", CaseSensitive: true, IncludeIgnored: false, Offset: 0, Limit: 100})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -212,9 +217,13 @@ func TestSearchContent_CommandInjection(t *testing.T) {
 
 	var capturedCmd []string
 	mockRunner := &services.MockCommandExecutor{
-		RunFunc: func(ctx context.Context, cmd []string) ([]byte, error) {
+		StartFunc: func(ctx context.Context, cmd []string, opts models.ProcessOptions) (models.Process, io.Reader, io.Reader, error) {
 			capturedCmd = cmd
-			return []byte(""), &services.MockExitError{Code: 1}
+			return &services.MockProcess{
+				WaitFunc: func() error {
+					return &services.MockExitError{Code: 1}
+				},
+			}, strings.NewReader(""), strings.NewReader(""), nil
 		},
 	}
 
@@ -228,7 +237,7 @@ func TestSearchContent_CommandInjection(t *testing.T) {
 	}
 
 	query := "foo; rm -rf /"
-	_, _ = SearchContent(ctx, query, "", true, false, 0, 100)
+	_, _ = SearchContent(ctx, models.SearchContentRequest{Query: query, SearchPath: "", CaseSensitive: true, IncludeIgnored: false, Offset: 0, Limit: 100})
 
 	// Verify query is passed as literal argument
 	found := slices.Contains(capturedCmd, query)
@@ -246,9 +255,13 @@ func TestSearchContent_NoMatches(t *testing.T) {
 	fs.CreateDir("/workspace")
 
 	mockRunner := &services.MockCommandExecutor{
-		RunFunc: func(ctx context.Context, cmd []string) ([]byte, error) {
+		StartFunc: func(ctx context.Context, cmd []string, opts models.ProcessOptions) (models.Process, io.Reader, io.Reader, error) {
 			// Simulate rg returning exit code 1 (no matches)
-			return []byte(""), &services.MockExitError{Code: 1}
+			return &services.MockProcess{
+				WaitFunc: func() error {
+					return &services.MockExitError{Code: 1}
+				},
+			}, strings.NewReader(""), strings.NewReader(""), nil
 		},
 	}
 
@@ -261,7 +274,7 @@ func TestSearchContent_NoMatches(t *testing.T) {
 		CommandExecutor: mockRunner,
 	}
 
-	resp, err := SearchContent(ctx, "nonexistent", "", true, false, 0, 100)
+	resp, err := SearchContent(ctx, models.SearchContentRequest{Query: "nonexistent", SearchPath: "", CaseSensitive: true, IncludeIgnored: false, Offset: 0, Limit: 100})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -290,8 +303,8 @@ func TestSearchContent_Pagination(t *testing.T) {
 	}
 
 	mockRunner := &services.MockCommandExecutor{
-		RunFunc: func(ctx context.Context, cmd []string) ([]byte, error) {
-			return []byte(rgOutput), nil
+		StartFunc: func(ctx context.Context, cmd []string, opts models.ProcessOptions) (models.Process, io.Reader, io.Reader, error) {
+			return &services.MockProcess{}, strings.NewReader(rgOutput), strings.NewReader(""), nil
 		},
 	}
 
@@ -305,7 +318,7 @@ func TestSearchContent_Pagination(t *testing.T) {
 	}
 
 	// Request offset=2, limit=2
-	resp, err := SearchContent(ctx, "pattern", "", true, false, 2, 2)
+	resp, err := SearchContent(ctx, models.SearchContentRequest{Query: "pattern", SearchPath: "", CaseSensitive: true, IncludeIgnored: false, Offset: 2, Limit: 2})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -341,8 +354,8 @@ func TestSearchContent_MultipleFiles(t *testing.T) {
 {"type":"match","data":{"path":{"text":"/workspace/a.txt"},"lines":{"text":"match"},"line_number":5}}`
 
 	mockRunner := &services.MockCommandExecutor{
-		RunFunc: func(ctx context.Context, cmd []string) ([]byte, error) {
-			return []byte(rgOutput), nil
+		StartFunc: func(ctx context.Context, cmd []string, opts models.ProcessOptions) (models.Process, io.Reader, io.Reader, error) {
+			return &services.MockProcess{}, strings.NewReader(rgOutput), strings.NewReader(""), nil
 		},
 	}
 
@@ -355,7 +368,7 @@ func TestSearchContent_MultipleFiles(t *testing.T) {
 		CommandExecutor: mockRunner,
 	}
 
-	resp, err := SearchContent(ctx, "pattern", "", true, false, 0, 100)
+	resp, err := SearchContent(ctx, models.SearchContentRequest{Query: "pattern", SearchPath: "", CaseSensitive: true, IncludeIgnored: false, Offset: 0, Limit: 100})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -390,8 +403,8 @@ invalid json line
 {"type":"match","data":{"path":{"text":"/workspace/file.txt"},"lines":{"text":"also valid"},"line_number":2}}`
 
 	mockRunner := &services.MockCommandExecutor{
-		RunFunc: func(ctx context.Context, cmd []string) ([]byte, error) {
-			return []byte(rgOutput), nil
+		StartFunc: func(ctx context.Context, cmd []string, opts models.ProcessOptions) (models.Process, io.Reader, io.Reader, error) {
+			return &services.MockProcess{}, strings.NewReader(rgOutput), strings.NewReader(""), nil
 		},
 	}
 
@@ -404,7 +417,7 @@ invalid json line
 		CommandExecutor: mockRunner,
 	}
 
-	resp, err := SearchContent(ctx, "pattern", "", true, false, 0, 100)
+	resp, err := SearchContent(ctx, models.SearchContentRequest{Query: "pattern", SearchPath: "", CaseSensitive: true, IncludeIgnored: false, Offset: 0, Limit: 100})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -423,8 +436,12 @@ func TestSearchContent_CommandFailure(t *testing.T) {
 	fs.CreateDir("/workspace")
 
 	mockRunner := &services.MockCommandExecutor{
-		RunFunc: func(ctx context.Context, cmd []string) ([]byte, error) {
-			return []byte(""), &services.MockExitError{Code: 2}
+		StartFunc: func(ctx context.Context, cmd []string, opts models.ProcessOptions) (models.Process, io.Reader, io.Reader, error) {
+			return &services.MockProcess{
+				WaitFunc: func() error {
+					return &services.MockExitError{Code: 2}
+				},
+			}, strings.NewReader(""), strings.NewReader(""), nil
 		},
 	}
 
@@ -437,7 +454,7 @@ func TestSearchContent_CommandFailure(t *testing.T) {
 		CommandExecutor: mockRunner,
 	}
 
-	_, err := SearchContent(ctx, "pattern", "", true, false, 0, 100)
+	_, err := SearchContent(ctx, models.SearchContentRequest{Query: "pattern", SearchPath: "", CaseSensitive: true, IncludeIgnored: false, Offset: 0, Limit: 100})
 	if err == nil {
 		t.Fatal("expected error for command failure, got nil")
 	}
@@ -451,14 +468,14 @@ func TestSearchContent_IncludeIgnored(t *testing.T) {
 
 	// Test with includeIgnored=false (default behavior, should respect gitignore)
 	mockRunner := &services.MockCommandExecutor{
-		RunFunc: func(ctx context.Context, cmd []string) ([]byte, error) {
+		StartFunc: func(ctx context.Context, cmd []string, opts models.ProcessOptions) (models.Process, io.Reader, io.Reader, error) {
 			// Verify --no-ignore is NOT present
 			if slices.Contains(cmd, "--no-ignore") {
 				t.Error("expected --no-ignore to NOT be present when includeIgnored=false")
 			}
 			// Simulate rg output without ignored files
 			output := `{"type":"match","data":{"path":{"text":"/workspace/visible.go"},"lines":{"text":"func main()"},"line_number":1}}`
-			return []byte(output), nil
+			return &services.MockProcess{}, strings.NewReader(output), strings.NewReader(""), nil
 		},
 	}
 
@@ -471,7 +488,7 @@ func TestSearchContent_IncludeIgnored(t *testing.T) {
 		CommandExecutor: mockRunner,
 	}
 
-	resp, err := SearchContent(ctx, "func main", "", true, false, 0, 100)
+	resp, err := SearchContent(ctx, models.SearchContentRequest{Query: "func main", SearchPath: "", CaseSensitive: true, IncludeIgnored: false, Offset: 0, Limit: 100})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -481,7 +498,7 @@ func TestSearchContent_IncludeIgnored(t *testing.T) {
 	}
 
 	// Test with includeIgnored=true (should include ignored files)
-	mockRunner.RunFunc = func(ctx context.Context, cmd []string) ([]byte, error) {
+	mockRunner.StartFunc = func(ctx context.Context, cmd []string, opts models.ProcessOptions) (models.Process, io.Reader, io.Reader, error) {
 		// Verify --no-ignore IS present
 		if !slices.Contains(cmd, "--no-ignore") {
 			t.Error("expected --no-ignore to be present when includeIgnored=true")
@@ -489,10 +506,10 @@ func TestSearchContent_IncludeIgnored(t *testing.T) {
 		// Simulate rg output with ignored files
 		output := `{"type":"match","data":{"path":{"text":"/workspace/ignored.go"},"lines":{"text":"func main()"},"line_number":1}}
 {"type":"match","data":{"path":{"text":"/workspace/visible.go"},"lines":{"text":"func main()"},"line_number":1}}`
-		return []byte(output), nil
+		return &services.MockProcess{}, strings.NewReader(output), strings.NewReader(""), nil
 	}
 
-	resp, err = SearchContent(ctx, "func main", "", true, true, 0, 100)
+	resp, err = SearchContent(ctx, models.SearchContentRequest{Query: "func main", SearchPath: "", CaseSensitive: true, IncludeIgnored: true, Offset: 0, Limit: 100})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
