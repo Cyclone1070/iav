@@ -392,8 +392,108 @@ func mapGeminiError(err error) error {
 }
 
 // parseRetryAfter attempts to parse Retry-After from error details.
+// The Retry-After value can be in the Details field of the APIError.
+// It may be specified as:
+// - A number of seconds (int or string)
+// - An HTTP date string
+// - A field in the Details map (e.g., "retryDelay", "retry_after")
 func parseRetryAfter(apiErr *genai.APIError) *time.Duration {
-	// TODO: Parse Retry-After header if available in error details
-	// For now, return nil
+	if apiErr == nil || len(apiErr.Details) == 0 {
+		return nil
+	}
+
+	// Check each detail map for retry information
+	for _, detail := range apiErr.Details {
+		// Common field names for retry delay
+		retryFields := []string{"retryDelay", "retry_after", "retryAfter", "Retry-After"}
+
+		for _, field := range retryFields {
+			if value, ok := detail[field]; ok {
+				if duration := parseRetryValue(value); duration != nil {
+					return duration
+				}
+			}
+		}
+
+		// Some APIs put it in a nested "metadata" field
+		if metadata, ok := detail["metadata"].(map[string]any); ok {
+			for _, field := range retryFields {
+				if value, ok := metadata[field]; ok {
+					if duration := parseRetryValue(value); duration != nil {
+						return duration
+					}
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+// parseRetryValue converts various retry value formats to time.Duration
+// Google API errors typically use a duration object with "seconds" and "nanos" fields
+func parseRetryValue(value any) *time.Duration {
+	switch v := value.(type) {
+	case int:
+		// Seconds as int
+		d := time.Duration(v) * time.Second
+		return &d
+	case int64:
+		// Seconds as int64
+		d := time.Duration(v) * time.Second
+		return &d
+	case float64:
+		// Seconds as float64 (JSON numbers)
+		d := time.Duration(v) * time.Second
+		return &d
+	case string:
+		// Try parsing as number of seconds
+		if v == "" {
+			return nil
+		}
+		// Simple numeric string (e.g., "120" means 120 seconds)
+		var seconds float64
+		if _, err := fmt.Sscanf(v, "%f", &seconds); err == nil {
+			d := time.Duration(seconds * float64(time.Second))
+			return &d
+		}
+	case map[string]any:
+		// Google API duration format: {"seconds": 120, "nanos": 0}
+		seconds, hasSeconds := v["seconds"]
+		nanos, hasNanos := v["nanos"]
+
+		var totalDuration time.Duration
+
+		if hasSeconds {
+			switch s := seconds.(type) {
+			case int:
+				totalDuration += time.Duration(s) * time.Second
+			case int64:
+				totalDuration += time.Duration(s) * time.Second
+			case float64:
+				totalDuration += time.Duration(s) * time.Second
+			case string:
+				var sec float64
+				if _, err := fmt.Sscanf(s, "%f", &sec); err == nil {
+					totalDuration += time.Duration(sec * float64(time.Second))
+				}
+			}
+		}
+
+		if hasNanos {
+			switch n := nanos.(type) {
+			case int:
+				totalDuration += time.Duration(n) * time.Nanosecond
+			case int64:
+				totalDuration += time.Duration(n) * time.Nanosecond
+			case float64:
+				totalDuration += time.Duration(n) * time.Nanosecond
+			}
+		}
+
+		if totalDuration > 0 {
+			return &totalDuration
+		}
+	}
 	return nil
 }
