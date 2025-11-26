@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	provider "github.com/Cyclone1070/deployforme/internal/provider/models"
+
 	"github.com/Cyclone1070/deployforme/internal/tools"
 	toolModels "github.com/Cyclone1070/deployforme/internal/tools/models"
 )
@@ -29,26 +31,30 @@ func (w *WriteFile) Description() string {
 	return "Creates a new file in the workspace"
 }
 
-// Schema returns the JSON schema
-func (w *WriteFile) Schema() string {
-	return `{
-		"type": "object",
-		"properties": {
-			"path": {
-				"type": "string",
-				"description": "Path to the file (relative to workspace root)"
+// Definition returns the structured tool definition
+func (w *WriteFile) Definition() provider.ToolDefinition {
+	return provider.ToolDefinition{
+		Name:        "write_file",
+		Description: "Creates a new file in the workspace",
+		Parameters: &provider.ParameterSchema{
+			Type: "object",
+			Properties: map[string]provider.PropertySchema{
+				"path": {
+					Type:        "string",
+					Description: "Path to the file (relative to workspace root)",
+				},
+				"content": {
+					Type:        "string",
+					Description: "File content",
+				},
+				"perm": {
+					Type:        "integer",
+					Description: "File permissions (octal, e.g., 0644)",
+				},
 			},
-			"content": {
-				"type": "string",
-				"description": "File content"
-			},
-			"perm": {
-				"type": "integer",
-				"description": "File permissions (octal, e.g., 0644)"
-			}
+			Required: []string{"path", "content"},
 		},
-		"required": ["path", "content"]
-	}`
+	}
 }
 
 // Execute runs the tool

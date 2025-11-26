@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	provider "github.com/Cyclone1070/deployforme/internal/provider/models"
 	"github.com/Cyclone1070/deployforme/internal/tools"
 	toolModels "github.com/Cyclone1070/deployforme/internal/tools/models"
 )
@@ -29,26 +30,30 @@ func (r *ReadFile) Description() string {
 	return "Reads a file from the workspace"
 }
 
-// Schema returns the JSON schema
-func (r *ReadFile) Schema() string {
-	return `{
-		"type": "object",
-		"properties": {
-			"path": {
-				"type": "string",
-				"description": "Path to the file (relative to workspace root)"
+// Definition returns the structured tool definition
+func (r *ReadFile) Definition() provider.ToolDefinition {
+	return provider.ToolDefinition{
+		Name:        "read_file",
+		Description: "Reads a file from the workspace",
+		Parameters: &provider.ParameterSchema{
+			Type: "object",
+			Properties: map[string]provider.PropertySchema{
+				"path": {
+					Type:        "string",
+					Description: "Path to the file (relative to workspace root)",
+				},
+				"offset": {
+					Type:        "integer",
+					Description: "Byte offset to start reading from",
+				},
+				"limit": {
+					Type:        "integer",
+					Description: "Maximum number of bytes to read",
+				},
 			},
-			"offset": {
-				"type": "integer",
-				"description": "Byte offset to start reading from"
-			},
-			"limit": {
-				"type": "integer",
-				"description": "Maximum number of bytes to read"
-			}
+			Required: []string{"path"},
 		},
-		"required": ["path"]
-	}`
+	}
 }
 
 // Execute runs the tool

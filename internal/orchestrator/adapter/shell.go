@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	provider "github.com/Cyclone1070/deployforme/internal/provider/models"
+
 	"github.com/Cyclone1070/deployforme/internal/tools"
 	toolModels "github.com/Cyclone1070/deployforme/internal/tools/models"
 )
@@ -30,36 +32,44 @@ func (s *Shell) Description() string {
 	return "Executes shell commands in the workspace"
 }
 
-// Schema returns the JSON schema for the tool arguments
-func (s *Shell) Schema() string {
-	return `{
-		"type": "object",
-		"properties": {
-			"command": {
-				"type": "array",
-				"items": {"type": "string"},
-				"description": "The command and arguments to execute"
+// Definition returns the structured tool definition
+func (s *Shell) Definition() provider.ToolDefinition {
+	return provider.ToolDefinition{
+		Name:        "run_shell",
+		Description: "Executes shell commands in the workspace",
+		Parameters: &provider.ParameterSchema{
+			Type: "object",
+			Properties: map[string]provider.PropertySchema{
+				"command": {
+					Type:        "array",
+					Description: "The command and arguments to execute",
+					Items: &provider.PropertySchema{
+						Type: "string",
+					},
+				},
+				"working_dir": {
+					Type:        "string",
+					Description: "Working directory (relative to workspace root)",
+				},
+				"timeout_seconds": {
+					Type:        "integer",
+					Description: "Timeout in seconds (default: 3600)",
+				},
+				"env": {
+					Type:        "object",
+					Description: "Environment variables",
+				},
+				"env_files": {
+					Type:        "array",
+					Description: "Paths to .env files to load",
+					Items: &provider.PropertySchema{
+						Type: "string",
+					},
+				},
 			},
-			"working_dir": {
-				"type": "string",
-				"description": "Working directory (relative to workspace root)"
-			},
-			"timeout_seconds": {
-				"type": "integer",
-				"description": "Timeout in seconds (default: 3600)"
-			},
-			"env": {
-				"type": "object",
-				"description": "Environment variables"
-			},
-			"env_files": {
-				"type": "array",
-				"items": {"type": "string"},
-				"description": "Paths to .env files to load"
-			}
+			Required: []string{"command"},
 		},
-		"required": ["command"]
-	}`
+	}
 }
 
 // Execute runs the shell command

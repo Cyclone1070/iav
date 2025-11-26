@@ -7,7 +7,7 @@ import (
 
 	"github.com/Cyclone1070/deployforme/internal/orchestrator/adapter"
 	"github.com/Cyclone1070/deployforme/internal/orchestrator/models"
-	"github.com/Cyclone1070/deployforme/internal/provider"
+	provider "github.com/Cyclone1070/deployforme/internal/provider/models"
 	"github.com/Cyclone1070/deployforme/internal/ui"
 )
 
@@ -38,48 +38,72 @@ func New(p provider.Provider, pol models.PolicyService, userInterface ui.UserInt
 
 // Run executes the main agent loop
 func (o *Orchestrator) Run(ctx context.Context, goal string) error {
-	// Add initial user goal to history
-	o.history = append(o.history, models.Message{
-		Role:    "user",
-		Content: goal,
-	})
+	const maxTurns = 50
 
-	maxTurns := 50 // Prevent infinite loops
+	// Initialize conversation with the goal
+	o.history = []models.Message{
+		{
+			Role:    "user",
+			Content: goal,
+		},
+	}
+
 	for range maxTurns {
-		// Check for context cancellation
-		select {
-		case <-ctx.Done():
+		// Check context
+		if ctx.Err() != nil {
 			return ctx.Err()
-		default:
 		}
 
-		// 1. Update UI status
+		// Update UI status
 		o.ui.WriteStatus("thinking", "Generating response...")
 
-		// 2. Generate response from LLM
-		response, err := o.provider.Generate(ctx, "", o.history)
+		// Generate response from LLM
+		req := &provider.GenerateRequest{
+			Prompt:  "",
+			History: o.history,
+		}
+		response, err := o.provider.Generate(ctx, req)
 		if err != nil {
 			return fmt.Errorf("provider error: %w", err)
 		}
 
-		// 3. Parse response
-		parsed, err := o.parseResponse(response)
-		if err != nil {
-			// Add system message about parse error
-			o.history = append(o.history, models.Message{
-				Role:    "system",
-				Content: fmt.Sprintf("Error parsing response: %v", err),
-			})
-			continue
-		}
+		// Handle response based on type
+		switch response.Content.Type {
+		case provider.ResponseTypeToolCall:
+			// Native tool call from provider
+			if len(response.Content.ToolCalls) == 0 {
+				o.history = append(o.history, models.Message{
+					Role:    "system",
+					Content: "Error: empty tool call list",
+				})
+				continue
+			}
 
-		// 4. Handle response type
-		if parsed.IsText {
+			// Add model message with tool calls to history
+			o.history = append(o.history, models.Message{
+				Role:      "model",
+				ToolCalls: response.Content.ToolCalls,
+			})
+
+			// Execute ALL tool calls
+			toolResults := make([]models.ToolResult, 0, len(response.Content.ToolCalls))
+			for _, toolCall := range response.Content.ToolCalls {
+				result := o.executeToolCall(ctx, toolCall)
+				toolResults = append(toolResults, result)
+			}
+
+			// Add function message with all results to history
+			o.history = append(o.history, models.Message{
+				Role:        "function",
+				ToolResults: toolResults,
+			})
+
+		case provider.ResponseTypeText:
 			// Text response: display to user and wait for input
-			o.ui.WriteMessage(parsed.Text)
+			o.ui.WriteMessage(response.Content.Text)
 			o.history = append(o.history, models.Message{
 				Role:    "assistant",
-				Content: parsed.Text,
+				Content: response.Content.Text,
 			})
 
 			// Wait for user input
@@ -92,101 +116,76 @@ func (o *Orchestrator) Run(ctx context.Context, goal string) error {
 				Role:    "user",
 				Content: userInput,
 			})
-			continue
-		}
 
-		// Tool call response
-		if parsed.ToolName == "" {
+		case provider.ResponseTypeRefusal:
+			// Model refused to generate (safety block, policy violation)
+			o.ui.WriteStatus("blocked", "Model refused to generate")
 			o.history = append(o.history, models.Message{
 				Role:    "system",
-				Content: "Error: tool call missing tool name",
+				Content: fmt.Sprintf("Model refused: %s", response.Content.RefusalReason),
 			})
-			continue
-		}
 
-		// 5. Check if tool exists
-		tool, exists := o.tools[parsed.ToolName]
-		if !exists {
+		default:
 			o.history = append(o.history, models.Message{
 				Role:    "system",
-				Content: fmt.Sprintf("Error: unknown tool '%s'", parsed.ToolName),
+				Content: fmt.Sprintf("Error: unknown response type %v", response.Content.Type),
 			})
-			continue
 		}
-
-		// 6. Policy check
-		if err := o.policy.CheckTool(ctx, parsed.ToolName); err != nil {
-			o.history = append(o.history, models.Message{
-				Role:    "system",
-				Content: fmt.Sprintf("Policy denied tool '%s': %v", parsed.ToolName, err),
-			})
-			continue
-		}
-
-		// 7. Execute tool
-		o.ui.WriteStatus("executing", fmt.Sprintf("Running tool: %s", parsed.ToolName))
-		result, err := o.executeTool(ctx, tool, parsed.ToolArgs)
-		if err != nil {
-			o.history = append(o.history, models.Message{
-				Role:    "system",
-				Content: fmt.Sprintf("Tool '%s' failed: %v", parsed.ToolName, err),
-			})
-			continue
-		}
-
-		// 8. Add tool result to history
-		o.history = append(o.history, models.Message{
-			Role:    "assistant",
-			Content: fmt.Sprintf("Tool '%s' result: %s", parsed.ToolName, result),
-		})
 	}
 
 	return fmt.Errorf("max turns (%d) reached", maxTurns)
 }
 
-// parsedResponse represents a parsed LLM response
-type parsedResponse struct {
-	IsText   bool
-	Text     string
-	ToolName string
-	ToolArgs string
-}
-
-// parseResponse attempts to parse the LLM response as either text or a tool call
-func (o *Orchestrator) parseResponse(response string) (*parsedResponse, error) {
-	// Try to parse as JSON (tool call)
-	var toolCall struct {
-		Tool string `json:"tool"`
-		Args string `json:"args"`
-	}
-
-	if err := json.Unmarshal([]byte(response), &toolCall); err == nil && toolCall.Tool != "" {
-		return &parsedResponse{
-			IsText:   false,
-			ToolName: toolCall.Tool,
-			ToolArgs: toolCall.Args,
-		}, nil
-	}
-
-	// Otherwise, treat as text
-	if response == "" {
-		return nil, fmt.Errorf("empty response from LLM")
-	}
-
-	return &parsedResponse{
-		IsText: true,
-		Text:   response,
-	}, nil
-}
-
-// executeTool safely executes a tool with panic recovery
-func (o *Orchestrator) executeTool(ctx context.Context, tool adapter.Tool, args string) (result string, err error) {
-	// Recover from panics
-	defer func() {
-		if r := recover(); r != nil {
-			err = fmt.Errorf("tool panicked: %v", r)
+// executeToolCall executes a single tool call and returns the result
+func (o *Orchestrator) executeToolCall(ctx context.Context, toolCall models.ToolCall) models.ToolResult {
+	// Check if tool exists
+	tool, exists := o.tools[toolCall.Name]
+	if !exists {
+		return models.ToolResult{
+			ID:      toolCall.ID,
+			Name:    toolCall.Name,
+			Content: "",
+			Error:   fmt.Sprintf("unknown tool '%s'", toolCall.Name),
 		}
-	}()
+	}
 
-	return tool.Execute(ctx, args)
+	// Policy check
+	if err := o.policy.CheckTool(ctx, toolCall.Name); err != nil {
+		return models.ToolResult{
+			ID:      toolCall.ID,
+			Name:    toolCall.Name,
+			Content: "",
+			Error:   fmt.Sprintf("policy denied: %v", err),
+		}
+	}
+
+	// Convert args to JSON string
+	argsJSON, err := json.Marshal(toolCall.Args)
+	if err != nil {
+		return models.ToolResult{
+			ID:      toolCall.ID,
+			Name:    toolCall.Name,
+			Content: "",
+			Error:   fmt.Sprintf("error marshaling args: %v", err),
+		}
+	}
+
+	// Execute tool
+	o.ui.WriteStatus("executing", fmt.Sprintf("Running %s...", toolCall.Name))
+	result, err := tool.Execute(ctx, string(argsJSON))
+	if err != nil {
+		return models.ToolResult{
+			ID:      toolCall.ID,
+			Name:    toolCall.Name,
+			Content: "",
+			Error:   err.Error(),
+		}
+	}
+
+	return models.ToolResult{
+		ID:      toolCall.ID,
+		Name:    toolCall.Name,
+		Content: result,
+		Error:   "",
+	}
 }

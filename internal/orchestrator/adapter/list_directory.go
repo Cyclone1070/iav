@@ -1,6 +1,7 @@
 package adapter
 
 import (
+	provider "github.com/Cyclone1070/deployforme/internal/provider/models"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -29,30 +30,30 @@ func (l *ListDirectory) Description() string {
 	return "Lists the contents of a directory"
 }
 
-// Schema returns the JSON schema
-func (l *ListDirectory) Schema() string {
-	return `{
-		"type": "object",
-		"properties": {
-			"path": {
-				"type": "string",
-				"description": "Path to the directory (relative to workspace root)"
+// Definition returns the structured tool definition
+func (l *ListDirectory) Definition() provider.ToolDefinition {
+	return provider.ToolDefinition{
+		Name:        "list_directory",
+		Description: "Lists contents of a directory",
+		Parameters: &provider.ParameterSchema{
+			Type: "object",
+			Properties: map[string]provider.PropertySchema{
+				"path": {
+					Type:        "string",
+					Description: "Directory path",
+				},
+				"recursive": {
+					Type:        "boolean",
+					Description: "List recursively",
+				},
+				"max_depth": {
+					Type:        "integer",
+					Description: "Maximum depth for recursive listing",
+				},
 			},
-			"max_depth": {
-				"type": "integer",
-				"description": "Maximum recursion depth (-1 for unlimited)"
-			},
-			"offset": {
-				"type": "integer",
-				"description": "Pagination offset"
-			},
-			"limit": {
-				"type": "integer",
-				"description": "Pagination limit"
-			}
+			Required: []string{"path"},
 		},
-		"required": ["path"]
-	}`
+	}
 }
 
 // Execute runs the tool

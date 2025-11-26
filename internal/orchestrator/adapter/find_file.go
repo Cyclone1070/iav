@@ -1,6 +1,7 @@
 package adapter
 
 import (
+	provider "github.com/Cyclone1070/deployforme/internal/provider/models"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -29,38 +30,30 @@ func (f *FindFile) Description() string {
 	return "Searches for files matching a glob pattern"
 }
 
-// Schema returns the JSON schema
-func (f *FindFile) Schema() string {
-	return `{
-		"type": "object",
-		"properties": {
-			"pattern": {
-				"type": "string",
-				"description": "Glob pattern to match"
+// Definition returns the structured tool definition
+func (f *FindFile) Definition() provider.ToolDefinition {
+	return provider.ToolDefinition{
+		Name:        "find_file",
+		Description: "Finds files in the workspace matching a pattern",
+		Parameters: &provider.ParameterSchema{
+			Type: "object",
+			Properties: map[string]provider.PropertySchema{
+				"pattern": {
+					Type:        "string",
+					Description: "Glob pattern to match files",
+				},
+				"max_depth": {
+					Type:        "integer",
+					Description: "Maximum directory depth to search",
+				},
+				"include_ignored": {
+					Type:        "boolean",
+					Description: "Include gitignored files",
+				},
 			},
-			"search_path": {
-				"type": "string",
-				"description": "Directory to search in"
-			},
-			"max_depth": {
-				"type": "integer",
-				"description": "Maximum search depth"
-			},
-			"include_ignored": {
-				"type": "boolean",
-				"description": "Include gitignored files"
-			},
-			"offset": {
-				"type": "integer",
-				"description": "Pagination offset"
-			},
-			"limit": {
-				"type": "integer",
-				"description": "Pagination limit"
-			}
+			Required: []string{"pattern"},
 		},
-		"required": ["pattern", "search_path"]
-	}`
+	}
 }
 
 // Execute runs the tool

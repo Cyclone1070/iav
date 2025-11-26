@@ -1,6 +1,7 @@
 package adapter
 
 import (
+	provider "github.com/Cyclone1070/deployforme/internal/provider/models"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -29,26 +30,22 @@ func (w *WriteTodos) Description() string {
 	return "Replaces the current list of todos"
 }
 
-// Schema returns the JSON schema
-func (w *WriteTodos) Schema() string {
-	return `{
-		"type": "object",
-		"properties": {
-			"todos": {
-				"type": "array",
-				"items": {
-					"type": "object",
-					"properties": {
-						"description": {"type": "string"},
-						"status": {"type": "string"}
-					},
-					"required": ["description", "status"]
+// Definition returns the structured tool definition
+func (w *WriteTodos) Definition() provider.ToolDefinition {
+	return provider.ToolDefinition{
+		Name:        "write_todos",
+		Description: "Writes TODO items",
+		Parameters: &provider.ParameterSchema{
+			Type: "object",
+			Properties: map[string]provider.PropertySchema{
+				"todos": {
+					Type:        "array",
+					Description: "List of TODO items",
 				},
-				"description": "List of todos"
-			}
+			},
+			Required: []string{"todos"},
 		},
-		"required": ["todos"]
-	}`
+	}
 }
 
 // Execute runs the tool

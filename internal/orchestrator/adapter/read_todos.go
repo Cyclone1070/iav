@@ -1,6 +1,7 @@
 package adapter
 
 import (
+	provider "github.com/Cyclone1070/deployforme/internal/provider/models"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -29,12 +30,19 @@ func (r *ReadTodos) Description() string {
 	return "Reads the current list of todos"
 }
 
-// Schema returns the JSON schema
-func (r *ReadTodos) Schema() string {
-	return `{
-		"type": "object",
-		"properties": {}
-	}`
+// Definition returns the structured tool definition
+func (r *ReadTodos) Definition() provider.ToolDefinition {
+	return provider.ToolDefinition{
+		Name:        "read_todos",
+		Description: "Reads all TODO items",
+		Parameters: &provider.ParameterSchema{
+			Type: "object",
+			Properties: map[string]provider.PropertySchema{
+
+			},
+			Required: []string{},
+		},
+	}
 }
 
 // Execute runs the tool

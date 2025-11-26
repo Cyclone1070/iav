@@ -1,6 +1,7 @@
 package adapter
 
 import (
+	provider "github.com/Cyclone1070/deployforme/internal/provider/models"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -29,38 +30,34 @@ func (s *SearchContent) Description() string {
 	return "Searches for content matching a regex pattern within files"
 }
 
-// Schema returns the JSON schema
-func (s *SearchContent) Schema() string {
-	return `{
-		"type": "object",
-		"properties": {
-			"query": {
-				"type": "string",
-				"description": "Regex pattern to search for"
+// Definition returns the structured tool definition
+func (s *SearchContent) Definition() provider.ToolDefinition {
+	return provider.ToolDefinition{
+		Name:        "search_content",
+		Description: "Searches for content within files",
+		Parameters: &provider.ParameterSchema{
+			Type: "object",
+			Properties: map[string]provider.PropertySchema{
+				"query": {
+					Type:        "string",
+					Description: "Search query",
+				},
+				"path": {
+					Type:        "string",
+					Description: "Path to search in",
+				},
+				"case_sensitive": {
+					Type:        "boolean",
+					Description: "Case sensitive search",
+				},
+				"include_ignored": {
+					Type:        "boolean",
+					Description: "Include gitignored files",
+				},
 			},
-			"search_path": {
-				"type": "string",
-				"description": "Directory to search in"
-			},
-			"case_sensitive": {
-				"type": "boolean",
-				"description": "Case-sensitive search"
-			},
-			"include_ignored": {
-				"type": "boolean",
-				"description": "Include gitignored files"
-			},
-			"offset": {
-				"type": "integer",
-				"description": "Pagination offset"
-			},
-			"limit": {
-				"type": "integer",
-				"description": "Pagination limit"
-			}
+			Required: []string{"query"},
 		},
-		"required": ["query", "search_path"]
-	}`
+	}
 }
 
 // Execute runs the tool

@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	provider "github.com/Cyclone1070/deployforme/internal/provider/models"
+
 	"github.com/Cyclone1070/deployforme/internal/tools"
 	toolModels "github.com/Cyclone1070/deployforme/internal/tools/models"
 )
@@ -29,31 +31,29 @@ func (e *EditFile) Description() string {
 	return "Applies edit operations to an existing file"
 }
 
-// Schema returns the JSON schema
-func (e *EditFile) Schema() string {
-	return `{
-		"type": "object",
-		"properties": {
-			"path": {
-				"type": "string",
-				"description": "Path to the file (relative to workspace root)"
-			},
-			"operations": {
-				"type": "array",
-				"items": {
-					"type": "object",
-					"properties": {
-						"before": {"type": "string"},
-						"after": {"type": "string"},
-						"expected_replacements": {"type": "integer"}
-					},
-					"required": ["before", "after", "expected_replacements"]
+// Definition returns the structured tool definition
+func (e *EditFile) Definition() provider.ToolDefinition {
+	return provider.ToolDefinition{
+		Name:        "edit_file",
+		Description: "Applies edit operations to an existing file",
+		Parameters: &provider.ParameterSchema{
+			Type: "object",
+			Properties: map[string]provider.PropertySchema{
+				"path": {
+					Type:        "string",
+					Description: "Path to the file (relative to workspace root)",
 				},
-				"description": "List of edit operations"
-			}
+				"operations": {
+					Type:        "array",
+					Description: "List of edit operations",
+					Items: &provider.PropertySchema{
+						Type: "object",
+					},
+				},
+			},
+			Required: []string{"path", "operations"},
 		},
-		"required": ["path", "operations"]
-	}`
+	}
 }
 
 // Execute runs the tool
