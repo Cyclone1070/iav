@@ -132,15 +132,23 @@ func NewListDirectory(wCtx *toolModels.WorkspaceContext) Tool {
 			Properties: map[string]provider.PropertySchema{
 				"path": {
 					Type:        "string",
-					Description: "Directory path",
-				},
-				"recursive": {
-					Type:        "boolean",
-					Description: "List recursively",
+					Description: "Directory path (relative to workspace root)",
 				},
 				"max_depth": {
 					Type:        "integer",
-					Description: "Maximum depth for recursive listing",
+					Description: "Maximum depth for recursive listing (0 = current dir only, -1 = unlimited)",
+				},
+				"include_ignored": {
+					Type:        "boolean",
+					Description: "Include gitignored files",
+				},
+				"offset": {
+					Type:        "integer",
+					Description: "Pagination offset",
+				},
+				"limit": {
+					Type:        "integer",
+					Description: "Maximum number of entries to return",
 				},
 			},
 			Required: []string{"path"},
