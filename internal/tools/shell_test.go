@@ -15,54 +15,6 @@ import (
 	"github.com/Cyclone1070/deployforme/internal/tools/services"
 )
 
-// MockProcess implements models.Process
-type MockProcess struct {
-	WaitFunc   func() error
-	KillFunc   func() error
-	SignalFunc func(sig os.Signal) error
-}
-
-func (m *MockProcess) Wait() error {
-	if m.WaitFunc != nil {
-		return m.WaitFunc()
-	}
-	return nil
-}
-
-func (m *MockProcess) Kill() error {
-	if m.KillFunc != nil {
-		return m.KillFunc()
-	}
-	return nil
-}
-
-func (m *MockProcess) Signal(sig os.Signal) error {
-	if m.SignalFunc != nil {
-		return m.SignalFunc(sig)
-	}
-	return nil
-}
-
-// MockCommandExecutor implements models.CommandExecutor
-type MockCommandExecutor struct {
-	RunFunc   func(ctx context.Context, command []string) ([]byte, error)
-	StartFunc func(ctx context.Context, command []string, opts models.ProcessOptions) (models.Process, io.Reader, io.Reader, error)
-}
-
-func (m *MockCommandExecutor) Run(ctx context.Context, command []string) ([]byte, error) {
-	if m.RunFunc != nil {
-		return m.RunFunc(ctx, command)
-	}
-	return nil, errors.New("RunFunc not set")
-}
-
-func (m *MockCommandExecutor) Start(ctx context.Context, command []string, opts models.ProcessOptions) (models.Process, io.Reader, io.Reader, error) {
-	if m.StartFunc != nil {
-		return m.StartFunc(ctx, command, opts)
-	}
-	return nil, nil, nil, errors.New("StartFunc not set")
-}
-
 func TestShellTool_Run_SimpleCommand(t *testing.T) {
 	mockFS := services.NewMockFileSystem(models.DefaultMaxFileSize)
 	mockFS.CreateDir("/workspace")
@@ -72,14 +24,14 @@ func TestShellTool_Run_SimpleCommand(t *testing.T) {
 		FS:            mockFS,
 	}
 
-	factory := &MockCommandExecutor{
+	factory := &services.MockCommandExecutor{
 		StartFunc: func(ctx context.Context, command []string, opts models.ProcessOptions) (models.Process, io.Reader, io.Reader, error) {
 			if command[0] != "echo" {
 				return nil, nil, nil, errors.New("unexpected command")
 			}
 			stdout := strings.NewReader("hello\n")
 			stderr := strings.NewReader("")
-			proc := &MockProcess{
+			proc := &services.MockProcess{
 				WaitFunc: func() error { return nil },
 			}
 			return proc, stdout, stderr, nil
@@ -114,10 +66,10 @@ func TestShellTool_Run_WorkingDir(t *testing.T) {
 	}
 
 	var capturedDir string
-	factory := &MockCommandExecutor{
+	factory := &services.MockCommandExecutor{
 		StartFunc: func(ctx context.Context, command []string, opts models.ProcessOptions) (models.Process, io.Reader, io.Reader, error) {
 			capturedDir = opts.Dir
-			proc := &MockProcess{WaitFunc: func() error { return nil }}
+			proc := &services.MockProcess{WaitFunc: func() error { return nil }}
 			return proc, strings.NewReader(""), strings.NewReader(""), nil
 		},
 	}
@@ -149,10 +101,10 @@ func TestShellTool_Run_Env(t *testing.T) {
 	}
 
 	var capturedEnv []string
-	factory := &MockCommandExecutor{
+	factory := &services.MockCommandExecutor{
 		StartFunc: func(ctx context.Context, command []string, opts models.ProcessOptions) (models.Process, io.Reader, io.Reader, error) {
 			capturedEnv = opts.Env
-			proc := &MockProcess{WaitFunc: func() error { return nil }}
+			proc := &services.MockProcess{WaitFunc: func() error { return nil }}
 			return proc, strings.NewReader(""), strings.NewReader(""), nil
 		},
 	}
@@ -199,7 +151,7 @@ func TestShellTool_Run_EmptyCommand(t *testing.T) {
 		FS:            mockFS,
 	}
 
-	tool := &ShellTool{CommandExecutor: &MockCommandExecutor{}}
+	tool := &ShellTool{CommandExecutor: &services.MockCommandExecutor{}}
 	req := models.ShellRequest{Command: []string{}}
 
 	_, err := tool.Run(context.Background(), wCtx, req)
@@ -228,10 +180,10 @@ CACHE_URL=redis://localhost`
 	}
 
 	var capturedEnv []string
-	factory := &MockCommandExecutor{
+	factory := &services.MockCommandExecutor{
 		StartFunc: func(ctx context.Context, command []string, opts models.ProcessOptions) (models.Process, io.Reader, io.Reader, error) {
 			capturedEnv = opts.Env
-			proc := &MockProcess{WaitFunc: func() error { return nil }}
+			proc := &services.MockProcess{WaitFunc: func() error { return nil }}
 			return proc, strings.NewReader(""), strings.NewReader(""), nil
 		},
 	}
@@ -367,7 +319,7 @@ func TestShellTool_Run_OutsideWorkspace(t *testing.T) {
 		FS:            mockFS,
 	}
 
-	tool := &ShellTool{CommandExecutor: &MockCommandExecutor{}}
+	tool := &ShellTool{CommandExecutor: &services.MockCommandExecutor{}}
 	req := models.ShellRequest{
 		Command:    []string{"ls"},
 		WorkingDir: "../outside",
@@ -388,9 +340,9 @@ func TestShellTool_Run_NonZeroExit(t *testing.T) {
 		FS:            mockFS,
 	}
 
-	factory := &MockCommandExecutor{
+	factory := &services.MockCommandExecutor{
 		StartFunc: func(ctx context.Context, command []string, opts models.ProcessOptions) (models.Process, io.Reader, io.Reader, error) {
-			proc := &MockProcess{
+			proc := &services.MockProcess{
 				WaitFunc: func() error {
 					return errors.New("exit status 1")
 				},
@@ -421,9 +373,9 @@ func TestShellTool_Run_BinaryOutput(t *testing.T) {
 	}
 
 	binaryData := []byte{0x00, 0x01, 0x02, 0xFF, 0xFE}
-	factory := &MockCommandExecutor{
+	factory := &services.MockCommandExecutor{
 		StartFunc: func(ctx context.Context, command []string, opts models.ProcessOptions) (models.Process, io.Reader, io.Reader, error) {
-			proc := &MockProcess{WaitFunc: func() error { return nil }}
+			proc := &services.MockProcess{WaitFunc: func() error { return nil }}
 			return proc, bytes.NewReader(binaryData), strings.NewReader(""), nil
 		},
 	}
@@ -450,10 +402,10 @@ func TestShellTool_Run_CommandInjection(t *testing.T) {
 	}
 
 	var capturedCommand []string
-	factory := &MockCommandExecutor{
+	factory := &services.MockCommandExecutor{
 		StartFunc: func(ctx context.Context, command []string, opts models.ProcessOptions) (models.Process, io.Reader, io.Reader, error) {
 			capturedCommand = command
-			proc := &MockProcess{WaitFunc: func() error { return nil }}
+			proc := &services.MockProcess{WaitFunc: func() error { return nil }}
 			return proc, strings.NewReader(""), strings.NewReader(""), nil
 		},
 	}
@@ -488,9 +440,9 @@ func TestShellTool_Run_HugeOutput(t *testing.T) {
 		hugeData[i] = 'A'
 	}
 
-	factory := &MockCommandExecutor{
+	factory := &services.MockCommandExecutor{
 		StartFunc: func(ctx context.Context, command []string, opts models.ProcessOptions) (models.Process, io.Reader, io.Reader, error) {
-			proc := &MockProcess{WaitFunc: func() error { return nil }}
+			proc := &services.MockProcess{WaitFunc: func() error { return nil }}
 			return proc, bytes.NewReader(hugeData), strings.NewReader(""), nil
 		},
 	}
@@ -519,9 +471,9 @@ func TestShellTool_Run_Timeout(t *testing.T) {
 		FS:            mockFS,
 	}
 
-	factory := &MockCommandExecutor{
+	factory := &services.MockCommandExecutor{
 		StartFunc: func(ctx context.Context, command []string, opts models.ProcessOptions) (models.Process, io.Reader, io.Reader, error) {
-			proc := &MockProcess{
+			proc := &services.MockProcess{
 				WaitFunc: func() error {
 					select {
 					case <-ctx.Done():
@@ -561,7 +513,7 @@ func TestShellTool_Run_DockerCheck(t *testing.T) {
 		},
 	}
 
-	factory := &MockCommandExecutor{
+	factory := &services.MockCommandExecutor{
 		RunFunc: func(ctx context.Context, command []string) ([]byte, error) {
 			// Handle Docker check command
 			if len(command) >= 2 && command[0] == "docker" && command[1] == "info" {
@@ -571,7 +523,7 @@ func TestShellTool_Run_DockerCheck(t *testing.T) {
 		},
 		StartFunc: func(ctx context.Context, command []string, opts models.ProcessOptions) (models.Process, io.Reader, io.Reader, error) {
 			if command[0] == "docker" && command[1] == "run" {
-				return &MockProcess{}, strings.NewReader("container running"), strings.NewReader(""), nil
+				return &services.MockProcess{}, strings.NewReader("container running"), strings.NewReader(""), nil
 			}
 			return nil, nil, nil, errors.New("unexpected command")
 		},
@@ -599,10 +551,10 @@ func TestShellTool_Run_EnvInjection(t *testing.T) {
 	}
 
 	var capturedEnv []string
-	factory := &MockCommandExecutor{
+	factory := &services.MockCommandExecutor{
 		StartFunc: func(ctx context.Context, command []string, opts models.ProcessOptions) (models.Process, io.Reader, io.Reader, error) {
 			capturedEnv = opts.Env
-			proc := &MockProcess{WaitFunc: func() error { return nil }}
+			proc := &services.MockProcess{WaitFunc: func() error { return nil }}
 			return proc, strings.NewReader(""), strings.NewReader(""), nil
 		},
 	}
@@ -633,9 +585,9 @@ func TestShellTool_Run_ContextCancellation(t *testing.T) {
 		FS:            mockFS,
 	}
 
-	factory := &MockCommandExecutor{
+	factory := &services.MockCommandExecutor{
 		StartFunc: func(ctx context.Context, command []string, opts models.ProcessOptions) (models.Process, io.Reader, io.Reader, error) {
-			proc := &MockProcess{
+			proc := &services.MockProcess{
 				WaitFunc: func() error {
 					<-ctx.Done()
 					return ctx.Err()
@@ -654,18 +606,19 @@ func TestShellTool_Run_ContextCancellation(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
 	defer cancel()
 
-	// Test that Run handles context cancellation gracefully (doesn't panic)
+	// Test that Run handles context cancellation gracefully and returns the error
 	resp, err := tool.Run(ctx, wCtx, req)
-	// Current implementation swallows context cancellation errors and returns nil error
-	// with ExitCode=1. This is a known limitation.
-	if err != nil {
-		t.Errorf("Expected nil error (current implementation), got %v", err)
+	if err == nil {
+		t.Error("Expected context cancellation error, got nil")
+	}
+	if !errors.Is(err, context.DeadlineExceeded) {
+		t.Errorf("Expected context.DeadlineExceeded, got %v", err)
 	}
 	if resp == nil {
 		t.Error("Expected response")
 	}
-	if resp.ExitCode == 0 {
-		t.Error("Expected non-zero exit code for cancelled context")
+	if resp.ExitCode != -1 {
+		t.Errorf("Expected ExitCode=-1 for cancelled context, got %d", resp.ExitCode)
 	}
 }
 
@@ -678,9 +631,9 @@ func TestShellTool_Run_SpecificExitCode(t *testing.T) {
 		FS:            mockFS,
 	}
 
-	factory := &MockCommandExecutor{
+	factory := &services.MockCommandExecutor{
 		StartFunc: func(ctx context.Context, command []string, opts models.ProcessOptions) (models.Process, io.Reader, io.Reader, error) {
-			proc := &MockProcess{
+			proc := &services.MockProcess{
 				WaitFunc: func() error {
 					// Return a specific exit code using the mock error type
 					return &services.MockExitError{Code: 42}

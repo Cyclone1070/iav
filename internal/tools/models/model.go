@@ -2,6 +2,7 @@ package models
 
 import (
 	"errors"
+	"fmt"
 	"os"
 )
 
@@ -83,6 +84,63 @@ type ReadTodosRequest struct{}
 // WriteTodosRequest contains parameters for WriteTodos operation
 type WriteTodosRequest struct {
 	Todos []Todo `json:"todos"`
+}
+
+// Validate methods for request structs
+
+func (r ReadFileRequest) Validate() error {
+	if r.Path == "" {
+		return fmt.Errorf("path is required")
+	}
+	return nil
+}
+
+func (r WriteFileRequest) Validate() error {
+	if r.Path == "" {
+		return fmt.Errorf("path is required")
+	}
+	if r.Content == "" {
+		return fmt.Errorf("content is required")
+	}
+	return nil
+}
+
+func (r EditFileRequest) Validate() error {
+	if r.Path == "" {
+		return fmt.Errorf("path is required")
+	}
+	if len(r.Operations) == 0 {
+		return fmt.Errorf("operations cannot be empty")
+	}
+	return nil
+}
+
+func (r ShellRequest) Validate() error {
+	if len(r.Command) == 0 {
+		return fmt.Errorf("command cannot be empty")
+	}
+	return nil
+}
+
+func (r FindFileRequest) Validate() error {
+	if r.Pattern == "" {
+		return fmt.Errorf("pattern is required")
+	}
+	return nil
+}
+
+func (r SearchContentRequest) Validate() error {
+	if r.Query == "" {
+		return fmt.Errorf("query is required")
+	}
+	return nil
+}
+
+func (r ListDirectoryRequest) Validate() error {
+	if r.Path == "" {
+		return fmt.Errorf("path is required")
+	}
+	return nil
 }
 
 // Response structs for tool operations

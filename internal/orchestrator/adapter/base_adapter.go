@@ -10,6 +10,11 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
+// Validator is an interface for request types that support validation
+type Validator interface {
+	Validate() error
+}
+
 // ToolExecutor is a function that executes a tool with typed request/response.
 // The function signature must match: func(*WorkspaceContext, RequestType) (ResponseType, error)
 type ToolExecutor[Req, Resp any] func(*toolModels.WorkspaceContext, Req) (Resp, error)
@@ -82,8 +87,9 @@ func (b *BaseAdapter[Req, Resp]) Definition() provider.ToolDefinition {
 //
 // This method:
 // 1. Decodes the args map into a typed request using mapstructure
-// 2. Calls the tool executor function with the typed request
-// 3. Marshals the response back to JSON
+// 2. Validates the request if it implements Validator interface
+// 3. Calls the tool executor function with the typed request
+// 4. Marshals the response back to JSON
 //
 // All error handling is centralized here, eliminating duplication.
 func (b *BaseAdapter[Req, Resp]) Execute(ctx context.Context, args map[string]any) (string, error) {
@@ -92,6 +98,13 @@ func (b *BaseAdapter[Req, Resp]) Execute(ctx context.Context, args map[string]an
 	// Decode map to typed request using mapstructure
 	if err := mapstructure.Decode(args, &req); err != nil {
 		return "", fmt.Errorf("invalid arguments: %w", err)
+	}
+
+	// Validate request if it implements Validator interface
+	if v, ok := any(req).(Validator); ok {
+		if err := v.Validate(); err != nil {
+			return "", fmt.Errorf("validation failed: %w", err)
+		}
 	}
 
 	// Execute the tool function with typed request

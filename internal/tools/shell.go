@@ -2,6 +2,7 @@ package tools
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"time"
@@ -96,6 +97,11 @@ func (t *ShellTool) Run(ctx context.Context, wCtx *models.WorkspaceContext, req 
 			resp.ExitCode = -1
 			return resp, models.ErrShellTimeout
 		}
+		// Check for context cancellation
+		if errors.Is(execErr, context.Canceled) || errors.Is(execErr, context.DeadlineExceeded) {
+			resp.ExitCode = -1
+			return resp, execErr
+		}
 		// Command ran but failed - extract exit code and return success
 		resp.ExitCode = services.GetExitCode(execErr)
 		return resp, nil
@@ -107,6 +113,8 @@ func (t *ShellTool) Run(ctx context.Context, wCtx *models.WorkspaceContext, req 
 		ids, err := services.CollectComposeContainers(ctx, t.CommandExecutor, wd)
 		if err == nil {
 			resp.Notes = append(resp.Notes, services.FormatContainerStartedNote(ids))
+		} else {
+			resp.Notes = append(resp.Notes, fmt.Sprintf("Warning: Could not list started containers: %v", err))
 		}
 	}
 

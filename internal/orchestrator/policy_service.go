@@ -37,13 +37,14 @@ func (p *policyService) CheckShell(ctx context.Context, command []string) error 
 		return fmt.Errorf("invalid command")
 	}
 
-	p.mu.RLock()
+	// Use single Lock for entire check-and-update operation to prevent races
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
 	// 1. Check SessionAllow (Override)
 	if p.policy.Shell.SessionAllow != nil && p.policy.Shell.SessionAllow[root] {
-		p.mu.RUnlock()
 		return nil
 	}
-	p.mu.RUnlock()
 
 	// 2. Check Allow List
 	if slices.Contains(p.policy.Shell.Allow, root) {
@@ -56,8 +57,11 @@ func (p *policyService) CheckShell(ctx context.Context, command []string) error 
 	}
 
 	// 4. Ask user for permission
+	// Unlock before blocking I/O operation
+	p.mu.Unlock()
 	prompt := fmt.Sprintf("Agent wants to execute shell command: %s\nAllow this command?", root)
 	decision, err := p.ui.ReadPermission(ctx, prompt)
+	p.mu.Lock() // Re-acquire lock before updating map
 	if err != nil {
 		return fmt.Errorf("failed to get user permission: %w", err)
 	}
@@ -69,12 +73,10 @@ func (p *policyService) CheckShell(ctx context.Context, command []string) error 
 		return fmt.Errorf("user denied command '%s'", root)
 	case ui.DecisionAllowAlways:
 		// Update SessionAllow
-		p.mu.Lock()
 		if p.policy.Shell.SessionAllow == nil {
 			p.policy.Shell.SessionAllow = make(map[string]bool)
 		}
 		p.policy.Shell.SessionAllow[root] = true
-		p.mu.Unlock()
 		return nil
 	default:
 		return fmt.Errorf("invalid permission decision: %s", decision)
@@ -87,13 +89,14 @@ func (p *policyService) CheckTool(ctx context.Context, toolName string) error {
 		return fmt.Errorf("tool name cannot be empty")
 	}
 
-	p.mu.RLock()
+	// Use single Lock for entire check-and-update operation to prevent races
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
 	// 1. Check SessionAllow (Override)
 	if p.policy.Tools.SessionAllow != nil && p.policy.Tools.SessionAllow[toolName] {
-		p.mu.RUnlock()
 		return nil
 	}
-	p.mu.RUnlock()
 
 	// 2. Check Allow List
 	if slices.Contains(p.policy.Tools.Allow, toolName) {
@@ -106,8 +109,11 @@ func (p *policyService) CheckTool(ctx context.Context, toolName string) error {
 	}
 
 	// 4. Ask user for permission
+	// Unlock before blocking I/O operation
+	p.mu.Unlock()
 	prompt := fmt.Sprintf("Agent wants to use tool: %s\nAllow this tool?", toolName)
 	decision, err := p.ui.ReadPermission(ctx, prompt)
+	p.mu.Lock() // Re-acquire lock before updating map
 	if err != nil {
 		return fmt.Errorf("failed to get user permission: %w", err)
 	}
@@ -119,12 +125,10 @@ func (p *policyService) CheckTool(ctx context.Context, toolName string) error {
 		return fmt.Errorf("user denied tool '%s'", toolName)
 	case ui.DecisionAllowAlways:
 		// Update SessionAllow
-		p.mu.Lock()
 		if p.policy.Tools.SessionAllow == nil {
 			p.policy.Tools.SessionAllow = make(map[string]bool)
 		}
 		p.policy.Tools.SessionAllow[toolName] = true
-		p.mu.Unlock()
 		return nil
 	default:
 		return fmt.Errorf("invalid permission decision: %s", decision)
