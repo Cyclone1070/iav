@@ -54,32 +54,13 @@ func SearchContent(ctx *models.WorkspaceContext, req models.SearchContentRequest
 	if limit == 0 {
 		limit = models.DefaultListDirectoryLimit
 	}
-	if limit > models.MaxListDirectoryLimit {
-		limit = models.MaxListDirectoryLimit
+	if limit < 1 || limit > models.MaxListDirectoryLimit {
+		return nil, models.ErrInvalidPaginationLimit
 	}
 
 	offset := max(req.Offset, 0)
 
-	// Final pagination validation
-	if limit <= 0 || limit > 1000 { // Keep 1000 as a hard upper limit for search results
-		return nil, models.ErrInvalidPaginationLimit
-	}
-
-	// 2. Validate query (This was already done above, but keeping the comment structure from the original)
-	if req.Query == "" {
-		return nil, fmt.Errorf("query cannot be empty")
-	}
-
-	// 3. Resolve search path (This was already done above, but keeping the comment structure from the original)
-	// The path is already resolved in absSearchPath. We just need to ensure it exists.
-	// The initial stat check already covers this. This redundant check can be removed or kept for clarity.
-	// For now, aligning with the user's instruction to keep the stat check here.
-	_, err = ctx.FS.Stat(absSearchPath)
-	if err != nil {
-		return nil, models.ErrFileMissing
-	}
-
-	// 5. Build ripgrep command
+	// Build ripgrep command
 	// rg --json "query" searchPath [--no-ignore]
 	cmd := []string{"rg", "--json"}
 	if !req.CaseSensitive {
@@ -90,15 +71,14 @@ func SearchContent(ctx *models.WorkspaceContext, req models.SearchContentRequest
 	}
 	cmd = append(cmd, req.Query, absSearchPath)
 
-	// 6. Execute command
-	// 6. Execute command with streaming
+	// Execute command with streaming
 	proc, stdout, _, err := ctx.CommandExecutor.Start(context.Background(), cmd, models.ProcessOptions{Dir: absSearchPath})
 	if err != nil {
 		return nil, fmt.Errorf("failed to start rg command: %w", err)
 	}
 	defer proc.Wait()
 
-	// 7. Stream and process JSON output line by line
+	// Stream and process JSON output line by line
 	var matches []models.SearchContentMatch
 	scanner := bufio.NewScanner(stdout)
 	// Increase buffer size to handle very long lines (e.g. minified JS)
@@ -180,7 +160,7 @@ func SearchContent(ctx *models.WorkspaceContext, req models.SearchContentRequest
 		}
 	}
 
-	// 8. Sort results for consistency (by file, then line number)
+	// Sort results for consistency (by file, then line number)
 	sort.Slice(matches, func(i, j int) bool {
 		if matches[i].File != matches[j].File {
 			return matches[i].File < matches[j].File
@@ -188,7 +168,7 @@ func SearchContent(ctx *models.WorkspaceContext, req models.SearchContentRequest
 		return matches[i].LineNumber < matches[j].LineNumber
 	})
 
-	// 9. Apply pagination
+	// Apply pagination
 	totalCount := len(matches)
 	start := min(offset, totalCount)
 	end := start + limit

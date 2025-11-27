@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
-	"strings"
 
 	"github.com/Cyclone1070/deployforme/internal/tools/models"
 	"github.com/Cyclone1070/deployforme/internal/tools/services"
@@ -57,7 +56,7 @@ func ListDirectory(ctx *models.WorkspaceContext, req models.ListDirectoryRequest
 
 	// Collect entries recursively
 	visited := make(map[string]bool)
-	directoryEntries, err := listRecursive(ctx, abs, 0, maxDepth, visited)
+	directoryEntries, err := listRecursive(ctx, abs, 0, maxDepth, visited, req.IncludeIgnored)
 	if err != nil {
 		return nil, err
 	}
@@ -102,51 +101,8 @@ func ListDirectory(ctx *models.WorkspaceContext, req models.ListDirectoryRequest
 	}, nil
 }
 
-// listSingleLevel lists entries in a single directory (non-recursive)
-func listSingleLevel(ctx *models.WorkspaceContext, abs string) ([]models.DirectoryEntry, error) {
-	allEntries, err := ctx.FS.ListDir(abs)
-	if err != nil {
-		// Propagate sentinel errors directly
-		if errors.Is(err, models.ErrOutsideWorkspace) || errors.Is(err, models.ErrFileMissing) {
-			return nil, err
-		}
-		// Wrap other errors for context
-		return nil, fmt.Errorf("failed to list directory: %w", err)
-	}
-
-	directoryEntries := make([]models.DirectoryEntry, 0, len(allEntries))
-	for _, entry := range allEntries {
-		// Calculate relative path for this entry
-		entryAbs := filepath.Join(abs, entry.Name())
-		entryRel, err := filepath.Rel(ctx.WorkspaceRoot, entryAbs)
-		if err != nil {
-			// This indicates a bug in path resolution - don't mask it
-			return nil, fmt.Errorf("failed to calculate relative path for entry %s: %w", entry.Name(), err)
-		}
-
-		// Normalize to forward slashes
-		entryRel = filepath.ToSlash(entryRel)
-
-		// Filter dotfiles through gitignore
-		if strings.HasPrefix(entry.Name(), ".") && ctx.GitignoreService != nil {
-			if ctx.GitignoreService.ShouldIgnore(entryRel) {
-				continue // Skip gitignored dotfiles
-			}
-		}
-
-		directoryEntry := models.DirectoryEntry{
-			RelativePath: entryRel,
-			IsDir:        entry.IsDir(),
-		}
-
-		directoryEntries = append(directoryEntries, directoryEntry)
-	}
-
-	return directoryEntries, nil
-}
-
 // listRecursive recursively lists all entries up to maxDepth (-1 = unlimited, 0 = current level only)
-func listRecursive(ctx *models.WorkspaceContext, abs string, currentDepth int, maxDepth int, visited map[string]bool) ([]models.DirectoryEntry, error) {
+func listRecursive(ctx *models.WorkspaceContext, abs string, currentDepth int, maxDepth int, visited map[string]bool, includeIgnored bool) ([]models.DirectoryEntry, error) {
 	// Check depth limit (-1 = unlimited, 0 = current level only, 1 = current + 1 level, etc.)
 	if maxDepth >= 0 && currentDepth > maxDepth {
 		return []models.DirectoryEntry{}, nil
@@ -188,10 +144,10 @@ func listRecursive(ctx *models.WorkspaceContext, abs string, currentDepth int, m
 		// Normalize to forward slashes
 		entryRel = filepath.ToSlash(entryRel)
 
-		// Filter dotfiles through gitignore
-		if strings.HasPrefix(entry.Name(), ".") && ctx.GitignoreService != nil {
+		// Apply gitignore filtering (unless IncludeIgnored is true)
+		if !includeIgnored && ctx.GitignoreService != nil {
 			if ctx.GitignoreService.ShouldIgnore(entryRel) {
-				continue // Skip gitignored dotfiles
+				continue // Skip gitignored files
 			}
 		}
 
@@ -204,7 +160,7 @@ func listRecursive(ctx *models.WorkspaceContext, abs string, currentDepth int, m
 
 		// Recurse into subdirectories
 		if entry.IsDir() {
-			subEntries, err := listRecursive(ctx, entryAbs, currentDepth+1, maxDepth, visited)
+			subEntries, err := listRecursive(ctx, entryAbs, currentDepth+1, maxDepth, visited, includeIgnored)
 			if err != nil {
 				return nil, err
 			}

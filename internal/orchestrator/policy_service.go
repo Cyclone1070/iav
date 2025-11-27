@@ -37,31 +37,33 @@ func (p *policyService) CheckShell(ctx context.Context, command []string) error 
 		return fmt.Errorf("invalid command")
 	}
 
-	// Use single Lock for entire check-and-update operation to prevent races
-	p.mu.Lock()
-	defer p.mu.Unlock()
-
-	// 1. Check SessionAllow (Override)
+	// Check cached/static policies first (read lock)
+	p.mu.RLock()
 	if p.policy.Shell.SessionAllow != nil && p.policy.Shell.SessionAllow[root] {
+		p.mu.RUnlock()
 		return nil
 	}
-
-	// 2. Check Allow List
 	if slices.Contains(p.policy.Shell.Allow, root) {
+		p.mu.RUnlock()
 		return nil
 	}
-
-	// 3. Check Deny List
 	if slices.Contains(p.policy.Shell.Deny, root) {
+		p.mu.RUnlock()
 		return fmt.Errorf("command '%s' is denied by policy", root)
 	}
+	p.mu.RUnlock()
 
-	// 4. Ask user for permission
-	// Unlock before blocking I/O operation
-	p.mu.Unlock()
+	// Ask user for permission (no lock held during I/O)
+	// NOTE: There is a benign race condition here between releasing RLock and acquiring Lock.
+	// If two goroutines check the same command simultaneously, both may prompt the user.
+	// This is safe because:
+	// 1. The SessionAllow map is always protected by locks (RLock for reads, Lock for writes)
+	// 2. Writing "true" to the map is idempotent - setting allow[cmd]=true twice is harmless
+	// 3. The worst case is duplicate user prompts (UX issue), not data corruption
+	// We cannot hold the lock during ReadPermission as it blocks on user input, which would
+	// freeze the entire policy service and prevent other tools from checking permissions.
 	prompt := fmt.Sprintf("Agent wants to execute shell command: %s\nAllow this command?", root)
 	decision, err := p.ui.ReadPermission(ctx, prompt)
-	p.mu.Lock() // Re-acquire lock before updating map
 	if err != nil {
 		return fmt.Errorf("failed to get user permission: %w", err)
 	}
@@ -72,11 +74,13 @@ func (p *policyService) CheckShell(ctx context.Context, command []string) error 
 	case ui.DecisionDeny:
 		return fmt.Errorf("user denied command '%s'", root)
 	case ui.DecisionAllowAlways:
-		// Update SessionAllow
+		// Update SessionAllow (write lock)
+		p.mu.Lock()
 		if p.policy.Shell.SessionAllow == nil {
 			p.policy.Shell.SessionAllow = make(map[string]bool)
 		}
 		p.policy.Shell.SessionAllow[root] = true
+		p.mu.Unlock()
 		return nil
 	default:
 		return fmt.Errorf("invalid permission decision: %s", decision)
@@ -89,31 +93,33 @@ func (p *policyService) CheckTool(ctx context.Context, toolName string) error {
 		return fmt.Errorf("tool name cannot be empty")
 	}
 
-	// Use single Lock for entire check-and-update operation to prevent races
-	p.mu.Lock()
-	defer p.mu.Unlock()
-
-	// 1. Check SessionAllow (Override)
+	// Check cached/static policies first (read lock)
+	p.mu.RLock()
 	if p.policy.Tools.SessionAllow != nil && p.policy.Tools.SessionAllow[toolName] {
+		p.mu.RUnlock()
 		return nil
 	}
-
-	// 2. Check Allow List
 	if slices.Contains(p.policy.Tools.Allow, toolName) {
+		p.mu.RUnlock()
 		return nil
 	}
-
-	// 3. Check Deny List
 	if slices.Contains(p.policy.Tools.Deny, toolName) {
+		p.mu.RUnlock()
 		return fmt.Errorf("tool '%s' is denied by policy", toolName)
 	}
+	p.mu.RUnlock()
 
-	// 4. Ask user for permission
-	// Unlock before blocking I/O operation
-	p.mu.Unlock()
+	// Ask user for permission (no lock held during I/O)
+	// NOTE: There is a benign race condition here between releasing RLock and acquiring Lock.
+	// If two goroutines check the same tool simultaneously, both may prompt the user.
+	// This is safe because:
+	// 1. The SessionAllow map is always protected by locks (RLock for reads, Lock for writes)
+	// 2. Writing "true" to the map is idempotent - setting allow[tool]=true twice is harmless
+	// 3. The worst case is duplicate user prompts (UX issue), not data corruption
+	// We cannot hold the lock during ReadPermission as it blocks on user input, which would
+	// freeze the entire policy service and prevent other tools from checking permissions.
 	prompt := fmt.Sprintf("Agent wants to use tool: %s\nAllow this tool?", toolName)
 	decision, err := p.ui.ReadPermission(ctx, prompt)
-	p.mu.Lock() // Re-acquire lock before updating map
 	if err != nil {
 		return fmt.Errorf("failed to get user permission: %w", err)
 	}
@@ -124,11 +130,13 @@ func (p *policyService) CheckTool(ctx context.Context, toolName string) error {
 	case ui.DecisionDeny:
 		return fmt.Errorf("user denied tool '%s'", toolName)
 	case ui.DecisionAllowAlways:
-		// Update SessionAllow
+		// Update SessionAllow (write lock)
+		p.mu.Lock()
 		if p.policy.Tools.SessionAllow == nil {
 			p.policy.Tools.SessionAllow = make(map[string]bool)
 		}
 		p.policy.Tools.SessionAllow[toolName] = true
+		p.mu.Unlock()
 		return nil
 	default:
 		return fmt.Errorf("invalid permission decision: %s", decision)

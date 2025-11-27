@@ -52,10 +52,11 @@ type EditFileRequest struct {
 
 // ListDirectoryRequest contains parameters for ListDirectory operation
 type ListDirectoryRequest struct {
-	Path     string `json:"path"`
-	MaxDepth int    `json:"max_depth,omitempty"`
-	Offset   int    `json:"offset,omitempty"`
-	Limit    int    `json:"limit,omitempty"`
+	Path           string `json:"path"`
+	MaxDepth       int    `json:"max_depth,omitempty"`
+	IncludeIgnored bool   `json:"include_ignored,omitempty"`
+	Offset         int    `json:"offset,omitempty"`
+	Limit          int    `json:"limit,omitempty"`
 }
 
 // FindFileRequest contains parameters for FindFile operation
@@ -237,7 +238,7 @@ type ShellRequest struct {
 	Command        []string          `json:"command"`
 	WorkingDir     string            `json:"working_dir,omitempty"`
 	TimeoutSeconds int               `json:"timeout_seconds,omitempty"`
-	Env            map[string]string `json:\"env,omitempty\"`
+	Env            map[string]string `json:"env,omitempty"`
 	EnvFiles       []string          `json:"env_files,omitempty"` // Paths to .env files to load (relative to workspace root)
 }
 
