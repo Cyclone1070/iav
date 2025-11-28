@@ -48,11 +48,14 @@ func (c *RealGeminiClient) ListModels(ctx context.Context) ([]string, error) {
 
 	var models []string
 	for {
-		model, err := iter.Next(ctx)
+		page, err := iter.Next(ctx)
 		if err != nil {
 			break // End of list or error
 		}
-		models = append(models, model.Name)
+		// Each page contains multiple models in the Items field
+		for _, model := range page.Items {
+			models = append(models, model.Name)
+		}
 	}
 	return models, nil
 }
