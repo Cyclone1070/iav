@@ -23,6 +23,9 @@ type UI struct {
 
 	// UI -> Orchestrator
 	commandChan chan UICommand
+
+	// Ready signal
+	readyChan chan struct{}
 }
 
 // Internal message types
@@ -50,6 +53,7 @@ type UIChannels struct {
 	MessageChan   chan string
 	ModelListChan chan []string
 	CommandChan   chan UICommand
+	ReadyChan     chan struct{} // Signals when UI is ready to accept requests
 }
 
 // NewUIChannels creates a new UIChannels struct with default buffers
@@ -63,6 +67,7 @@ func NewUIChannels() *UIChannels {
 		MessageChan:   make(chan string, 10),
 		ModelListChan: make(chan []string),
 		CommandChan:   make(chan UICommand, 10),
+		ReadyChan:     make(chan struct{}),
 	}
 }
 
@@ -81,6 +86,7 @@ func NewUI(
 		messageChan:   channels.MessageChan,
 		modelListChan: channels.ModelListChan,
 		commandChan:   channels.CommandChan,
+		readyChan:     channels.ReadyChan,
 	}
 
 	model := newBubbleTeaModel(
@@ -92,6 +98,7 @@ func NewUI(
 		ui.messageChan,
 		ui.modelListChan,
 		ui.commandChan,
+		ui.readyChan,
 		renderer,
 		spinnerFactory,
 	)
@@ -167,4 +174,9 @@ func (u *UI) WriteModelList(models []string) {
 // Commands returns the command channel
 func (u *UI) Commands() <-chan UICommand {
 	return u.commandChan
+}
+
+// Ready returns a channel that is closed when the UI is ready to accept requests
+func (u *UI) Ready() <-chan struct{} {
+	return u.readyChan
 }

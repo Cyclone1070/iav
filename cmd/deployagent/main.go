@@ -161,37 +161,9 @@ func runInteractive(ctx *models.WorkspaceContext) {
 	// Initialize Orchestrator
 	orch := orchestrator.New(providerClient, policyService, userInterface, toolList)
 
-	// Start UI in a goroutine
+	// Start orchestrator after UI is ready
 	go func() {
-		if err := userInterface.Start(); err != nil {
-			fmt.Fprintf(os.Stderr, "Error running UI: %v\n", err)
-			os.Exit(1)
-		}
-	}()
-
-	// Wait for UI to be ready (hacky, but simple for now)
-	// Better way: UI signals readiness via a channel?
-	// The UI Start() blocks, so we run it in a goroutine.
-	// We can just start the orchestrator loop.
-
-	// Ask for initial goal
-	// We need to wait a bit for UI to render first frame?
-	// Or we can just call ReadInput, which will block until UI processes it.
-
-	// Run Orchestrator Loop
-	// We need a context that can be cancelled by the UI (e.g. Ctrl+C)
-	// The UI handles Ctrl+C and returns from Start().
-	// But we are in a separate goroutine here? No, runInteractive is called from main.
-	// So we should block here.
-
-	// Actually, userInterface.Start() blocks. So if we run it in a goroutine, main() will exit.
-	// We need to run Orchestrator in a goroutine and UI in main thread (or vice versa).
-	// Bubble Tea recommends running Program.Run() in the main thread.
-
-	// So:
-	go func() {
-		// Give UI a moment to start
-		// TODO: Use a proper ready channel
+		<-userInterface.Ready() // Wait for UI to be ready
 
 		// Initial prompt
 		goal, err := userInterface.ReadInput(context.Background(), "What would you like to do?")
@@ -205,6 +177,7 @@ func runInteractive(ctx *models.WorkspaceContext) {
 		}
 	}()
 
+	// Run UI in main thread (blocks until exit)
 	if err := userInterface.Start(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error running UI: %v\n", err)
 		os.Exit(1)

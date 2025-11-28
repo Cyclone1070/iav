@@ -31,6 +31,9 @@ type BubbleTeaModel struct {
 
 	// UI -> Orchestrator
 	commandChan chan<- UICommand
+
+	// Ready signal
+	readyChan chan<- struct{}
 }
 
 // ... (Init and Update methods remain mostly same, just View changes)
@@ -55,6 +58,7 @@ func newBubbleTeaModel(
 	messageChan <-chan string,
 	modelListChan <-chan []string,
 	commandChan chan<- UICommand,
+	readyChan chan<- struct{},
 	renderer services.MarkdownRenderer,
 	spinnerFactory SpinnerFactory,
 ) BubbleTeaModel {
@@ -83,6 +87,7 @@ func newBubbleTeaModel(
 		messageChan:   messageChan,
 		modelListChan: modelListChan,
 		commandChan:   commandChan,
+		readyChan:     readyChan,
 	}
 }
 
@@ -96,6 +101,11 @@ type modelListReceivedMsg []string
 
 // Init initializes the model
 func (m BubbleTeaModel) Init() tea.Cmd {
+	// Signal that UI is ready
+	if m.readyChan != nil {
+		close(m.readyChan)
+	}
+
 	return tea.Batch(
 		textinput.Blink,
 		m.state.Spinner.Tick,

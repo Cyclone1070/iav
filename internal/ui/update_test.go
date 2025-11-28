@@ -20,6 +20,7 @@ func createTestModel() BubbleTeaModel {
 		channels.MessageChan,
 		channels.ModelListChan,
 		channels.CommandChan,
+		channels.ReadyChan,
 		&MockMarkdownRenderer{},
 		mockSpinnerFactory,
 	)
