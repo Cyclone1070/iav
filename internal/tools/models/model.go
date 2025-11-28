@@ -22,10 +22,11 @@ const (
 // Operation represents a single edit operation for EditFile.
 // Before must be a non-empty literal snippet that exists in the file.
 // ExpectedReplacements must match the exact number of occurrences of Before in the file.
+// If ExpectedReplacements is omitted (0), it defaults to 1.
 type Operation struct {
 	Before               string // required, non-empty literal snippet
 	After                string // required
-	ExpectedReplacements int    // required, >=1
+	ExpectedReplacements int    // optional, defaults to 1 if omitted; must be >= 1
 }
 
 // Request structs for tool operations
@@ -213,18 +214,18 @@ type SearchContentResponse struct {
 
 // Sentinel errors for consistent error handling
 var (
-	ErrOutsideWorkspace        = errors.New("path is outside workspace root")
-	ErrFileExists              = errors.New("file already exists, use EditFile instead")
-	ErrBinaryFile              = errors.New("binary files are not supported")
-	ErrEditConflict            = errors.New("file was modified since last read, please re-read first")
-	ErrSnippetNotFound         = errors.New("snippet not found in file")
-	ErrSnippetAmbiguous        = errors.New("snippet occurrence count does not match expected")
-	ErrTooLarge                = errors.New("file or content exceeds size limit")
-	ErrFileMissing             = errors.New("file does not exist")
-	ErrInvalidOffset           = errors.New("offset must be >= 0")
-	ErrInvalidLimit            = errors.New("limit must be >= 0")
-	ErrInvalidPaginationOffset = errors.New("offset must be >= 0")
-	ErrInvalidPaginationLimit  = errors.New("limit must be between 1 and MaxListDirectoryLimit")
+	ErrOutsideWorkspace             = errors.New("path is outside workspace root")
+	ErrFileExists                   = errors.New("file already exists, use EditFile instead")
+	ErrBinaryFile                   = errors.New("binary files are not supported")
+	ErrEditConflict                 = errors.New("file was modified since last read, please re-read first")
+	ErrSnippetNotFound              = errors.New("snippet not found in file")
+	ErrExpectedReplacementsMismatch = errors.New("expected replacements count does not match actual occurrences")
+	ErrTooLarge                     = errors.New("file or content exceeds size limit")
+	ErrFileMissing                  = errors.New("file does not exist")
+	ErrInvalidOffset                = errors.New("offset must be >= 0")
+	ErrInvalidLimit                 = errors.New("limit must be >= 0")
+	ErrInvalidPaginationOffset      = errors.New("offset must be >= 0")
+	ErrInvalidPaginationLimit       = errors.New("limit must be between 1 and MaxListDirectoryLimit")
 
 	// Shell Sentinel Errors
 	ErrShellTimeout                    = errors.New("shell command timed out")

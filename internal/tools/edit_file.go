@@ -59,6 +59,11 @@ func EditFile(ctx *models.WorkspaceContext, req models.EditFileRequest) (*models
 	// Apply operations sequentially
 	operationsApplied := 0
 	for i, op := range req.Operations {
+		// Apply default ExpectedReplacements if not specified (0 = omitted)
+		if op.ExpectedReplacements == 0 {
+			op.ExpectedReplacements = 1
+		}
+
 		if op.Before == "" {
 			return nil, fmt.Errorf("operation %d: Before must be non-empty, include nearest meaningful context for append-style edits", i+1)
 		}
@@ -74,7 +79,7 @@ func EditFile(ctx *models.WorkspaceContext, req models.EditFileRequest) (*models
 		}
 
 		if count != op.ExpectedReplacements {
-			return nil, models.ErrSnippetAmbiguous
+			return nil, models.ErrExpectedReplacementsMismatch
 		}
 
 		content = strings.Replace(content, op.Before, op.After, op.ExpectedReplacements)

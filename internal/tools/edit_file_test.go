@@ -143,7 +143,7 @@ func TestEditFile(t *testing.T) {
 		}
 	})
 
-	t.Run("snippet ambiguous", func(t *testing.T) {
+	t.Run("expected replacements mismatch", func(t *testing.T) {
 		fs := services.NewMockFileSystem(maxFileSize)
 		checksumManager := services.NewChecksumManager()
 		content := []byte("test test test")
@@ -171,8 +171,89 @@ func TestEditFile(t *testing.T) {
 		}
 
 		_, err = EditFile(ctx, models.EditFileRequest{Path: "test.txt", Operations: ops})
-		if err != models.ErrSnippetAmbiguous {
-			t.Errorf("expected ErrSnippetAmbiguous, got %v", err)
+		if err != models.ErrExpectedReplacementsMismatch {
+			t.Errorf("expected ErrExpectedReplacementsMismatch, got %v", err)
+		}
+	})
+
+	t.Run("default ExpectedReplacements to 1 when omitted", func(t *testing.T) {
+		fs := services.NewMockFileSystem(maxFileSize)
+		checksumManager := services.NewChecksumManager()
+		content := []byte("replace me")
+		fs.CreateFile("/workspace/test.txt", content, 0644)
+
+		ctx := &models.WorkspaceContext{
+			FS:              fs,
+			BinaryDetector:  services.NewMockBinaryDetector(),
+			ChecksumManager: checksumManager,
+			MaxFileSize:     maxFileSize,
+			WorkspaceRoot:   workspaceRoot,
+		}
+
+		_, err := ReadFile(ctx, models.ReadFileRequest{Path: "test.txt"})
+		if err != nil {
+			t.Fatalf("failed to read file: %v", err)
+		}
+
+		ops := []models.Operation{
+			{
+				Before:               "replace me",
+				After:                "replaced",
+				ExpectedReplacements: 0, // Should default to 1
+			},
+		}
+
+		resp, err := EditFile(ctx, models.EditFileRequest{Path: "test.txt", Operations: ops})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if resp.OperationsApplied != 1 {
+			t.Errorf("expected 1 operation applied, got %d", resp.OperationsApplied)
+		}
+
+		// Verify edit was applied
+		fileContent, err := fs.ReadFileRange("/workspace/test.txt", 0, 0)
+		if err != nil {
+			t.Fatalf("failed to read edited file: %v", err)
+		}
+
+		result := string(fileContent)
+		if result != "replaced" {
+			t.Errorf("expected content %q, got %q", "replaced", result)
+		}
+	})
+
+	t.Run("default ExpectedReplacements fails on multiple matches", func(t *testing.T) {
+		fs := services.NewMockFileSystem(maxFileSize)
+		checksumManager := services.NewChecksumManager()
+		content := []byte("test test")
+		fs.CreateFile("/workspace/test.txt", content, 0644)
+
+		ctx := &models.WorkspaceContext{
+			FS:              fs,
+			BinaryDetector:  services.NewMockBinaryDetector(),
+			ChecksumManager: checksumManager,
+			MaxFileSize:     maxFileSize,
+			WorkspaceRoot:   workspaceRoot,
+		}
+
+		_, err := ReadFile(ctx, models.ReadFileRequest{Path: "test.txt"})
+		if err != nil {
+			t.Fatalf("failed to read file: %v", err)
+		}
+
+		ops := []models.Operation{
+			{
+				Before:               "test",
+				After:                "replaced",
+				ExpectedReplacements: 0, // Defaults to 1, but there are 2 occurrences
+			},
+		}
+
+		_, err = EditFile(ctx, models.EditFileRequest{Path: "test.txt", Operations: ops})
+		if err != models.ErrExpectedReplacementsMismatch {
+			t.Errorf("expected ErrExpectedReplacementsMismatch, got %v", err)
 		}
 	})
 
