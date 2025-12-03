@@ -20,7 +20,11 @@ type MockProvider struct {
 	contextWindow  int
 	modelName      string
 	// OnGenerateCalled is a callback for observing Generate calls
-	OnGenerateCalled func(req *models.GenerateRequest)
+	OnGenerateCalled func(*models.GenerateRequest)
+
+	// Callbacks for new methods
+	ListModelsFunc func(ctx context.Context) ([]string, error)
+	SetModelFunc   func(model string) error
 }
 
 // NewMockProvider creates a new mock provider with default settings
@@ -98,8 +102,20 @@ func (m *MockProvider) CountTokens(ctx context.Context, history []orchmodels.Mes
 	return len(history) * 50, nil
 }
 
-// SetModel implements the Provider interface
+// ListModels implements the Provider interface
+func (m *MockProvider) ListModels(ctx context.Context) ([]string, error) {
+	if m.ListModelsFunc != nil {
+		return m.ListModelsFunc(ctx)
+	}
+	// Default behavior
+	return []string{"mock-model-1", "mock-model-2"}, nil
+}
+
+// SetModel sets the model
 func (m *MockProvider) SetModel(model string) error {
+	if m.SetModelFunc != nil {
+		return m.SetModelFunc(model)
+	}
 	m.modelName = model
 	return nil
 }
@@ -128,9 +144,7 @@ func (m *MockProvider) DefineTools(ctx context.Context, tools []models.ToolDefin
 }
 
 // ListModels implements the Provider interface
-func (m *MockProvider) ListModels(ctx context.Context) ([]string, error) {
-	return []string{"mock-model-1", "mock-model-2"}, nil
-}
+// (Removed duplicate)
 
 // CreateTestWorkspace creates a temporary workspace for integration tests
 func CreateTestWorkspace(t *testing.T) string {
@@ -148,7 +162,10 @@ type MockUI struct {
 	// OnReadyCalled is a callback for observing Ready calls
 	OnReadyCalled func()
 	// StartBlocker controls when Start() returns (for tests)
-	StartBlocker chan struct{}
+	StartBlocker       chan struct{}
+	OnModelListWritten func(models []string)
+	CommandsChan       chan ui.UICommand
+	ModelList          []string
 }
 
 func (m *MockUI) WriteMessage(message string) {
@@ -187,12 +204,22 @@ func (m *MockUI) ReadPermission(ctx context.Context, prompt string, preview *uim
 }
 
 func (m *MockUI) WriteModelList(models []string) {
-	// No-op for tests
+	m.mu.Lock()
+	m.ModelList = models
+	m.mu.Unlock()
+
+	if m.OnModelListWritten != nil {
+		m.OnModelListWritten(models)
+	}
 }
 
 func (m *MockUI) Commands() <-chan ui.UICommand {
-	// Return nil channel for tests
-	return nil
+	if m.CommandsChan != nil {
+		return m.CommandsChan
+	}
+	ch := make(chan ui.UICommand)
+	close(ch)
+	return ch
 }
 
 func (m *MockUI) SetModel(model string) {

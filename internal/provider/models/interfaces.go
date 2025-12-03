@@ -37,6 +37,10 @@ type Provider interface {
 	// GetModel returns the currently active model name.
 	GetModel() string
 
+	// ListModels returns a list of available model names.
+	// Providers should implement this to allow users to discover available models.
+	ListModels(ctx context.Context) ([]string, error)
+
 	// === Capabilities ===
 
 	// GetCapabilities returns what features the provider/model supports.

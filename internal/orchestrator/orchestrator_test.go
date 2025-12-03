@@ -23,6 +23,7 @@ type MockProvider struct {
 	GetCapabilitiesFunc  func() provider.Capabilities
 	DefineToolsFunc      func(ctx context.Context, tools []provider.ToolDefinition) error
 	GenerateStreamFunc   func(ctx context.Context, req *provider.GenerateRequest) (provider.ResponseStream, error)
+	ListModelsFunc       func(ctx context.Context) ([]string, error)
 }
 
 func (m *MockProvider) Generate(ctx context.Context, req *provider.GenerateRequest) (*provider.GenerateResponse, error) {
@@ -79,6 +80,13 @@ func (m *MockProvider) DefineTools(ctx context.Context, tools []provider.ToolDef
 		return m.DefineToolsFunc(ctx, tools)
 	}
 	return nil
+}
+
+func (m *MockProvider) ListModels(ctx context.Context) ([]string, error) {
+	if m.ListModelsFunc != nil {
+		return m.ListModelsFunc(ctx)
+	}
+	return []string{"test-model"}, nil
 }
 
 // MockTool implements adapter.Tool for testing

@@ -12,6 +12,7 @@ import (
 	orchmodels "github.com/Cyclone1070/deployforme/internal/orchestrator/models"
 	providermodels "github.com/Cyclone1070/deployforme/internal/provider/models"
 	"github.com/Cyclone1070/deployforme/internal/testing/testhelpers"
+	"github.com/Cyclone1070/deployforme/internal/ui"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -137,4 +138,172 @@ loop:
 		}
 	}
 	assert.True(t, foundResponse, "Should have received final response. Messages: %v", mockUI.GetMessages())
+}
+
+func TestInteractiveMode_ListModelsFromProvider(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping E2E test in short mode")
+	}
+
+	// Expected models from provider
+	expectedModels := []string{
+		"gemini-2.0-flash-exp",
+		"gemini-1.5-pro-latest",
+		"gemini-1.5-flash",
+	}
+
+	// Track whether ListModels was called
+	var listModelsCalled bool
+	var mu sync.Mutex
+
+	// Create mock provider with ListModels implementation
+	mockProvider := testhelpers.NewMockProvider()
+	mockProvider.ListModelsFunc = func(ctx context.Context) ([]string, error) {
+		mu.Lock()
+		listModelsCalled = true
+		mu.Unlock()
+		return expectedModels, nil
+	}
+
+	providerFactory := func(ctx context.Context) (providermodels.Provider, error) {
+		return mockProvider, nil
+	}
+
+	// Track what models UI received
+	var receivedModels []string
+	modelListChan := make(chan []string, 1)
+
+	startBlocker := make(chan struct{})
+	commandChan := make(chan ui.UICommand, 1)
+
+	mockUI := &testhelpers.MockUI{
+		StartBlocker: startBlocker,
+		CommandsChan: commandChan,
+		OnModelListWritten: func(models []string) {
+			modelListChan <- models
+		},
+		// We need to provide InputFunc to avoid infinite loop if ReadInput is called
+		InputFunc: func(ctx context.Context, prompt string) (string, error) {
+			select {
+			case <-ctx.Done():
+				return "", ctx.Err()
+			case <-time.After(10 * time.Second):
+				return "timeout", nil
+			}
+		},
+	}
+
+	deps := Dependencies{
+		UI:              mockUI,
+		ProviderFactory: providerFactory,
+		Tools:           nil,
+	}
+
+	// Run interactive mode in background
+	go func() {
+		runInteractive(context.Background(), deps)
+	}()
+
+	// Wait for initialization
+	time.Sleep(300 * time.Millisecond)
+
+	// Send list_models command
+	commandChan <- ui.UICommand{Type: "list_models"}
+
+	// Wait for response
+	select {
+	case receivedModels = <-modelListChan:
+		// Success
+	case <-time.After(2 * time.Second):
+		t.Fatal("Timeout waiting for model list response")
+	}
+
+	// Stop test
+	close(startBlocker)
+	time.Sleep(50 * time.Millisecond)
+
+	// Verify provider.ListModels was called
+	mu.Lock()
+	called := listModelsCalled
+	mu.Unlock()
+
+	assert.True(t, called, "provider.ListModels() should have been called")
+	assert.Equal(t, expectedModels, receivedModels,
+		"UI should receive models from provider, not hardcoded list")
+}
+
+func TestInteractiveMode_SwitchModelCallsProvider(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping E2E test in short mode")
+	}
+
+	var setModelCalled bool
+	var setModelArg string
+	var mu sync.Mutex
+
+	mockProvider := testhelpers.NewMockProvider()
+	mockProvider.SetModelFunc = func(model string) error {
+		mu.Lock()
+		setModelCalled = true
+		setModelArg = model
+		mu.Unlock()
+		return nil
+	}
+
+	providerFactory := func(ctx context.Context) (providermodels.Provider, error) {
+		return mockProvider, nil
+	}
+
+	startBlocker := make(chan struct{})
+	commandChan := make(chan ui.UICommand, 1)
+
+	mockUI := &testhelpers.MockUI{
+		StartBlocker: startBlocker,
+		CommandsChan: commandChan,
+		InputFunc: func(ctx context.Context, prompt string) (string, error) {
+			select {
+			case <-ctx.Done():
+				return "", ctx.Err()
+			case <-time.After(10 * time.Second):
+				return "timeout", nil
+			}
+		},
+	}
+
+	deps := Dependencies{
+		UI:              mockUI,
+		ProviderFactory: providerFactory,
+		Tools:           nil,
+	}
+
+	go func() {
+		runInteractive(context.Background(), deps)
+	}()
+
+	// Wait for initialization
+	time.Sleep(300 * time.Millisecond)
+
+	// Send switch_model command
+	targetModel := "gemini-1.5-flash"
+	commandChan <- ui.UICommand{
+		Type: "switch_model",
+		Args: map[string]string{"model": targetModel},
+	}
+
+	// Give it time to process
+	time.Sleep(100 * time.Millisecond)
+
+	// Stop test
+	close(startBlocker)
+	time.Sleep(50 * time.Millisecond)
+
+	// Verify provider.SetModel was called
+	mu.Lock()
+	called := setModelCalled
+	modelArg := setModelArg
+	mu.Unlock()
+
+	assert.True(t, called, "provider.SetModel() should have been called")
+	assert.Equal(t, targetModel, modelArg,
+		"provider.SetModel() should be called with correct model name")
 }

@@ -90,6 +90,10 @@ func runInteractive(ctx context.Context, deps Dependencies) {
 
 	var wg sync.WaitGroup
 
+	// Provider shared between goroutines (GeminiProvider is thread-safe)
+	var providerClient provider.Provider
+	providerReady := make(chan struct{})
+
 	// Goroutine #1: Initialize & REPL
 	wg.Add(1)
 	go func() {
@@ -138,13 +142,17 @@ func runInteractive(ctx context.Context, deps Dependencies) {
 		// === PROVIDER INITIALIZATION ===
 		userInterface.WriteStatus("thinking", "Initializing AI...")
 
-		providerClient, err := deps.ProviderFactory(orchCtx)
+		p, err := deps.ProviderFactory(orchCtx)
 		if err != nil {
 			userInterface.WriteStatus("error", "AI initialization failed")
 			userInterface.WriteMessage(fmt.Sprintf("Error initializing provider: %v", err))
 			userInterface.WriteMessage("The application cannot start. Press Ctrl+C to exit.")
 			return // DEGRADED MODE
 		}
+
+		// Share provider with other goroutines
+		providerClient = p
+		close(providerReady)
 
 		// Set initial model in status bar
 		userInterface.SetModel("gemini-2.0-flash-exp")
@@ -196,18 +204,32 @@ func runInteractive(ctx context.Context, deps Dependencies) {
 			case cmd := <-userInterface.Commands():
 				switch cmd.Type {
 				case "list_models":
-					// In a real implementation, we'd fetch this from the provider
-					// For now, hardcode some known models
-					models := []string{"gemini-2.0-flash-exp", "gemini-1.5-pro"}
-					userInterface.WriteModelList(models)
+					// Wait for provider to be ready
+					select {
+					case <-providerReady:
+						models, err := providerClient.ListModels(orchCtx)
+						if err != nil {
+							userInterface.WriteMessage(fmt.Sprintf("Error listing models: %v", err))
+						} else {
+							userInterface.WriteModelList(models)
+						}
+					case <-orchCtx.Done():
+						return
+					}
 				case "switch_model":
-					model := cmd.Args["model"]
-					userInterface.SetModel(model)
-					// Note: We'd also need to update the provider here in a full implementation
-					// providerClient.SetModel(model)
-					// But providerClient is local to the other goroutine.
-					// For this fix, we just update the UI.
-					userInterface.WriteMessage(fmt.Sprintf("Switched to model: %s", model))
+					// Wait for provider to be ready
+					select {
+					case <-providerReady:
+						model := cmd.Args["model"]
+						if err := providerClient.SetModel(model); err != nil {
+							userInterface.WriteMessage(fmt.Sprintf("Error switching model: %v", err))
+						} else {
+							userInterface.SetModel(model)
+							userInterface.WriteMessage(fmt.Sprintf("Switched to model: %s", model))
+						}
+					case <-orchCtx.Done():
+						return
+					}
 				}
 			}
 		}
