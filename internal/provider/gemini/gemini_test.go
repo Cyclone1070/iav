@@ -38,7 +38,7 @@ func TestGenerate_HappyPath_TextResponse(t *testing.T) {
 		},
 	}
 
-	p, _ := NewGeminiProvider(mockClient, "models/gemini-mock")
+	p, _ := NewGeminiProvider(mockClient, "gemini-mock")
 
 	req := &provider.GenerateRequest{
 		Prompt:  "Hello",
@@ -97,7 +97,7 @@ func TestGenerate_HappyPath_ToolCall(t *testing.T) {
 		},
 	}
 
-	p, _ := NewGeminiProvider(mockClient, "models/gemini-mock")
+	p, _ := NewGeminiProvider(mockClient, "gemini-mock")
 
 	req := &provider.GenerateRequest{
 		Prompt: "Read foo.txt",
@@ -140,7 +140,7 @@ func TestCountTokens_HappyPath(t *testing.T) {
 		},
 	}
 
-	p, _ := NewGeminiProvider(mockClient, "models/gemini-mock")
+	p, _ := NewGeminiProvider(mockClient, "gemini-mock")
 
 	messages := []models.Message{
 		{Role: "user", Content: "Hello"},
@@ -170,19 +170,19 @@ func TestSetModel_GetModel(t *testing.T) {
 			}, nil
 		},
 	}
-	p, _ := NewGeminiProvider(mockClient, "models/gemini-mock-1")
+	p, _ := NewGeminiProvider(mockClient, "gemini-mock-1")
 
-	if p.GetModel() != "models/gemini-mock-1" {
-		t.Errorf("expected 'models/gemini-mock-1', got %q", p.GetModel())
+	if p.GetModel() != "gemini-mock-1" {
+		t.Errorf("expected 'gemini-mock-1', got %q", p.GetModel())
 	}
 
-	err := p.SetModel("models/gemini-mock-2")
+	err := p.SetModel("gemini-mock-2")
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
 
-	if p.GetModel() != "models/gemini-mock-2" {
-		t.Errorf("expected 'models/gemini-mock-2', got %q", p.GetModel())
+	if p.GetModel() != "gemini-mock-2" {
+		t.Errorf("expected 'gemini-mock-2', got %q", p.GetModel())
 	}
 }
 
@@ -201,7 +201,7 @@ func TestGenerate_UnhappyPath_RateLimit(t *testing.T) {
 		},
 	}
 
-	p, _ := NewGeminiProvider(mockClient, "models/gemini-mock")
+	p, _ := NewGeminiProvider(mockClient, "gemini-mock")
 
 	req := &provider.GenerateRequest{
 		Prompt: "Hello",
@@ -242,7 +242,7 @@ func TestGenerate_UnhappyPath_AuthFailure(t *testing.T) {
 		},
 	}
 
-	p, _ := NewGeminiProvider(mockClient, "models/gemini-mock")
+	p, _ := NewGeminiProvider(mockClient, "gemini-mock")
 
 	req := &provider.GenerateRequest{
 		Prompt: "Hello",
@@ -282,7 +282,7 @@ func TestGenerate_EdgeCase_EmptyResponse(t *testing.T) {
 		},
 	}
 
-	p, _ := NewGeminiProvider(mockClient, "models/gemini-mock")
+	p, _ := NewGeminiProvider(mockClient, "gemini-mock")
 
 	req := &provider.GenerateRequest{
 		Prompt: "Hello",
@@ -327,7 +327,7 @@ func TestGenerate_EdgeCase_SafetyBlock(t *testing.T) {
 		},
 	}
 
-	p, _ := NewGeminiProvider(mockClient, "models/gemini-mock")
+	p, _ := NewGeminiProvider(mockClient, "gemini-mock")
 
 	req := &provider.GenerateRequest{
 		Prompt: "Dangerous content",
@@ -376,7 +376,7 @@ func TestGenerate_EdgeCase_NilConfig(t *testing.T) {
 		},
 	}
 
-	p, _ := NewGeminiProvider(mockClient, "models/gemini-mock")
+	p, _ := NewGeminiProvider(mockClient, "gemini-mock")
 
 	req := &provider.GenerateRequest{
 		Prompt: "Hello",
@@ -417,7 +417,7 @@ func TestGenerate_EdgeCase_NilHistory(t *testing.T) {
 		},
 	}
 
-	p, _ := NewGeminiProvider(mockClient, "models/gemini-mock")
+	p, _ := NewGeminiProvider(mockClient, "gemini-mock")
 
 	req := &provider.GenerateRequest{
 		Prompt:  "Hello",
@@ -439,7 +439,7 @@ func TestGetCapabilities(t *testing.T) {
 			return []ModelInfo{{Name: "models/gemini-1.5-pro", InputTokenLimit: 2_000_000, OutputTokenLimit: 8192}}, nil
 		},
 	}
-	p, _ := NewGeminiProvider(mockClient, "models/gemini-1.5-pro")
+	p, _ := NewGeminiProvider(mockClient, "gemini-1.5-pro")
 
 	caps := p.GetCapabilities()
 
@@ -489,7 +489,7 @@ func TestDefineTools(t *testing.T) {
 		},
 	}
 
-	p, _ := NewGeminiProvider(mockClient, "models/gemini-mock")
+	p, _ := NewGeminiProvider(mockClient, "gemini-mock")
 
 	tools := []provider.ToolDefinition{
 		{
@@ -677,7 +677,7 @@ func TestNewGeminiProviderWithLatest(t *testing.T) {
 				{Name: "models/gemini-2.0-flash", InputTokenLimit: 1_000_000, OutputTokenLimit: 8192},
 				{Name: "models/gemini-1.5-pro", InputTokenLimit: 2_000_000, OutputTokenLimit: 8192},
 			},
-			expectedModel: "models/gemini-2.0-flash",
+			expectedModel: "gemini-2.0-flash",
 			expectError:   false,
 		},
 		{
@@ -686,7 +686,7 @@ func TestNewGeminiProviderWithLatest(t *testing.T) {
 				{Name: "models/gemini-1.5-pro", InputTokenLimit: 2_000_000, OutputTokenLimit: 8192},
 				{Name: "models/gemini-1.5-flash", InputTokenLimit: 1_000_000, OutputTokenLimit: 8192},
 			},
-			expectedModel: "models/gemini-1.5-pro",
+			expectedModel: "gemini-1.5-pro",
 			expectError:   false,
 		},
 		{
@@ -699,7 +699,7 @@ func TestNewGeminiProviderWithLatest(t *testing.T) {
 			models: []ModelInfo{
 				{Name: "models/gemini-2.0-flash", InputTokenLimit: 1_000_000, OutputTokenLimit: 8192},
 			},
-			expectedModel: "models/gemini-2.0-flash",
+			expectedModel: "gemini-2.0-flash",
 			expectError:   false,
 		},
 	}

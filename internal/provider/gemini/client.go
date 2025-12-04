@@ -48,18 +48,20 @@ func (c *RealGeminiClient) CountTokens(ctx context.Context, model string, conten
 }
 
 // ListModels returns a list of available model information, filtered to only include gemini-* models
-// (excluding embedding, image, and audio models)
+// (excluding embedding, image, audio, live, and robotic models)
 func (c *RealGeminiClient) ListModels(ctx context.Context) ([]ModelInfo, error) {
 	var models []ModelInfo
 	for model, err := range c.client.Models.All(ctx) {
 		if err != nil {
 			return nil, err
 		}
-		// Filter to only include models starting with "models/gemini-" and exclude embedding, image, and audio models
+		// Filter to only include models starting with "models/gemini-" and exclude embedding, image, audio, live, and robotic models
 		if strings.HasPrefix(model.Name, "models/gemini-") &&
 			!strings.Contains(model.Name, "embedding") &&
 			!strings.Contains(model.Name, "image") &&
-			!strings.Contains(model.Name, "audio") {
+			!strings.Contains(model.Name, "audio") &&
+			!strings.Contains(model.Name, "live") &&
+			!strings.Contains(model.Name, "robotic") {
 			models = append(models, ModelInfo{
 				Name:             model.Name,
 				InputTokenLimit:  int(model.InputTokenLimit),

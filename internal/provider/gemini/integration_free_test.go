@@ -32,7 +32,8 @@ func TestGeminiProvider_FreeAPI_ListModels(t *testing.T) {
 	// Verify it selected a model
 	model := provider.GetModel()
 	assert.NotEmpty(t, model)
-	assert.True(t, strings.HasPrefix(model, "models/gemini-"), "Expected model to start with 'models/gemini-', got %q", model)
+	assert.True(t, strings.HasPrefix(model, "gemini-"), "Expected model to start with 'gemini-', got %q", model)
+	assert.False(t, strings.HasPrefix(model, "models/"), "Expected model to NOT have 'models/' prefix, got %q", model)
 	t.Logf("Selected latest model: %s", model)
 
 	// List models (free API call)
@@ -42,9 +43,10 @@ func TestGeminiProvider_FreeAPI_ListModels(t *testing.T) {
 	// Should return some models (all should be gemini-* models now)
 	assert.NotEmpty(t, models)
 
-	// All models should be gemini models (filtered)
+	// All models should be gemini models (filtered, without models/ prefix)
 	for _, m := range models {
-		assert.True(t, strings.HasPrefix(m, "models/gemini-"), "Expected all models to be gemini-*, got %q", m)
+		assert.True(t, strings.HasPrefix(m, "gemini-"), "Expected all models to start with 'gemini-', got %q", m)
+		assert.False(t, strings.HasPrefix(m, "models/"), "Expected models to NOT have 'models/' prefix, got %q", m)
 		t.Logf("Found gemini model: %s", m)
 	}
 }
@@ -82,6 +84,8 @@ func TestGeminiProvider_FreeAPI_NamingConventions(t *testing.T) {
 	hasEmbeddingModel := false
 	hasImageModel := false
 	hasAudioModel := false
+	hasLiveModel := false
+	hasRoboticModel := false
 
 	for _, m := range allModels {
 		if strings.Contains(m, "-pro") {
@@ -102,6 +106,12 @@ func TestGeminiProvider_FreeAPI_NamingConventions(t *testing.T) {
 		if strings.Contains(m, "audio") {
 			hasAudioModel = true
 		}
+		if strings.Contains(m, "live") {
+			hasLiveModel = true
+		}
+		if strings.Contains(m, "robotic") {
+			hasRoboticModel = true
+		}
 	}
 
 	// These assertions verify Google's naming conventions haven't changed
@@ -109,7 +119,7 @@ func TestGeminiProvider_FreeAPI_NamingConventions(t *testing.T) {
 	assert.True(t, hasFlashModel, "Expected at least one model with '-flash' suffix. Got models: %v", allModels)
 	assert.True(t, hasLatestModel, "Expected at least one model with '-latest' suffix. Got models: %v", allModels)
 	
-	// Verify embedding/image/audio models exist (they should be filtered out by our ListModels)
+	// Verify embedding/image/audio/live/robotic models exist (they should be filtered out by our ListModels)
 	if !hasEmbeddingModel {
 		t.Log("Note: No embedding models found in API response (this is fine)")
 	}
@@ -119,6 +129,12 @@ func TestGeminiProvider_FreeAPI_NamingConventions(t *testing.T) {
 	if !hasAudioModel {
 		t.Log("Note: No audio models found in API response (this is fine)")
 	}
+	if !hasLiveModel {
+		t.Log("Note: No live models found in API response (this is fine)")
+	}
+	if !hasRoboticModel {
+		t.Log("Note: No robotic models found in API response (this is fine)")
+	}
 
 	// Verify our filtering works correctly
 	provider, err := NewGeminiProviderWithLatest(geminiClient)
@@ -127,7 +143,7 @@ func TestGeminiProvider_FreeAPI_NamingConventions(t *testing.T) {
 	filteredModels, err := provider.ListModels(context.Background())
 	assert.NoError(t, err)
 	
-	// Verify no embedding/image/audio models in filtered list
+	// Verify no embedding/image/audio/live/robotic models in filtered list
 	for _, m := range filteredModels {
 		assert.False(t, strings.Contains(m, "embedding"), 
 			"Embedding models should be filtered out, but found: %s", m)
@@ -135,5 +151,9 @@ func TestGeminiProvider_FreeAPI_NamingConventions(t *testing.T) {
 			"Image models should be filtered out, but found: %s", m)
 		assert.False(t, strings.Contains(m, "audio"), 
 			"Audio models should be filtered out, but found: %s", m)
+		assert.False(t, strings.Contains(m, "live"), 
+			"Live models should be filtered out, but found: %s", m)
+		assert.False(t, strings.Contains(m, "robotic"), 
+			"Robotic models should be filtered out, but found: %s", m)
 	}
 }

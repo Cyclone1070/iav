@@ -61,6 +61,24 @@ func (p *GeminiProvider) getModelInfo(name string) *ModelInfo {
 	return nil
 }
 
+// stripModelPrefix removes the "models/" prefix from a model name for display purposes.
+// If the model doesn't have the prefix, it returns the name unchanged.
+func stripModelPrefix(modelName string) string {
+	if strings.HasPrefix(modelName, "models/") {
+		return strings.TrimPrefix(modelName, "models/")
+	}
+	return modelName
+}
+
+// addModelPrefix adds the "models/" prefix to a model name if it's not already present.
+// This is used when accepting user input to convert it to SDK format.
+func addModelPrefix(modelName string) string {
+	if strings.HasPrefix(modelName, "models/") {
+		return modelName
+	}
+	return "models/" + modelName
+}
+
 // hasLatestSuffix returns true if the model name contains "-latest"
 func hasLatestSuffix(modelName string) bool {
 	return strings.Contains(modelName, "-latest")
@@ -193,7 +211,11 @@ func NewGeminiProviderWithLatest(client GeminiClient) (*GeminiProvider, error) {
 
 // NewGeminiProvider creates a new Gemini provider with the given client and model.
 // It validates that the provided model exists in the filtered list of available gemini-* models.
+// The model parameter can be provided with or without the "models/" prefix.
 func NewGeminiProvider(client GeminiClient, model string) (*GeminiProvider, error) {
+	// Add "models/" prefix if not present (user input may not have it)
+	modelWithPrefix := addModelPrefix(model)
+	
 	// Fetch and validate model list
 	ctx := context.Background()
 	models, err := client.ListModels(ctx)
@@ -204,7 +226,7 @@ func NewGeminiProvider(client GeminiClient, model string) (*GeminiProvider, erro
 	// Validate that the provided model exists in the filtered list
 	found := false
 	for _, m := range models {
-		if m.Name == model {
+		if m.Name == modelWithPrefix {
 			found = true
 			break
 		}
@@ -215,20 +237,20 @@ func NewGeminiProvider(client GeminiClient, model string) (*GeminiProvider, erro
 
 	p := &GeminiProvider{
 		client:     client,
-		model:      model,
+		model:      modelWithPrefix,
 		modelCache: models,
 	}
 
 	return p, nil
 }
 
-// ListModels returns a list of available model names
+// ListModels returns a list of available model names (without "models/" prefix for display)
 func (g *GeminiProvider) ListModels(ctx context.Context) ([]string, error) {
 	// Return cached list if available
 	if len(g.modelCache) > 0 {
 		names := make([]string, len(g.modelCache))
 		for i, m := range g.modelCache {
-			names[i] = m.Name
+			names[i] = stripModelPrefix(m.Name)
 		}
 		return names, nil
 	}
@@ -242,10 +264,10 @@ func (g *GeminiProvider) ListModels(ctx context.Context) ([]string, error) {
 	// Update cache
 	g.modelCache = models
 	
-	// Extract names for return
+	// Extract names for return (strip prefix for display)
 	names := make([]string, len(models))
 	for i, m := range models {
-		names[i] = m.Name
+		names[i] = stripModelPrefix(m.Name)
 	}
 	return names, nil
 }
@@ -314,11 +336,14 @@ func (p *GeminiProvider) GetContextWindow() int {
 
 // SetModel sets the model to use for generation
 func (p *GeminiProvider) SetModel(model string) error {
+	// Add "models/" prefix if not present (user input may not have it)
+	modelWithPrefix := addModelPrefix(model)
+	
 	// Validate model if cache is available
 	if len(p.modelCache) > 0 {
 		found := false
 		for _, m := range p.modelCache {
-			if m.Name == model {
+			if m.Name == modelWithPrefix {
 				found = true
 				break
 			}
@@ -328,16 +353,16 @@ func (p *GeminiProvider) SetModel(model string) error {
 		}
 	}
 	p.mu.Lock()
-	p.model = model
+	p.model = modelWithPrefix
 	p.mu.Unlock()
 	return nil
 }
 
-// GetModel returns the current model name
+// GetModel returns the current model name (without "models/" prefix for display)
 func (p *GeminiProvider) GetModel() string {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
-	return p.model
+	return stripModelPrefix(p.model)
 }
 
 // GetCapabilities returns what features the provider/model supports.
