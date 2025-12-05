@@ -24,11 +24,11 @@ func TestGeminiProvider_FreeAPI_ListModels(t *testing.T) {
 	// defer genaiClient.Close() // Client doesn't have Close method
 
 	geminiClient := NewRealGeminiClient(genaiClient)
-	
+
 	// Test NewGeminiProviderWithLatest
-	provider, err := NewGeminiProviderWithLatest(geminiClient)
+	provider, err := NewGeminiProviderWithLatest(context.Background(), geminiClient)
 	assert.NoError(t, err)
-	
+
 	// Verify it selected a model
 	model := provider.GetModel()
 	assert.NotEmpty(t, model)
@@ -64,7 +64,7 @@ func TestGeminiProvider_FreeAPI_NamingConventions(t *testing.T) {
 	assert.NoError(t, err)
 
 	geminiClient := NewRealGeminiClient(genaiClient)
-	
+
 	// Get all models directly from client (before filtering)
 	var allModels []string
 	for model, err := range genaiClient.Models.All(context.Background()) {
@@ -118,7 +118,7 @@ func TestGeminiProvider_FreeAPI_NamingConventions(t *testing.T) {
 	assert.True(t, hasProModel, "Expected at least one model with '-pro' suffix. Got models: %v", allModels)
 	assert.True(t, hasFlashModel, "Expected at least one model with '-flash' suffix. Got models: %v", allModels)
 	assert.True(t, hasLatestModel, "Expected at least one model with '-latest' suffix. Got models: %v", allModels)
-	
+
 	// Verify embedding/image/audio/live/robotic models exist (they should be filtered out by our ListModels)
 	if !hasEmbeddingModel {
 		t.Log("Note: No embedding models found in API response (this is fine)")
@@ -137,23 +137,23 @@ func TestGeminiProvider_FreeAPI_NamingConventions(t *testing.T) {
 	}
 
 	// Verify our filtering works correctly
-	provider, err := NewGeminiProviderWithLatest(geminiClient)
+	provider, err := NewGeminiProviderWithLatest(context.Background(), geminiClient)
 	assert.NoError(t, err)
-	
+
 	filteredModels, err := provider.ListModels(context.Background())
 	assert.NoError(t, err)
-	
+
 	// Verify no embedding/image/audio/live/robotic models in filtered list
 	for _, m := range filteredModels {
-		assert.False(t, strings.Contains(m, "embedding"), 
+		assert.False(t, strings.Contains(m, "embedding"),
 			"Embedding models should be filtered out, but found: %s", m)
-		assert.False(t, strings.Contains(m, "image"), 
+		assert.False(t, strings.Contains(m, "image"),
 			"Image models should be filtered out, but found: %s", m)
-		assert.False(t, strings.Contains(m, "audio"), 
+		assert.False(t, strings.Contains(m, "audio"),
 			"Audio models should be filtered out, but found: %s", m)
-		assert.False(t, strings.Contains(m, "live"), 
+		assert.False(t, strings.Contains(m, "live"),
 			"Live models should be filtered out, but found: %s", m)
-		assert.False(t, strings.Contains(m, "robotic"), 
+		assert.False(t, strings.Contains(m, "robotic"),
 			"Robotic models should be filtered out, but found: %s", m)
 	}
 }

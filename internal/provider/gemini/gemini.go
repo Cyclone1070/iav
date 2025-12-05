@@ -104,80 +104,50 @@ func getModelTypePriority(modelName string) int {
 // 2. Version number (descending: 3.0 > 2.5 > 2.0 > 1.5)
 // 3. Model type (pro > flash > others)
 // 4. Original API order (stable sort)
+// sortModelsByVersion sorts models with the following priority (highest to lowest):
+// 1. Models with "-latest" suffix (regardless of version)
+// 2. Version number (descending: 3.0 > 2.5 > 2.0 > 1.5)
+// 3. Model type (pro > flash > others)
+// 4. Original API order (stable sort)
 func sortModelsByVersion(models []ModelInfo) []ModelInfo {
-	// Create slice of modelVersion with original indices for stable sort
-	type indexedModel struct {
-		modelVersion
-		originalIndex int
-		hasLatest     bool
-		typePriority  int
-	}
-
-	indexed := make([]indexedModel, 0, len(models))
-	for i, model := range models {
-		version, ok := extractVersion(model.Name)
-		if !ok {
-			// If version parsing fails, use 0.0 (will be sorted last)
-			version = 0.0
-		}
-		indexed = append(indexed, indexedModel{
-			modelVersion: modelVersion{
-				name:    model.Name,
-				version: version,
-			},
-			originalIndex: i,
-			hasLatest:    hasLatestSuffix(model.Name),
-			typePriority: getModelTypePriority(model.Name),
-		})
-	}
-
-	// Sort by: latest suffix > version > type priority > original index
-	slices.SortFunc(indexed, func(a, b indexedModel) int {
-		// First priority: models with "-latest" suffix (highest priority)
-		if a.hasLatest && !b.hasLatest {
-			return -1
-		}
-		if !a.hasLatest && b.hasLatest {
-			return 1
-		}
-		
-		// Second priority: Compare versions (descending)
-		if a.version > b.version {
-			return -1
-		}
-		if a.version < b.version {
-			return 1
-		}
-		
-		// Third priority: If versions are equal, prefer pro over flash
-		if a.typePriority > b.typePriority {
-			return -1
-		}
-		if a.typePriority < b.typePriority {
-			return 1
-		}
-		
-		// Fourth priority: If versions and types are equal, preserve original order
-		if a.originalIndex < b.originalIndex {
-			return -1
-		}
-		if a.originalIndex > b.originalIndex {
-			return 1
-		}
-		return 0
-	})
-
-	// Extract sorted model info
+	// Copy to avoid mutating input
 	result := make([]ModelInfo, len(models))
-	for i, m := range indexed {
-		// Find the original model info by name
-		for j := range models {
-			if models[j].Name == m.name {
-				result[i] = models[j]
-				break
-			}
+	copy(result, models)
+
+	// Sort directly - O(n log n)
+	slices.SortStableFunc(result, func(a, b ModelInfo) int {
+		// First priority: models with "-latest" suffix (highest priority)
+		aLatest := hasLatestSuffix(a.Name)
+		bLatest := hasLatestSuffix(b.Name)
+		if aLatest && !bLatest {
+			return -1
 		}
-	}
+		if !aLatest && bLatest {
+			return 1
+		}
+
+		// Second priority: Compare versions (descending)
+		aVer, _ := extractVersion(a.Name)
+		bVer, _ := extractVersion(b.Name)
+		if aVer > bVer {
+			return -1
+		}
+		if aVer < bVer {
+			return 1
+		}
+
+		// Third priority: If versions are equal, prefer pro over flash
+		aPri := getModelTypePriority(a.Name)
+		bPri := getModelTypePriority(b.Name)
+		if aPri > bPri {
+			return -1
+		}
+		if aPri < bPri {
+			return 1
+		}
+
+		return 0 // SortStable preserves original order for equal elements
+	})
 
 	return result
 }
@@ -185,8 +155,10 @@ func sortModelsByVersion(models []ModelInfo) []ModelInfo {
 // NewGeminiProviderWithLatest creates a new Gemini provider with the latest available gemini-* model.
 // It fetches the list of available models, filters to gemini-* models, sorts by version (highest first),
 // and uses the first model as the default.
-func NewGeminiProviderWithLatest(client GeminiClient) (*GeminiProvider, error) {
-	ctx := context.Background()
+// NewGeminiProviderWithLatest creates a new Gemini provider with the latest available gemini-* model.
+// It fetches the list of available models, filters to gemini-* models, sorts by version (highest first),
+// and uses the first model as the default.
+func NewGeminiProviderWithLatest(ctx context.Context, client GeminiClient) (*GeminiProvider, error) {
 	models, err := client.ListModels(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list models: %w", err)
@@ -212,12 +184,11 @@ func NewGeminiProviderWithLatest(client GeminiClient) (*GeminiProvider, error) {
 // NewGeminiProvider creates a new Gemini provider with the given client and model.
 // It validates that the provided model exists in the filtered list of available gemini-* models.
 // The model parameter can be provided with or without the "models/" prefix.
-func NewGeminiProvider(client GeminiClient, model string) (*GeminiProvider, error) {
+func NewGeminiProvider(ctx context.Context, client GeminiClient, model string) (*GeminiProvider, error) {
 	// Add "models/" prefix if not present (user input may not have it)
 	modelWithPrefix := addModelPrefix(model)
-	
+
 	// Fetch and validate model list
-	ctx := context.Background()
 	models, err := client.ListModels(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list models: %w", err)
@@ -245,25 +216,25 @@ func NewGeminiProvider(client GeminiClient, model string) (*GeminiProvider, erro
 }
 
 // ListModels returns a list of available model names (without "models/" prefix for display)
-func (g *GeminiProvider) ListModels(ctx context.Context) ([]string, error) {
+func (p *GeminiProvider) ListModels(ctx context.Context) ([]string, error) {
 	// Return cached list if available
-	if len(g.modelCache) > 0 {
-		names := make([]string, len(g.modelCache))
-		for i, m := range g.modelCache {
+	if len(p.modelCache) > 0 {
+		names := make([]string, len(p.modelCache))
+		for i, m := range p.modelCache {
 			names[i] = stripModelPrefix(m.Name)
 		}
 		return names, nil
 	}
 
 	// Otherwise fetch from client
-	models, err := g.client.ListModels(ctx)
+	models, err := p.client.ListModels(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list models: %w", err)
 	}
 
 	// Update cache
-	g.modelCache = models
-	
+	p.modelCache = models
+
 	// Extract names for return (strip prefix for display)
 	names := make([]string, len(models))
 	for i, m := range models {
@@ -338,7 +309,7 @@ func (p *GeminiProvider) GetContextWindow() int {
 func (p *GeminiProvider) SetModel(model string) error {
 	// Add "models/" prefix if not present (user input may not have it)
 	modelWithPrefix := addModelPrefix(model)
-	
+
 	// Validate model if cache is available
 	if len(p.modelCache) > 0 {
 		found := false

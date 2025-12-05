@@ -15,7 +15,6 @@ import (
 	provider "github.com/Cyclone1070/deployforme/internal/provider/models"
 	"github.com/Cyclone1070/deployforme/internal/tools"
 	"github.com/Cyclone1070/deployforme/internal/tools/models"
-	"github.com/Cyclone1070/deployforme/internal/tools/services"
 	"github.com/Cyclone1070/deployforme/internal/ui"
 	uiservices "github.com/Cyclone1070/deployforme/internal/ui/services"
 	"github.com/charmbracelet/bubbles/spinner"
@@ -51,7 +50,7 @@ func createRealProviderFactory() func(context.Context) (provider.Provider, error
 		}
 
 		geminiClient := gemini.NewRealGeminiClient(genaiClient)
-		return gemini.NewGeminiProviderWithLatest(geminiClient)
+		return gemini.NewGeminiProviderWithLatest(ctx, geminiClient)
 	}
 }
 
@@ -112,28 +111,12 @@ func runInteractive(ctx context.Context, deps Dependencies) {
 			return // DEGRADED MODE: UI runs but app doesn't start
 		}
 
-		fileSystem := services.NewOSFileSystem(models.DefaultMaxFileSize)
-		binaryDetector := &services.SystemBinaryDetector{}
-		checksumMgr := services.NewChecksumManager()
-
-		gitignoreSvc, err := services.NewGitignoreService(workspaceRoot, fileSystem)
+		workspaceCtx, err := tools.NewWorkspaceContext(workspaceRoot)
 		if err != nil {
-			// Non-fatal - just log warning
-			userInterface.WriteMessage(fmt.Sprintf("Warning: failed to initialize gitignore service: %v", err))
-		}
-
-		workspaceCtx := &models.WorkspaceContext{
-			FS:               fileSystem,
-			BinaryDetector:   binaryDetector,
-			ChecksumManager:  checksumMgr,
-			MaxFileSize:      models.DefaultMaxFileSize,
-			WorkspaceRoot:    workspaceRoot,
-			GitignoreService: gitignoreSvc,
-			CommandExecutor:  &services.OSCommandExecutor{},
-			DockerConfig: models.DockerConfig{
-				CheckCommand: []string{"docker", "info"},
-				StartCommand: []string{"docker", "desktop", "start"},
-			},
+			userInterface.WriteStatus("error", "Initialization failed")
+			userInterface.WriteMessage(fmt.Sprintf("Error: failed to initialize workspace: %v", err))
+			userInterface.WriteMessage("The application cannot start. Press Ctrl+C to exit.")
+			return
 		}
 
 		// Create tools
@@ -158,14 +141,7 @@ func runInteractive(ctx context.Context, deps Dependencies) {
 		userInterface.SetModel(p.GetModel())
 
 		// === ORCHESTRATOR INITIALIZATION ===
-		policy := &orchmodels.Policy{
-			Shell: orchmodels.ShellPolicy{
-				SessionAllow: make(map[string]bool),
-			},
-			Tools: orchmodels.ToolPolicy{
-				SessionAllow: make(map[string]bool),
-			},
-		}
+		policy := orchmodels.NewPolicy()
 		policyService := orchestrator.NewPolicyService(policy, userInterface)
 		orch := orchestrator.New(providerClient, policyService, userInterface, toolList)
 

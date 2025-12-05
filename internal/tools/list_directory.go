@@ -1,6 +1,7 @@
 package tools
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -15,7 +16,7 @@ import (
 // ListDirectory lists the contents of a directory with optional recursion and pagination.
 // It validates the path is within workspace boundaries, respects gitignore rules,
 // and returns entries sorted by path with pagination support.
-func ListDirectory(ctx *models.WorkspaceContext, req models.ListDirectoryRequest) (*models.ListDirectoryResponse, error) {
+func ListDirectory(ctx context.Context, wCtx *models.WorkspaceContext, req models.ListDirectoryRequest) (*models.ListDirectoryResponse, error) {
 	// Validate pagination parameters
 	if req.Offset < 0 {
 		return nil, models.ErrInvalidPaginationOffset
@@ -30,13 +31,13 @@ func ListDirectory(ctx *models.WorkspaceContext, req models.ListDirectoryRequest
 	}
 
 	// Resolve path
-	abs, rel, err := services.Resolve(ctx, req.Path)
+	abs, rel, err := services.Resolve(wCtx, req.Path)
 	if err != nil {
 		return nil, err
 	}
 
 	// Check if path exists and is a directory
-	info, err := ctx.FS.Stat(abs)
+	info, err := wCtx.FS.Stat(abs)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, models.ErrFileMissing
@@ -56,7 +57,7 @@ func ListDirectory(ctx *models.WorkspaceContext, req models.ListDirectoryRequest
 
 	// Collect entries recursively
 	visited := make(map[string]bool)
-	directoryEntries, err := listRecursive(ctx, abs, 0, maxDepth, visited, req.IncludeIgnored)
+	directoryEntries, err := listRecursive(ctx, wCtx, abs, 0, maxDepth, visited, req.IncludeIgnored)
 	if err != nil {
 		return nil, err
 	}
@@ -102,7 +103,11 @@ func ListDirectory(ctx *models.WorkspaceContext, req models.ListDirectoryRequest
 }
 
 // listRecursive recursively lists all entries up to maxDepth (-1 = unlimited, 0 = current level only)
-func listRecursive(ctx *models.WorkspaceContext, abs string, currentDepth int, maxDepth int, visited map[string]bool, includeIgnored bool) ([]models.DirectoryEntry, error) {
+func listRecursive(ctx context.Context, wCtx *models.WorkspaceContext, abs string, currentDepth int, maxDepth int, visited map[string]bool, includeIgnored bool) ([]models.DirectoryEntry, error) {
+	// Check cancellation
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
 	// Check depth limit (-1 = unlimited, 0 = current level only, 1 = current + 1 level, etc.)
 	if maxDepth >= 0 && currentDepth > maxDepth {
 		return []models.DirectoryEntry{}, nil
@@ -121,7 +126,7 @@ func listRecursive(ctx *models.WorkspaceContext, abs string, currentDepth int, m
 	}
 	visited[canonicalPath] = true
 
-	allEntries, err := ctx.FS.ListDir(abs)
+	allEntries, err := wCtx.FS.ListDir(abs)
 	if err != nil {
 		// Propagate sentinel errors directly
 		if errors.Is(err, models.ErrOutsideWorkspace) || errors.Is(err, models.ErrFileMissing) {
@@ -135,7 +140,7 @@ func listRecursive(ctx *models.WorkspaceContext, abs string, currentDepth int, m
 	for _, entry := range allEntries {
 		// Calculate relative path for this entry
 		entryAbs := filepath.Join(abs, entry.Name())
-		entryRel, err := filepath.Rel(ctx.WorkspaceRoot, entryAbs)
+		entryRel, err := filepath.Rel(wCtx.WorkspaceRoot, entryAbs)
 		if err != nil {
 			// This indicates a bug in path resolution - don't mask it
 			return nil, fmt.Errorf("failed to calculate relative path for entry %s: %w", entry.Name(), err)
@@ -145,8 +150,8 @@ func listRecursive(ctx *models.WorkspaceContext, abs string, currentDepth int, m
 		entryRel = filepath.ToSlash(entryRel)
 
 		// Apply gitignore filtering (unless IncludeIgnored is true)
-		if !includeIgnored && ctx.GitignoreService != nil {
-			if ctx.GitignoreService.ShouldIgnore(entryRel) {
+		if !includeIgnored && wCtx.GitignoreService != nil {
+			if wCtx.GitignoreService.ShouldIgnore(entryRel) {
 				continue // Skip gitignored files
 			}
 		}
@@ -160,7 +165,7 @@ func listRecursive(ctx *models.WorkspaceContext, abs string, currentDepth int, m
 
 		// Recurse into subdirectories
 		if entry.IsDir() {
-			subEntries, err := listRecursive(ctx, entryAbs, currentDepth+1, maxDepth, visited, includeIgnored)
+			subEntries, err := listRecursive(ctx, wCtx, entryAbs, currentDepth+1, maxDepth, visited, includeIgnored)
 			if err != nil {
 				return nil, err
 			}

@@ -1,6 +1,7 @@
 package tools
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -15,15 +16,15 @@ import (
 //
 // Note: There is a narrow race condition window between checksum validation and write.
 // For guaranteed conflict-free edits, external file locking would be required.
-func EditFile(ctx *models.WorkspaceContext, req models.EditFileRequest) (*models.EditFileResponse, error) {
+func EditFile(ctx context.Context, wCtx *models.WorkspaceContext, req models.EditFileRequest) (*models.EditFileResponse, error) {
 	// Resolve path
-	abs, rel, err := services.Resolve(ctx, req.Path)
+	abs, rel, err := services.Resolve(wCtx, req.Path)
 	if err != nil {
 		return nil, err
 	}
 
 	// Check if file exists
-	info, err := ctx.FS.Stat(abs)
+	info, err := wCtx.FS.Stat(abs)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, models.ErrFileMissing
@@ -32,23 +33,23 @@ func EditFile(ctx *models.WorkspaceContext, req models.EditFileRequest) (*models
 	}
 
 	// Read full file (single open+read syscall)
-	contentBytes, err := ctx.FS.ReadFileRange(abs, 0, 0)
+	contentBytes, err := wCtx.FS.ReadFileRange(abs, 0, 0)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read file: %w", err)
 	}
 
 	// Check for binary using content we already read
-	if ctx.BinaryDetector.IsBinaryContent(contentBytes) {
+	if wCtx.BinaryDetector.IsBinaryContent(contentBytes) {
 		return nil, models.ErrBinaryFile
 	}
 
 	content := string(contentBytes)
 
 	// Compute current checksum
-	currentChecksum := ctx.ChecksumManager.Compute(contentBytes)
+	currentChecksum := wCtx.ChecksumManager.Compute(contentBytes)
 
 	// Check for conflicts with cached version
-	priorChecksum, ok := ctx.ChecksumManager.Get(abs)
+	priorChecksum, ok := wCtx.ChecksumManager.Get(abs)
 	if ok && priorChecksum != currentChecksum {
 		return nil, models.ErrEditConflict
 	}
@@ -89,31 +90,31 @@ func EditFile(ctx *models.WorkspaceContext, req models.EditFileRequest) (*models
 	newContentBytes := []byte(content)
 
 	// Check size limit
-	if int64(len(newContentBytes)) > ctx.MaxFileSize {
+	if int64(len(newContentBytes)) > wCtx.MaxFileSize {
 		return nil, models.ErrTooLarge
 	}
 
 	// Only revalidate if we had a cached checksum to check against
 	// This optimizes the common case where files are edited without being read first
 	if ok {
-		revalidationBytes, err := ctx.FS.ReadFileRange(abs, 0, 0)
+		revalidationBytes, err := wCtx.FS.ReadFileRange(abs, 0, 0)
 		if err != nil {
 			return nil, fmt.Errorf("failed to revalidate file before write: %w", err)
 		}
-		revalidationChecksum := ctx.ChecksumManager.Compute(revalidationBytes)
+		revalidationChecksum := wCtx.ChecksumManager.Compute(revalidationBytes)
 		if revalidationChecksum != currentChecksum {
 			return nil, models.ErrEditConflict
 		}
 	}
 
 	// Write the modified content atomically
-	if err := writeFileAtomic(ctx, abs, newContentBytes, originalPerm); err != nil {
+	if err := writeFileAtomic(wCtx, abs, newContentBytes, originalPerm); err != nil {
 		return nil, fmt.Errorf("failed to write edited file: %w", err)
 	}
 
 	// Compute new checksum and update cache
-	newChecksum := ctx.ChecksumManager.Compute(newContentBytes)
-	ctx.ChecksumManager.Update(abs, newChecksum)
+	newChecksum := wCtx.ChecksumManager.Compute(newContentBytes)
+	wCtx.ChecksumManager.Update(abs, newChecksum)
 
 	return &models.EditFileResponse{
 		AbsolutePath:      abs,

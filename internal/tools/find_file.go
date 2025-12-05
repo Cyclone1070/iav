@@ -24,20 +24,20 @@ const (
 // FindFile searches for files matching a glob pattern using the fd command.
 // It validates the search path is within workspace boundaries, respects gitignore rules
 // (unless includeIgnored is true), and returns matches with pagination support.
-func FindFile(ctx *models.WorkspaceContext, req models.FindFileRequest) (*models.FindFileResponse, error) {
+func FindFile(ctx context.Context, wCtx *models.WorkspaceContext, req models.FindFileRequest) (*models.FindFileResponse, error) {
 	// Validate pattern (reject path traversal attempts)
 	if strings.Contains(req.Pattern, "..") || strings.HasPrefix(req.Pattern, "/") {
 		return nil, fmt.Errorf("invalid pattern: path traversal not allowed")
 	}
 
 	// Resolve search path
-	absSearchPath, _, err := services.Resolve(ctx, req.SearchPath)
+	absSearchPath, _, err := services.Resolve(wCtx, req.SearchPath)
 	if err != nil {
 		return nil, err
 	}
 
 	// Check if search path exists and is a directory
-	info, err := ctx.FS.Stat(absSearchPath)
+	info, err := wCtx.FS.Stat(absSearchPath)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, models.ErrFileMissing
@@ -80,7 +80,7 @@ func FindFile(ctx *models.WorkspaceContext, req models.FindFileRequest) (*models
 	cmd = append(cmd, absSearchPath)
 
 	// Execute command with streaming
-	proc, stdout, _, err := ctx.CommandExecutor.Start(context.Background(), cmd, models.ProcessOptions{Dir: absSearchPath})
+	proc, stdout, _, err := wCtx.CommandExecutor.Start(ctx, cmd, models.ProcessOptions{Dir: absSearchPath})
 	if err != nil {
 		return nil, fmt.Errorf("failed to start fd command: %w", err)
 	}
@@ -96,7 +96,7 @@ func FindFile(ctx *models.WorkspaceContext, req models.FindFileRequest) (*models
 		}
 
 		// Convert to relative path
-		relPath, err := filepath.Rel(ctx.WorkspaceRoot, line)
+		relPath, err := filepath.Rel(wCtx.WorkspaceRoot, line)
 		if err != nil {
 			// Skip paths that can't be made relative (shouldn't happen with fd)
 			continue

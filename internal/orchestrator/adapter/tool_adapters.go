@@ -245,9 +245,9 @@ func NewShell(tool *tools.ShellTool, wCtx *toolModels.WorkspaceContext) Tool {
 		},
 		wCtx,
 		// Use a closure to adapt ShellTool.Run to the expected signature
-		func(ctx *toolModels.WorkspaceContext, req toolModels.ShellRequest) (toolModels.ShellResponse, error) {
+		func(ctx context.Context, wCtx *toolModels.WorkspaceContext, req toolModels.ShellRequest) (toolModels.ShellResponse, error) {
 			// ShellTool.Run returns *ShellResponse, so we need to dereference it
-			resp, err := tool.Run(context.Background(), ctx, req)
+			resp, err := tool.Run(ctx, wCtx, req)
 			if err != nil {
 				// Return zero value on error
 				return toolModels.ShellResponse{}, err

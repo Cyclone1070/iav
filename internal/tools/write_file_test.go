@@ -1,6 +1,7 @@
 package tools
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"testing"
@@ -25,7 +26,7 @@ func TestWriteFile(t *testing.T) {
 		}
 
 		content := "test content"
-		resp, err := WriteFile(ctx, models.WriteFileRequest{Path: "new.txt", Content: content})
+		resp, err := WriteFile(context.Background(), ctx, models.WriteFileRequest{Path: "new.txt", Content: content})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -66,7 +67,7 @@ func TestWriteFile(t *testing.T) {
 			WorkspaceRoot:   workspaceRoot,
 		}
 
-		_, err := WriteFile(ctx, models.WriteFileRequest{Path: "existing.txt", Content: "new content"})
+		_, err := WriteFile(context.Background(), ctx, models.WriteFileRequest{Path: "existing.txt", Content: "new content"})
 		if err != models.ErrFileExists {
 			t.Errorf("expected ErrFileExists, got %v", err)
 		}
@@ -86,7 +87,7 @@ func TestWriteFile(t *testing.T) {
 			WorkspaceRoot:   workspaceRoot,
 		}
 
-		_, err := WriteFile(ctx, models.WriteFileRequest{Path: "escape", Content: "content"})
+		_, err := WriteFile(context.Background(), ctx, models.WriteFileRequest{Path: "escape", Content: "content"})
 		if err != models.ErrOutsideWorkspace {
 			t.Errorf("expected ErrOutsideWorkspace for symlink escape, got %v", err)
 		}
@@ -109,7 +110,7 @@ func TestWriteFile(t *testing.T) {
 			largeContent[i] = 'A'
 		}
 
-		_, err := WriteFile(ctx, models.WriteFileRequest{Path: "large.txt", Content: string(largeContent)})
+		_, err := WriteFile(context.Background(), ctx, models.WriteFileRequest{Path: "large.txt", Content: string(largeContent)})
 		if err != models.ErrTooLarge {
 			t.Errorf("expected ErrTooLarge, got %v", err)
 		}
@@ -128,7 +129,7 @@ func TestWriteFile(t *testing.T) {
 
 		// Content with NUL byte
 		binaryContent := []byte{0x48, 0x65, 0x6C, 0x00, 0x6C, 0x6F}
-		_, err := WriteFile(ctx, models.WriteFileRequest{Path: "binary.bin", Content: string(binaryContent)})
+		_, err := WriteFile(context.Background(), ctx, models.WriteFileRequest{Path: "binary.bin", Content: string(binaryContent)})
 		if err != models.ErrBinaryFile {
 			t.Errorf("expected ErrBinaryFile, got %v", err)
 		}
@@ -146,7 +147,7 @@ func TestWriteFile(t *testing.T) {
 		}
 
 		perm := os.FileMode(0o755)
-		resp, err := WriteFile(ctx, models.WriteFileRequest{Path: "executable.txt", Content: "content", Perm: &perm})
+		resp, err := WriteFile(context.Background(), ctx, models.WriteFileRequest{Path: "executable.txt", Content: "content", Perm: &perm})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -176,7 +177,7 @@ func TestWriteFile(t *testing.T) {
 			WorkspaceRoot:   workspaceRoot,
 		}
 
-		_, err := WriteFile(ctx, models.WriteFileRequest{Path: "nested/deep/file.txt", Content: "content"})
+		_, err := WriteFile(context.Background(), ctx, models.WriteFileRequest{Path: "nested/deep/file.txt", Content: "content"})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -208,7 +209,7 @@ func TestWriteFile(t *testing.T) {
 
 		// Writing to a symlink that points inside workspace should work
 		// (the symlink itself is treated as a regular path for new files)
-		_, err := WriteFile(ctx, models.WriteFileRequest{Path: "link", Content: "new content"})
+		_, err := WriteFile(context.Background(), ctx, models.WriteFileRequest{Path: "link", Content: "new content"})
 		// This should succeed because we're creating a new file at the symlink path
 		if err != nil {
 			// If it fails, it's because the symlink exists, which is expected
@@ -234,7 +235,7 @@ func TestWriteFile(t *testing.T) {
 		}
 
 		// Try to write a file through the symlink directory - should fail
-		_, err := WriteFile(ctx, models.WriteFileRequest{Path: "link/escape.txt", Content: "content"})
+		_, err := WriteFile(context.Background(), ctx, models.WriteFileRequest{Path: "link/escape.txt", Content: "content"})
 		if err != models.ErrOutsideWorkspace {
 			t.Errorf("expected ErrOutsideWorkspace for symlink directory escape, got %v", err)
 		}
@@ -257,7 +258,7 @@ func TestWriteFile(t *testing.T) {
 		}
 
 		// Write through symlink chain - should succeed
-		resp, err := WriteFile(ctx, models.WriteFileRequest{Path: "link1/file.txt", Content: "content"})
+		resp, err := WriteFile(context.Background(), ctx, models.WriteFileRequest{Path: "link1/file.txt", Content: "content"})
 		if err != nil {
 			t.Fatalf("unexpected error writing through symlink chain: %v", err)
 		}
@@ -294,7 +295,7 @@ func TestWriteFile(t *testing.T) {
 		}
 
 		// Try to write through escaping chain - should fail
-		_, err := WriteFile(ctx, models.WriteFileRequest{Path: "link1/file.txt", Content: "content"})
+		_, err := WriteFile(context.Background(), ctx, models.WriteFileRequest{Path: "link1/file.txt", Content: "content"})
 		if err != models.ErrOutsideWorkspace {
 			t.Errorf("expected ErrOutsideWorkspace for escaping symlink chain, got %v", err)
 		}
@@ -319,7 +320,7 @@ func TestAtomicWriteCrashScenarios(t *testing.T) {
 			WorkspaceRoot:   workspaceRoot,
 		}
 
-		_, err := WriteFile(ctx, models.WriteFileRequest{Path: "test.txt", Content: "content"})
+		_, err := WriteFile(context.Background(), ctx, models.WriteFileRequest{Path: "test.txt", Content: "content"})
 		if err == nil {
 			t.Fatal("expected error")
 		}
@@ -351,7 +352,7 @@ func TestAtomicWriteCrashScenarios(t *testing.T) {
 			WorkspaceRoot:   workspaceRoot,
 		}
 
-		_, err := WriteFile(ctx, models.WriteFileRequest{Path: "test.txt", Content: "content"})
+		_, err := WriteFile(context.Background(), ctx, models.WriteFileRequest{Path: "test.txt", Content: "content"})
 		if err == nil {
 			t.Fatal("expected error")
 		}
@@ -383,7 +384,7 @@ func TestAtomicWriteCrashScenarios(t *testing.T) {
 			WorkspaceRoot:   workspaceRoot,
 		}
 
-		_, err := WriteFile(ctx, models.WriteFileRequest{Path: "test.txt", Content: "content"})
+		_, err := WriteFile(context.Background(), ctx, models.WriteFileRequest{Path: "test.txt", Content: "content"})
 		if err == nil {
 			t.Fatal("expected error")
 		}
@@ -415,7 +416,7 @@ func TestAtomicWriteCrashScenarios(t *testing.T) {
 			WorkspaceRoot:   workspaceRoot,
 		}
 
-		_, err := WriteFile(ctx, models.WriteFileRequest{Path: "test.txt", Content: "content"})
+		_, err := WriteFile(context.Background(), ctx, models.WriteFileRequest{Path: "test.txt", Content: "content"})
 		if err == nil {
 			t.Fatal("expected error")
 		}
@@ -493,7 +494,7 @@ func TestAtomicWriteCrashScenarios(t *testing.T) {
 			WorkspaceRoot:   workspaceRoot,
 		}
 
-		_, err := WriteFile(ctx, models.WriteFileRequest{Path: "test.txt", Content: "content"})
+		_, err := WriteFile(context.Background(), ctx, models.WriteFileRequest{Path: "test.txt", Content: "content"})
 		// Chmod failure should still result in error, but file should exist
 		// The atomic write succeeded (rename worked), but chmod failed
 		if err == nil {
@@ -519,7 +520,7 @@ func TestAtomicWriteCrashScenarios(t *testing.T) {
 		}
 
 		content := "test content"
-		resp, err := WriteFile(ctx, models.WriteFileRequest{Path: "test.txt", Content: content})
+		resp, err := WriteFile(context.Background(), ctx, models.WriteFileRequest{Path: "test.txt", Content: content})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}

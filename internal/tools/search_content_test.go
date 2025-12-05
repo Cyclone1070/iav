@@ -38,7 +38,7 @@ func TestSearchContent_BasicRegex(t *testing.T) {
 		CommandExecutor: mockRunner,
 	}
 
-	resp, err := SearchContent(ctx, models.SearchContentRequest{Query: "func .*", SearchPath: "", CaseSensitive: true, IncludeIgnored: false, Offset: 0, Limit: 100})
+	resp, err := SearchContent(context.Background(), ctx, models.SearchContentRequest{Query: "func .*", SearchPath: "", CaseSensitive: true, IncludeIgnored: false, Offset: 0, Limit: 100})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -87,7 +87,7 @@ func TestSearchContent_CaseInsensitive(t *testing.T) {
 		CommandExecutor: mockRunner,
 	}
 
-	_, _ = SearchContent(ctx, models.SearchContentRequest{Query: "pattern", SearchPath: "", CaseSensitive: false, IncludeIgnored: false, Offset: 0, Limit: 100})
+	_, _ = SearchContent(context.Background(), ctx, models.SearchContentRequest{Query: "pattern", SearchPath: "", CaseSensitive: false, IncludeIgnored: false, Offset: 0, Limit: 100})
 
 	// Verify -i flag is present
 	foundFlag := slices.Contains(capturedCmd, "-i")
@@ -113,7 +113,7 @@ func TestSearchContent_PathOutsideWorkspace(t *testing.T) {
 		CommandExecutor: &services.MockCommandExecutor{},
 	}
 
-	_, err := SearchContent(ctx, models.SearchContentRequest{Query: "pattern", SearchPath: "../outside", CaseSensitive: true, IncludeIgnored: false, Offset: 0, Limit: 100})
+	_, err := SearchContent(context.Background(), ctx, models.SearchContentRequest{Query: "pattern", SearchPath: "../outside", CaseSensitive: true, IncludeIgnored: false, Offset: 0, Limit: 100})
 	if err != models.ErrOutsideWorkspace {
 		t.Errorf("expected ErrOutsideWorkspace, got %v", err)
 	}
@@ -135,7 +135,7 @@ func TestSearchContent_EmptyQuery(t *testing.T) {
 		CommandExecutor: &services.MockCommandExecutor{},
 	}
 
-	_, err := SearchContent(ctx, models.SearchContentRequest{Query: "", SearchPath: "", CaseSensitive: true, IncludeIgnored: false, Offset: 0, Limit: 100})
+	_, err := SearchContent(context.Background(), ctx, models.SearchContentRequest{Query: "", SearchPath: "", CaseSensitive: true, IncludeIgnored: false, Offset: 0, Limit: 100})
 	if err == nil {
 		t.Fatal("expected error for empty query, got nil")
 	}
@@ -157,7 +157,7 @@ func TestSearchContent_HugeLimit(t *testing.T) {
 		CommandExecutor: &services.MockCommandExecutor{},
 	}
 
-	_, err := SearchContent(ctx, models.SearchContentRequest{Query: "pattern", SearchPath: "", CaseSensitive: true, IncludeIgnored: false, Offset: 0, Limit: 1000000})
+	_, err := SearchContent(context.Background(), ctx, models.SearchContentRequest{Query: "pattern", SearchPath: "", CaseSensitive: true, IncludeIgnored: false, Offset: 0, Limit: 1000000})
 	if err != models.ErrInvalidPaginationLimit {
 		t.Errorf("expected ErrInvalidPaginationLimit, got %v", err)
 	}
@@ -189,7 +189,7 @@ func TestSearchContent_VeryLongLine(t *testing.T) {
 		CommandExecutor: mockRunner,
 	}
 
-	resp, err := SearchContent(ctx, models.SearchContentRequest{Query: "pattern", SearchPath: "", CaseSensitive: true, IncludeIgnored: false, Offset: 0, Limit: 100})
+	resp, err := SearchContent(context.Background(), ctx, models.SearchContentRequest{Query: "pattern", SearchPath: "", CaseSensitive: true, IncludeIgnored: false, Offset: 0, Limit: 100})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -237,7 +237,7 @@ func TestSearchContent_CommandInjection(t *testing.T) {
 	}
 
 	query := "foo; rm -rf /"
-	_, _ = SearchContent(ctx, models.SearchContentRequest{Query: query, SearchPath: "", CaseSensitive: true, IncludeIgnored: false, Offset: 0, Limit: 100})
+	_, _ = SearchContent(context.Background(), ctx, models.SearchContentRequest{Query: query, SearchPath: "", CaseSensitive: true, IncludeIgnored: false, Offset: 0, Limit: 100})
 
 	// Verify query is passed as literal argument
 	found := slices.Contains(capturedCmd, query)
@@ -274,7 +274,7 @@ func TestSearchContent_NoMatches(t *testing.T) {
 		CommandExecutor: mockRunner,
 	}
 
-	resp, err := SearchContent(ctx, models.SearchContentRequest{Query: "nonexistent", SearchPath: "", CaseSensitive: true, IncludeIgnored: false, Offset: 0, Limit: 100})
+	resp, err := SearchContent(context.Background(), ctx, models.SearchContentRequest{Query: "nonexistent", SearchPath: "", CaseSensitive: true, IncludeIgnored: false, Offset: 0, Limit: 100})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -318,7 +318,7 @@ func TestSearchContent_Pagination(t *testing.T) {
 	}
 
 	// Request offset=2, limit=2
-	resp, err := SearchContent(ctx, models.SearchContentRequest{Query: "pattern", SearchPath: "", CaseSensitive: true, IncludeIgnored: false, Offset: 2, Limit: 2})
+	resp, err := SearchContent(context.Background(), ctx, models.SearchContentRequest{Query: "pattern", SearchPath: "", CaseSensitive: true, IncludeIgnored: false, Offset: 2, Limit: 2})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -368,7 +368,7 @@ func TestSearchContent_MultipleFiles(t *testing.T) {
 		CommandExecutor: mockRunner,
 	}
 
-	resp, err := SearchContent(ctx, models.SearchContentRequest{Query: "pattern", SearchPath: "", CaseSensitive: true, IncludeIgnored: false, Offset: 0, Limit: 100})
+	resp, err := SearchContent(context.Background(), ctx, models.SearchContentRequest{Query: "pattern", SearchPath: "", CaseSensitive: true, IncludeIgnored: false, Offset: 0, Limit: 100})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -417,7 +417,7 @@ invalid json line
 		CommandExecutor: mockRunner,
 	}
 
-	resp, err := SearchContent(ctx, models.SearchContentRequest{Query: "pattern", SearchPath: "", CaseSensitive: true, IncludeIgnored: false, Offset: 0, Limit: 100})
+	resp, err := SearchContent(context.Background(), ctx, models.SearchContentRequest{Query: "pattern", SearchPath: "", CaseSensitive: true, IncludeIgnored: false, Offset: 0, Limit: 100})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -454,7 +454,7 @@ func TestSearchContent_CommandFailure(t *testing.T) {
 		CommandExecutor: mockRunner,
 	}
 
-	_, err := SearchContent(ctx, models.SearchContentRequest{Query: "pattern", SearchPath: "", CaseSensitive: true, IncludeIgnored: false, Offset: 0, Limit: 100})
+	_, err := SearchContent(context.Background(), ctx, models.SearchContentRequest{Query: "pattern", SearchPath: "", CaseSensitive: true, IncludeIgnored: false, Offset: 0, Limit: 100})
 	if err == nil {
 		t.Fatal("expected error for command failure, got nil")
 	}
@@ -488,7 +488,7 @@ func TestSearchContent_IncludeIgnored(t *testing.T) {
 		CommandExecutor: mockRunner,
 	}
 
-	resp, err := SearchContent(ctx, models.SearchContentRequest{Query: "func main", SearchPath: "", CaseSensitive: true, IncludeIgnored: false, Offset: 0, Limit: 100})
+	resp, err := SearchContent(context.Background(), ctx, models.SearchContentRequest{Query: "func main", SearchPath: "", CaseSensitive: true, IncludeIgnored: false, Offset: 0, Limit: 100})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -509,7 +509,7 @@ func TestSearchContent_IncludeIgnored(t *testing.T) {
 		return &services.MockProcess{}, strings.NewReader(output), strings.NewReader(""), nil
 	}
 
-	resp, err = SearchContent(ctx, models.SearchContentRequest{Query: "func main", SearchPath: "", CaseSensitive: true, IncludeIgnored: true, Offset: 0, Limit: 100})
+	resp, err = SearchContent(context.Background(), ctx, models.SearchContentRequest{Query: "func main", SearchPath: "", CaseSensitive: true, IncludeIgnored: true, Offset: 0, Limit: 100})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

@@ -1,6 +1,7 @@
 package tools
 
 import (
+	"context"
 	"testing"
 
 	"github.com/Cyclone1070/deployforme/internal/tools/models"
@@ -37,12 +38,12 @@ func TestMultiContextIsolation(t *testing.T) {
 	content1 := "content1"
 	content2 := "content2"
 
-	resp1, err := WriteFile(ctx1, models.WriteFileRequest{Path: "file.txt", Content: content1})
+	resp1, err := WriteFile(context.Background(), ctx1, models.WriteFileRequest{Path: "file.txt", Content: content1})
 	if err != nil {
 		t.Fatalf("failed to write file in ctx1: %v", err)
 	}
 
-	resp2, err := WriteFile(ctx2, models.WriteFileRequest{Path: "file.txt", Content: content2})
+	resp2, err := WriteFile(context.Background(), ctx2, models.WriteFileRequest{Path: "file.txt", Content: content2})
 	if err != nil {
 		t.Fatalf("failed to write file in ctx2: %v", err)
 	}
@@ -77,7 +78,7 @@ func TestMultiContextIsolation(t *testing.T) {
 	}
 
 	// Verify filesystems are isolated
-	read1, err := ReadFile(ctx1, models.ReadFileRequest{Path: "file.txt"})
+	read1, err := ReadFile(context.Background(), ctx1, models.ReadFileRequest{Path: "file.txt"})
 	if err != nil {
 		t.Fatalf("failed to read file from ctx1: %v", err)
 	}
@@ -85,7 +86,7 @@ func TestMultiContextIsolation(t *testing.T) {
 		t.Errorf("ctx1 should read its own content, got %q", read1.Content)
 	}
 
-	read2, err := ReadFile(ctx2, models.ReadFileRequest{Path: "file.txt"})
+	read2, err := ReadFile(context.Background(), ctx2, models.ReadFileRequest{Path: "file.txt"})
 	if err != nil {
 		t.Fatalf("failed to read file from ctx2: %v", err)
 	}
@@ -117,7 +118,7 @@ func TestCustomFileSizeLimit(t *testing.T) {
 			largeContent[i] = 'A'
 		}
 
-		_, err := WriteFile(ctx, models.WriteFileRequest{Path: "large.txt", Content: string(largeContent)})
+		_, err := WriteFile(context.Background(), ctx, models.WriteFileRequest{Path: "large.txt", Content: string(largeContent)})
 		if err != models.ErrTooLarge {
 			t.Errorf("expected ErrTooLarge for content exceeding limit, got %v", err)
 		}
@@ -141,7 +142,7 @@ func TestCustomFileSizeLimit(t *testing.T) {
 			content[i] = 'A'
 		}
 
-		_, err := WriteFile(ctx, models.WriteFileRequest{Path: "large.txt", Content: string(content)})
+		_, err := WriteFile(context.Background(), ctx, models.WriteFileRequest{Path: "large.txt", Content: string(content)})
 		if err != nil {
 			t.Errorf("expected success with large limit, got %v", err)
 		}
@@ -177,13 +178,13 @@ func TestCustomFileSizeLimit(t *testing.T) {
 		}
 
 		// Should fail in ctx1
-		_, err := WriteFile(ctx1, models.WriteFileRequest{Path: "file.txt", Content: string(content)})
+		_, err := WriteFile(context.Background(), ctx1, models.WriteFileRequest{Path: "file.txt", Content: string(content)})
 		if err != models.ErrTooLarge {
 			t.Errorf("expected ErrTooLarge in ctx1, got %v", err)
 		}
 
 		// Should succeed in ctx2
-		_, err = WriteFile(ctx2, models.WriteFileRequest{Path: "file.txt", Content: string(content)})
+		_, err = WriteFile(context.Background(), ctx2, models.WriteFileRequest{Path: "file.txt", Content: string(content)})
 		if err != nil {
 			t.Errorf("expected success in ctx2, got %v", err)
 		}

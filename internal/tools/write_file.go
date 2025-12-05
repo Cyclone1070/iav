@@ -1,6 +1,7 @@
 package tools
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -13,15 +14,15 @@ import (
 // It validates the path is within workspace boundaries, checks for binary content,
 // enforces size limits, and writes atomically using a temp file + rename pattern.
 // Returns an error if the file already exists, is binary, too large, or outside the workspace.
-func WriteFile(ctx *models.WorkspaceContext, req models.WriteFileRequest) (*models.WriteFileResponse, error) {
+func WriteFile(ctx context.Context, wCtx *models.WorkspaceContext, req models.WriteFileRequest) (*models.WriteFileResponse, error) {
 	// Resolve path
-	abs, rel, err := services.Resolve(ctx, req.Path)
+	abs, rel, err := services.Resolve(wCtx, req.Path)
 	if err != nil {
 		return nil, err
 	}
 
 	// Check if file already exists
-	_, err = ctx.FS.Stat(abs)
+	_, err = wCtx.FS.Stat(abs)
 	if err == nil {
 		return nil, models.ErrFileExists
 	}
@@ -30,17 +31,17 @@ func WriteFile(ctx *models.WorkspaceContext, req models.WriteFileRequest) (*mode
 	}
 
 	parentDir := filepath.Dir(abs)
-	if err := ctx.FS.EnsureDirs(parentDir); err != nil {
+	if err := wCtx.FS.EnsureDirs(parentDir); err != nil {
 		return nil, fmt.Errorf("failed to create parent directories: %w", err)
 	}
 
 	contentBytes := []byte(req.Content)
 
-	if ctx.BinaryDetector.IsBinaryContent(contentBytes) {
+	if wCtx.BinaryDetector.IsBinaryContent(contentBytes) {
 		return nil, models.ErrBinaryFile
 	}
 
-	if int64(len(contentBytes)) > ctx.MaxFileSize {
+	if int64(len(contentBytes)) > wCtx.MaxFileSize {
 		return nil, models.ErrTooLarge
 	}
 
@@ -54,13 +55,13 @@ func WriteFile(ctx *models.WorkspaceContext, req models.WriteFileRequest) (*mode
 	}
 
 	// Write the file atomically
-	if err := writeFileAtomic(ctx, abs, contentBytes, filePerm); err != nil {
+	if err := writeFileAtomic(wCtx, abs, contentBytes, filePerm); err != nil {
 		return nil, fmt.Errorf("failed to write file: %w", err)
 	}
 
 	// Compute checksum and update cache
-	checksum := ctx.ChecksumManager.Compute(contentBytes)
-	ctx.ChecksumManager.Update(abs, checksum)
+	checksum := wCtx.ChecksumManager.Compute(contentBytes)
+	wCtx.ChecksumManager.Update(abs, checksum)
 
 	return &models.WriteFileResponse{
 		AbsolutePath: abs,

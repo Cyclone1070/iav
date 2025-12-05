@@ -16,8 +16,8 @@ type Validator interface {
 }
 
 // ToolExecutor is a function that executes a tool with typed request/response.
-// The function signature must match: func(*WorkspaceContext, RequestType) (ResponseType, error)
-type ToolExecutor[Req, Resp any] func(*toolModels.WorkspaceContext, Req) (Resp, error)
+// The function signature must match: func(context.Context, *WorkspaceContext, RequestType) (ResponseType, error)
+type ToolExecutor[Req, Resp any] func(context.Context, *toolModels.WorkspaceContext, Req) (Resp, error)
 
 // BaseAdapter provides common adapter functionality using generics.
 // This eliminates duplication across all tool adapters by centralizing:
@@ -108,7 +108,7 @@ func (b *BaseAdapter[Req, Resp]) Execute(ctx context.Context, args map[string]an
 	}
 
 	// Execute the tool function with typed request
-	resp, err := b.executor(b.wCtx, req)
+	resp, err := b.executor(ctx, b.wCtx, req)
 	if err != nil {
 		return "", err
 	}

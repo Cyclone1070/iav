@@ -24,15 +24,15 @@ const (
 // SearchContent searches for content matching a regex pattern using ripgrep.
 // It validates the search path is within workspace boundaries, respects gitignore rules
 // (unless includeIgnored is true), and returns matches with pagination support.
-func SearchContent(ctx *models.WorkspaceContext, req models.SearchContentRequest) (*models.SearchContentResponse, error) {
+func SearchContent(ctx context.Context, wCtx *models.WorkspaceContext, req models.SearchContentRequest) (*models.SearchContentResponse, error) {
 	// Resolve search path
-	absSearchPath, _, err := services.Resolve(ctx, req.SearchPath)
+	absSearchPath, _, err := services.Resolve(wCtx, req.SearchPath)
 	if err != nil {
 		return nil, err
 	}
 
 	// Check if search path exists
-	info, err := ctx.FS.Stat(absSearchPath)
+	info, err := wCtx.FS.Stat(absSearchPath)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, models.ErrFileMissing
@@ -72,7 +72,7 @@ func SearchContent(ctx *models.WorkspaceContext, req models.SearchContentRequest
 	cmd = append(cmd, req.Query, absSearchPath)
 
 	// Execute command with streaming
-	proc, stdout, _, err := ctx.CommandExecutor.Start(context.Background(), cmd, models.ProcessOptions{Dir: absSearchPath})
+	proc, stdout, _, err := wCtx.CommandExecutor.Start(ctx, cmd, models.ProcessOptions{Dir: absSearchPath})
 	if err != nil {
 		return nil, fmt.Errorf("failed to start rg command: %w", err)
 	}
@@ -117,7 +117,7 @@ func SearchContent(ctx *models.WorkspaceContext, req models.SearchContentRequest
 		}
 
 		// Convert absolute path to relative
-		relPath, err := filepath.Rel(ctx.WorkspaceRoot, rgMatch.Data.Path.Text)
+		relPath, err := filepath.Rel(wCtx.WorkspaceRoot, rgMatch.Data.Path.Text)
 		if err != nil {
 			// Skip if we can't make it relative
 			continue

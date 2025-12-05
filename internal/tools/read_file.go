@@ -1,6 +1,7 @@
 package tools
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/Cyclone1070/deployforme/internal/tools/models"
@@ -11,15 +12,15 @@ import (
 // It validates the path is within workspace boundaries, checks for binary content,
 // enforces size limits, and caches checksums for full file reads.
 // Returns an error if the file is binary, too large, or outside the workspace.
-func ReadFile(ctx *models.WorkspaceContext, req models.ReadFileRequest) (*models.ReadFileResponse, error) {
+func ReadFile(ctx context.Context, wCtx *models.WorkspaceContext, req models.ReadFileRequest) (*models.ReadFileResponse, error) {
 	// Resolve path
-	abs, rel, err := services.Resolve(ctx, req.Path)
+	abs, rel, err := services.Resolve(wCtx, req.Path)
 	if err != nil {
 		return nil, err
 	}
 
 	// Get file info (single stat syscall)
-	info, err := ctx.FS.Stat(abs)
+	info, err := wCtx.FS.Stat(abs)
 	if err != nil {
 		return nil, fmt.Errorf("failed to stat file: %w", err)
 	}
@@ -30,7 +31,7 @@ func ReadFile(ctx *models.WorkspaceContext, req models.ReadFileRequest) (*models
 	}
 
 	// Enforce size limit
-	if info.Size() > ctx.MaxFileSize {
+	if info.Size() > wCtx.MaxFileSize {
 		return nil, models.ErrTooLarge
 	}
 
@@ -50,13 +51,13 @@ func ReadFile(ctx *models.WorkspaceContext, req models.ReadFileRequest) (*models
 	}
 
 	// Read the file range (single open+read syscall)
-	contentBytes, err := ctx.FS.ReadFileRange(abs, actualOffset, actualLimit)
+	contentBytes, err := wCtx.FS.ReadFileRange(abs, actualOffset, actualLimit)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read file: %w", err)
 	}
 
 	// Check for binary using content we already read
-	if ctx.BinaryDetector.IsBinaryContent(contentBytes) {
+	if wCtx.BinaryDetector.IsBinaryContent(contentBytes) {
 		return nil, models.ErrBinaryFile
 	}
 
@@ -67,8 +68,8 @@ func ReadFile(ctx *models.WorkspaceContext, req models.ReadFileRequest) (*models
 	isFullRead := actualOffset == 0 && int64(len(contentBytes)) == info.Size()
 
 	if isFullRead {
-		checksum := ctx.ChecksumManager.Compute(contentBytes)
-		ctx.ChecksumManager.Update(abs, checksum)
+		checksum := wCtx.ChecksumManager.Compute(contentBytes)
+		wCtx.ChecksumManager.Update(abs, checksum)
 	}
 
 	return &models.ReadFileResponse{
