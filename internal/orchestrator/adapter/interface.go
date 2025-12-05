@@ -3,7 +3,7 @@ package adapter
 import (
 	"context"
 
-	provider "github.com/Cyclone1070/deployforme/internal/provider/models"
+	provider "github.com/Cyclone1070/iav/internal/provider/models"
 )
 
 // Tool represents a capability the agent can use.

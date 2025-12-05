@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Cyclone1070/deployforme/internal/ui/models"
+	"github.com/Cyclone1070/iav/internal/ui/models"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/stretchr/testify/assert"
 )

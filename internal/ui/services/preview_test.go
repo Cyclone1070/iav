@@ -3,7 +3,7 @@ package services
 import (
 	"testing"
 
-	"github.com/Cyclone1070/deployforme/internal/ui/models"
+	"github.com/Cyclone1070/iav/internal/ui/models"
 	"github.com/stretchr/testify/assert"
 )
 

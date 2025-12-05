@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Cyclone1070/deployforme/internal/ui/models"
+	"github.com/Cyclone1070/iav/internal/ui/models"
 	"github.com/charmbracelet/lipgloss"
 )
 

@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/Cyclone1070/deployforme/internal/tools/models"
+	"github.com/Cyclone1070/iav/internal/tools/models"
 )
 
 func TestEnsureDockerReady(t *testing.T) {

@@ -6,10 +6,10 @@ import (
 	"sync"
 	"testing"
 
-	orchmodels "github.com/Cyclone1070/deployforme/internal/orchestrator/models"
-	"github.com/Cyclone1070/deployforme/internal/provider/models"
-	"github.com/Cyclone1070/deployforme/internal/ui"
-	uimodels "github.com/Cyclone1070/deployforme/internal/ui/models"
+	orchmodels "github.com/Cyclone1070/iav/internal/orchestrator/models"
+	"github.com/Cyclone1070/iav/internal/provider/models"
+	"github.com/Cyclone1070/iav/internal/ui"
+	uimodels "github.com/Cyclone1070/iav/internal/ui/models"
 )
 
 // MockProvider is a controllable mock for the Gemini provider

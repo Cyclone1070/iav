@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	provider "github.com/Cyclone1070/deployforme/internal/provider/models"
-	toolModels "github.com/Cyclone1070/deployforme/internal/tools/models"
+	provider "github.com/Cyclone1070/iav/internal/provider/models"
+	toolModels "github.com/Cyclone1070/iav/internal/tools/models"
 	"github.com/mitchellh/mapstructure"
 )
 

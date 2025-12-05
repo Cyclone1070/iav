@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/Cyclone1070/deployforme/internal/orchestrator/adapter"
-	"github.com/Cyclone1070/deployforme/internal/orchestrator/models"
-	provider "github.com/Cyclone1070/deployforme/internal/provider/models"
-	"github.com/Cyclone1070/deployforme/internal/ui"
+	"github.com/Cyclone1070/iav/internal/orchestrator/adapter"
+	"github.com/Cyclone1070/iav/internal/orchestrator/models"
+	provider "github.com/Cyclone1070/iav/internal/provider/models"
+	"github.com/Cyclone1070/iav/internal/ui"
 )
 
 // Orchestrator manages the agent loop, tool execution, and conversation history

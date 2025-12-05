@@ -3,7 +3,7 @@ package services
 import (
 	"bytes"
 
-	"github.com/Cyclone1070/deployforme/internal/tools/models"
+	"github.com/Cyclone1070/iav/internal/tools/models"
 )
 
 // Collector captures command output with size limits and binary content detection.

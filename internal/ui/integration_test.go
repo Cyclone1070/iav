@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	uiservices "github.com/Cyclone1070/deployforme/internal/ui/services"
+	uiservices "github.com/Cyclone1070/iav/internal/ui/services"
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/stretchr/testify/assert"
 )

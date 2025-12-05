@@ -3,8 +3,8 @@ package views
 import (
 	"strings"
 
-	"github.com/Cyclone1070/deployforme/internal/ui/models"
-	"github.com/Cyclone1070/deployforme/internal/ui/services"
+	"github.com/Cyclone1070/iav/internal/ui/models"
+	"github.com/Cyclone1070/iav/internal/ui/services"
 )
 
 // RenderChat renders the message history

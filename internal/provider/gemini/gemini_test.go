@@ -5,8 +5,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/Cyclone1070/deployforme/internal/orchestrator/models"
-	provider "github.com/Cyclone1070/deployforme/internal/provider/models"
+	"github.com/Cyclone1070/iav/internal/orchestrator/models"
+	provider "github.com/Cyclone1070/iav/internal/provider/models"
 	"google.golang.org/genai"
 )
 

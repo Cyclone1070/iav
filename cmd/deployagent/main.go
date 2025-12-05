@@ -1,4 +1,4 @@
-// Package main provides a command-line interface for the deployagent tool.
+// Package main provides a command-line interface for the iav tool.
 // It supports file operations (read, write, edit, list) and shell command execution.
 package main
 
@@ -8,15 +8,15 @@ import (
 	"os"
 	"sync"
 
-	"github.com/Cyclone1070/deployforme/internal/orchestrator"
-	orchadapter "github.com/Cyclone1070/deployforme/internal/orchestrator/adapter"
-	orchmodels "github.com/Cyclone1070/deployforme/internal/orchestrator/models"
-	"github.com/Cyclone1070/deployforme/internal/provider/gemini"
-	provider "github.com/Cyclone1070/deployforme/internal/provider/models"
-	"github.com/Cyclone1070/deployforme/internal/tools"
-	"github.com/Cyclone1070/deployforme/internal/tools/models"
-	"github.com/Cyclone1070/deployforme/internal/ui"
-	uiservices "github.com/Cyclone1070/deployforme/internal/ui/services"
+	"github.com/Cyclone1070/iav/internal/orchestrator"
+	orchadapter "github.com/Cyclone1070/iav/internal/orchestrator/adapter"
+	orchmodels "github.com/Cyclone1070/iav/internal/orchestrator/models"
+	"github.com/Cyclone1070/iav/internal/provider/gemini"
+	provider "github.com/Cyclone1070/iav/internal/provider/models"
+	"github.com/Cyclone1070/iav/internal/tools"
+	"github.com/Cyclone1070/iav/internal/tools/models"
+	"github.com/Cyclone1070/iav/internal/ui"
+	uiservices "github.com/Cyclone1070/iav/internal/ui/services"
 	"github.com/charmbracelet/bubbles/spinner"
 	"google.golang.org/genai"
 )

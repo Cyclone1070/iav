@@ -3,7 +3,7 @@ package ui
 import (
 	"context"
 
-	"github.com/Cyclone1070/deployforme/internal/ui/models"
+	"github.com/Cyclone1070/iav/internal/ui/models"
 )
 
 // PermissionDecision represents the user's choice for a permission request

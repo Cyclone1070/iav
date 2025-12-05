@@ -5,7 +5,7 @@ import (
 	"encoding/hex"
 	"sync"
 
-	"github.com/Cyclone1070/deployforme/internal/tools/models"
+	"github.com/Cyclone1070/iav/internal/tools/models"
 )
 
 // checksumManagerImpl is a thread-safe implementation of models.ChecksumManager.

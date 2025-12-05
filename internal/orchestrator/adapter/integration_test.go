@@ -9,10 +9,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	orchadapter "github.com/Cyclone1070/deployforme/internal/orchestrator/adapter"
-	"github.com/Cyclone1070/deployforme/internal/tools"
-	"github.com/Cyclone1070/deployforme/internal/tools/models"
-	"github.com/Cyclone1070/deployforme/internal/tools/services"
+	orchadapter "github.com/Cyclone1070/iav/internal/orchestrator/adapter"
+	"github.com/Cyclone1070/iav/internal/tools"
+	"github.com/Cyclone1070/iav/internal/tools/models"
+	"github.com/Cyclone1070/iav/internal/tools/services"
 	"github.com/stretchr/testify/assert"
 )
 

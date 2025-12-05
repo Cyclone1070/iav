@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/Cyclone1070/deployforme/internal/tools/models"
+	"github.com/Cyclone1070/iav/internal/tools/models"
 	"github.com/go-git/go-git/v5/plumbing/format/gitignore"
 )
 

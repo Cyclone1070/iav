@@ -4,9 +4,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Cyclone1070/deployforme/internal/ui/models"
-	"github.com/Cyclone1070/deployforme/internal/ui/services"
-	"github.com/Cyclone1070/deployforme/internal/ui/views"
+	"github.com/Cyclone1070/iav/internal/ui/models"
+	"github.com/Cyclone1070/iav/internal/ui/services"
+	"github.com/Cyclone1070/iav/internal/ui/views"
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Cyclone1070/deployforme/internal/tools/models"
+	"github.com/Cyclone1070/iav/internal/tools/models"
 )
 
 // IsDockerCommand checks if the command is a docker command by examining the base name.

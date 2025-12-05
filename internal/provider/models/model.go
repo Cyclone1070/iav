@@ -1,7 +1,7 @@
 package models
 
 import (
-	"github.com/Cyclone1070/deployforme/internal/orchestrator/models"
+	"github.com/Cyclone1070/iav/internal/orchestrator/models"
 )
 
 // GenerateRequest encapsulates all parameters for a generation request.

@@ -7,8 +7,8 @@ import (
 	"os"
 	"testing"
 
-	orchmodels "github.com/Cyclone1070/deployforme/internal/orchestrator/models"
-	"github.com/Cyclone1070/deployforme/internal/provider/models"
+	orchmodels "github.com/Cyclone1070/iav/internal/orchestrator/models"
+	"github.com/Cyclone1070/iav/internal/provider/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/genai"

@@ -9,10 +9,10 @@ import (
 	"testing"
 	"time"
 
-	orchmodels "github.com/Cyclone1070/deployforme/internal/orchestrator/models"
-	providermodels "github.com/Cyclone1070/deployforme/internal/provider/models"
-	"github.com/Cyclone1070/deployforme/internal/testing/testhelpers"
-	"github.com/Cyclone1070/deployforme/internal/ui"
+	orchmodels "github.com/Cyclone1070/iav/internal/orchestrator/models"
+	providermodels "github.com/Cyclone1070/iav/internal/provider/models"
+	"github.com/Cyclone1070/iav/internal/testing/testhelpers"
+	"github.com/Cyclone1070/iav/internal/ui"
 	"github.com/stretchr/testify/assert"
 )
 

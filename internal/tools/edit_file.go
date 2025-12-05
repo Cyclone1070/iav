@@ -6,8 +6,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/Cyclone1070/deployforme/internal/tools/models"
-	"github.com/Cyclone1070/deployforme/internal/tools/services"
+	"github.com/Cyclone1070/iav/internal/tools/models"
+	"github.com/Cyclone1070/iav/internal/tools/services"
 )
 
 // EditFile applies edit operations to an existing file in the workspace.

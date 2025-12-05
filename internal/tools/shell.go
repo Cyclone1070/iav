@@ -7,8 +7,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/Cyclone1070/deployforme/internal/tools/models"
-	"github.com/Cyclone1070/deployforme/internal/tools/services"
+	"github.com/Cyclone1070/iav/internal/tools/models"
+	"github.com/Cyclone1070/iav/internal/tools/services"
 )
 
 // ShellTool executes commands on the local machine.

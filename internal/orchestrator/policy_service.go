@@ -7,9 +7,9 @@ import (
 	"slices"
 	"sync"
 
-	"github.com/Cyclone1070/deployforme/internal/orchestrator/models"
-	"github.com/Cyclone1070/deployforme/internal/ui"
-	uimodels "github.com/Cyclone1070/deployforme/internal/ui/models"
+	"github.com/Cyclone1070/iav/internal/orchestrator/models"
+	"github.com/Cyclone1070/iav/internal/ui"
+	uimodels "github.com/Cyclone1070/iav/internal/ui/models"
 )
 
 // policyService implements models.PolicyService
