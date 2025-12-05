@@ -80,7 +80,7 @@ func (t *ShellTool) Run(ctx context.Context, wCtx *models.WorkspaceContext, req 
 
 	timeout := time.Duration(req.TimeoutSeconds) * time.Second
 	if timeout == 0 {
-		timeout = 1 * time.Hour // Default timeout
+		timeout = 10 * time.Minute // Default timeout
 	}
 
 	execErr := services.ExecuteWithTimeout(ctx, timeout, proc)

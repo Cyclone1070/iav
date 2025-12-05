@@ -228,7 +228,7 @@ CACHE_URL=redis://localhost`
 		}
 	})
 
-	t.Run("Multiple env files with override", func(t *testing.T) {
+	t.Run("Multiple env files with override - explicit ordering", func(t *testing.T) {
 		req := models.ShellRequest{
 			Command:  []string{"env"},
 			EnvFiles: []string{".env", ".env.local"},
@@ -239,19 +239,24 @@ CACHE_URL=redis://localhost`
 			t.Fatalf("Run failed: %v", err)
 		}
 
-		// .env.local should override DB_PORT from .env
+		// Count all DB_PORT occurrences and track the last one
 		dbPortCount := 0
-		var dbPortValue string
+		lastDBPort := ""
 		for _, envVar := range capturedEnv {
 			if strings.HasPrefix(envVar, "DB_PORT=") {
 				dbPortCount++
-				dbPortValue = envVar
+				lastDBPort = envVar
 			}
 		}
 
-		// Should have DB_PORT=3306 from .env.local (last one wins)
-		if !strings.Contains(dbPortValue, "3306") {
-			t.Errorf("Expected DB_PORT=3306 from .env.local, got %s", dbPortValue)
+		// Both values should be in the array (env append behavior)
+		if dbPortCount < 2 {
+			t.Errorf("Expected at least 2 DB_PORT entries (from both files), got %d", dbPortCount)
+		}
+
+		// The LAST value wins (OS behavior) - should be from .env.local
+		if lastDBPort != "DB_PORT=3306" {
+			t.Errorf("Expected last DB_PORT=3306 (from .env.local), got %s", lastDBPort)
 		}
 	})
 

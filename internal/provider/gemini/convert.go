@@ -306,6 +306,8 @@ func buildToolCallResponse(candidate *genai.Candidate, usage *genai.GenerateCont
 	for _, part := range candidate.Content.Parts {
 		if part.FunctionCall != nil {
 			toolCalls = append(toolCalls, models.ToolCall{
+				// TODO: Gemini doesn't provide IDs. Consider generating synthetic IDs
+				// if future features require correlating tool calls with results.
 				ID:   "", // Gemini doesn't provide IDs
 				Name: part.FunctionCall.Name,
 				Args: part.FunctionCall.Args,

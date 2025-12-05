@@ -104,11 +104,6 @@ func getModelTypePriority(modelName string) int {
 // 2. Version number (descending: 3.0 > 2.5 > 2.0 > 1.5)
 // 3. Model type (pro > flash > others)
 // 4. Original API order (stable sort)
-// sortModelsByVersion sorts models with the following priority (highest to lowest):
-// 1. Models with "-latest" suffix (regardless of version)
-// 2. Version number (descending: 3.0 > 2.5 > 2.0 > 1.5)
-// 3. Model type (pro > flash > others)
-// 4. Original API order (stable sort)
 func sortModelsByVersion(models []ModelInfo) []ModelInfo {
 	// Copy to avoid mutating input
 	result := make([]ModelInfo, len(models))

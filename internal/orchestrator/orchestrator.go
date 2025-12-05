@@ -151,7 +151,12 @@ func (o *Orchestrator) checkAndTruncateHistory(ctx context.Context) error {
 	}
 
 	contextWindow := o.provider.GetContextWindow()
-	safetyMargin := 1000 // Reserve tokens for response
+	// Reserve tokens for response - use model's max output capability
+	maxOutput := o.provider.GetCapabilities().MaxOutputTokens
+	if maxOutput == 0 {
+		maxOutput = 8192 // Fallback for models without capability info
+	}
+	safetyMargin := maxOutput
 
 	if tokens <= contextWindow-safetyMargin {
 		return nil // No truncation needed

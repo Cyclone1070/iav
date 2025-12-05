@@ -96,6 +96,8 @@ type MockFileSystem struct {
 	opErrors    map[string]error           // operation -> error to return (e.g., "CreateTemp", "Write", "Sync", "Close", "Rename", "Chmod", "Remove")
 	tempFiles   map[string]*mockFileHandle // temp path -> handle
 	maxFileSize int64
+	// Counter for unique temp files
+	tempCounter int
 }
 
 // NewMockFileSystem creates a new mock filesystem
@@ -109,6 +111,7 @@ func NewMockFileSystem(maxFileSize int64) *MockFileSystem {
 		opErrors:    make(map[string]error),
 		tempFiles:   make(map[string]*mockFileHandle),
 		maxFileSize: maxFileSize,
+		tempCounter: 0,
 	}
 }
 
@@ -322,7 +325,8 @@ func (f *MockFileSystem) CreateTemp(dir, pattern string) (string, models.FileHan
 	}
 
 	// Generate a temp file path
-	tempPath := filepath.Join(dir, ".tmp-12345")
+	f.tempCounter++
+	tempPath := filepath.Join(dir, fmt.Sprintf(".tmp-%d", f.tempCounter))
 	handle := &mockFileHandle{
 		fs:      f,
 		path:    tempPath,
@@ -330,6 +334,15 @@ func (f *MockFileSystem) CreateTemp(dir, pattern string) (string, models.FileHan
 		closed:  false,
 	}
 	f.tempFiles[tempPath] = handle
+
+	// Also add it to the regular files map and fileInfos for Stat/Lstat to work
+	f.files[tempPath] = []byte{}
+	f.fileInfos[tempPath] = &mockFileInfo{
+		name:  filepath.Base(tempPath),
+		size:  0,
+		mode:  0o600, // Default temp file permissions
+		isDir: false,
+	}
 
 	return tempPath, handle, nil
 }

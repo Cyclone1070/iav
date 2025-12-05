@@ -41,6 +41,7 @@ func NewWorkspaceContextWithOptions(workspaceRoot string, maxFileSize int64) (*m
 		TodoStore:        NewInMemoryTodoStore(),
 		DockerConfig: models.DockerConfig{
 			CheckCommand: []string{"docker", "info"},
+			// TODO(MVP): MacOS-specific. Linux uses systemd, Windows uses different command.
 			StartCommand: []string{"docker", "desktop", "start"},
 		},
 	}, nil

@@ -83,9 +83,25 @@ type SearchContentRequest struct {
 // ReadTodosRequest contains parameters for ReadTodos operation
 type ReadTodosRequest struct{}
 
+func (r ReadTodosRequest) Validate() error {
+	return nil // No fields to validate
+}
+
 // WriteTodosRequest contains parameters for WriteTodos operation
 type WriteTodosRequest struct {
 	Todos []Todo `json:"todos"`
+}
+
+func (r WriteTodosRequest) Validate() error {
+	for i, todo := range r.Todos {
+		switch todo.Status {
+		case TodoStatusPending, TodoStatusInProgress, TodoStatusCompleted, TodoStatusCancelled:
+			// Valid
+		default:
+			return fmt.Errorf("todo[%d]: invalid status %q", i, todo.Status)
+		}
+	}
+	return nil
 }
 
 // Validate methods for request structs

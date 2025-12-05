@@ -103,7 +103,7 @@ func (b *BaseAdapter[Req, Resp]) Execute(ctx context.Context, args map[string]an
 	// Validate request if it implements Validator interface
 	if v, ok := any(req).(Validator); ok {
 		if err := v.Validate(); err != nil {
-			return "", fmt.Errorf("validation failed: %w", err)
+			return "", fmt.Errorf("%s validation failed: %w", b.name, err)
 		}
 	}
 
