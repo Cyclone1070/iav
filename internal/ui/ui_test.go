@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Cyclone1070/iav/internal/config"
 	"github.com/Cyclone1070/iav/internal/ui/models"
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/stretchr/testify/assert"
@@ -27,7 +28,7 @@ func mockSpinnerFactory() spinner.Model {
 }
 
 func TestReadInput_ReturnsUserInput(t *testing.T) {
-	channels := NewUIChannels()
+	channels := NewUIChannels(config.DefaultConfig())
 	ui := NewUI(channels, &MockMarkdownRenderer{}, mockSpinnerFactory)
 	ctx := context.Background()
 	expected := "hello world"
@@ -53,7 +54,7 @@ func TestReadInput_ReturnsUserInput(t *testing.T) {
 }
 
 func TestReadInput_ContextCancelled(t *testing.T) {
-	channels := NewUIChannels()
+	channels := NewUIChannels(config.DefaultConfig())
 	ui := NewUI(channels, &MockMarkdownRenderer{}, mockSpinnerFactory)
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
@@ -65,7 +66,7 @@ func TestReadInput_ContextCancelled(t *testing.T) {
 }
 
 func TestReadPermission_Allow(t *testing.T) {
-	channels := NewUIChannels()
+	channels := NewUIChannels(config.DefaultConfig())
 	ui := NewUI(channels, &MockMarkdownRenderer{}, mockSpinnerFactory)
 	ctx := context.Background()
 	prompt := "Allow?"
@@ -94,7 +95,7 @@ func TestReadPermission_Allow(t *testing.T) {
 }
 
 func TestWriteStatus(t *testing.T) {
-	channels := NewUIChannels()
+	channels := NewUIChannels(config.DefaultConfig())
 	ui := NewUI(channels, &MockMarkdownRenderer{}, mockSpinnerFactory)
 
 	go func() {
@@ -116,7 +117,7 @@ func TestWriteStatus(t *testing.T) {
 }
 
 func TestWriteMessage_AddsMessage(t *testing.T) {
-	channels := NewUIChannels()
+	channels := NewUIChannels(config.DefaultConfig())
 	ui := NewUI(channels, &MockMarkdownRenderer{}, mockSpinnerFactory)
 
 	go func() {
@@ -128,7 +129,7 @@ func TestWriteMessage_AddsMessage(t *testing.T) {
 }
 
 func TestWriteModelList_SendsList(t *testing.T) {
-	channels := NewUIChannels()
+	channels := NewUIChannels(config.DefaultConfig())
 	ui := NewUI(channels, &MockMarkdownRenderer{}, mockSpinnerFactory)
 	models := []string{"a", "b"}
 
@@ -141,7 +142,7 @@ func TestWriteModelList_SendsList(t *testing.T) {
 }
 
 func TestCommands_ReturnsValidChannel(t *testing.T) {
-	channels := NewUIChannels()
+	channels := NewUIChannels(config.DefaultConfig())
 	ui := NewUI(channels, &MockMarkdownRenderer{}, mockSpinnerFactory)
 
 	ch := ui.Commands()

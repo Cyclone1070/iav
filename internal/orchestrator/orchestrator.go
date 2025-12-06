@@ -4,14 +4,16 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/Cyclone1070/iav/internal/config"
 	"github.com/Cyclone1070/iav/internal/orchestrator/adapter"
 	"github.com/Cyclone1070/iav/internal/orchestrator/models"
 	provider "github.com/Cyclone1070/iav/internal/provider/models"
 	"github.com/Cyclone1070/iav/internal/ui"
 )
 
-// Orchestrator manages the agent loop, tool execution, and conversation history
+// Orchestrator coordinates the agent loop
 type Orchestrator struct {
+	config   *config.Config
 	provider provider.Provider
 	policy   models.PolicyService
 	ui       ui.UserInterface
@@ -20,13 +22,18 @@ type Orchestrator struct {
 }
 
 // New creates a new Orchestrator instance
-func New(p provider.Provider, pol models.PolicyService, userInterface ui.UserInterface, tools []adapter.Tool) *Orchestrator {
+func New(cfg *config.Config, p provider.Provider, pol models.PolicyService, userInterface ui.UserInterface, tools []adapter.Tool) *Orchestrator {
+	if cfg == nil {
+		cfg = config.DefaultConfig()
+	}
+
 	toolMap := make(map[string]adapter.Tool)
 	for _, t := range tools {
 		toolMap[t.Name()] = t
 	}
 
 	return &Orchestrator{
+		config:   cfg,
 		provider: p,
 		policy:   pol,
 		ui:       userInterface,
@@ -37,7 +44,7 @@ func New(p provider.Provider, pol models.PolicyService, userInterface ui.UserInt
 
 // Run executes the main agent loop
 func (o *Orchestrator) Run(ctx context.Context, goal string) error {
-	const maxTurns = 50
+	maxTurns := o.config.Orchestrator.MaxTurns
 
 	// Initialize conversation with the goal
 	o.history = []models.Message{

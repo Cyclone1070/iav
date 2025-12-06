@@ -46,7 +46,7 @@ func TestOrchestratorProvider_ToolCallResponse(t *testing.T) {
 	}
 
 	// Create UI
-	channels := ui.NewUIChannels()
+	channels := ui.NewUIChannels(nil)
 	renderer := uiservices.NewGlamourRenderer()
 	spinnerFactory := func() spinner.Model {
 		return spinner.New(spinner.WithSpinner(spinner.Dot))
@@ -141,7 +141,7 @@ func TestOrchestratorProvider_ToolCallResponse(t *testing.T) {
 	policyService := NewPolicyService(policy, userInterface)
 
 	// Create orchestrator
-	orch := New(mockProvider, policyService, userInterface, toolList)
+	orch := New(nil, mockProvider, policyService, userInterface, toolList)
 
 	// Run orchestrator
 	err := orch.Run(runCtx, "List files")
@@ -238,7 +238,7 @@ func TestOrchestratorProvider_ContextTruncation(t *testing.T) {
 	}
 
 	// Create UI
-	channels := ui.NewUIChannels()
+	channels := ui.NewUIChannels(nil)
 	renderer := uiservices.NewGlamourRenderer()
 	userInterface := ui.NewUI(channels, renderer, func() spinner.Model {
 		return spinner.New(spinner.WithSpinner(spinner.Dot))
@@ -267,7 +267,7 @@ func TestOrchestratorProvider_ContextTruncation(t *testing.T) {
 		orchadapter.NewListDirectory(ctx),
 	}
 
-	orch := New(mockProvider, policyService, userInterface, toolList)
+	orch := New(nil, mockProvider, policyService, userInterface, toolList)
 
 	// Set a clear goal message
 	goalMsg := orchmodels.Message{

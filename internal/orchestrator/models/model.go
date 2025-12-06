@@ -1,5 +1,7 @@
 package models
 
+import "github.com/Cyclone1070/iav/internal/config"
+
 // Message represents a single message in the conversation history
 type Message struct {
 	Role    string // "user", "assistant", "system", "model", "function"
@@ -48,38 +50,22 @@ type ToolPolicy struct {
 	SessionAllow map[string]bool // Runtime approvals
 }
 
-// NewPolicy creates a Policy with sensible defaults for a terraform/ansible/docker agent.
+// NewPolicy creates a Policy with values from config.
 // It initializes all maps to ensure thread safety.
-func NewPolicy() *Policy {
+func NewPolicy(cfg *config.Config) *Policy {
+	if cfg == nil {
+		cfg = config.DefaultConfig()
+	}
+
 	return &Policy{
 		Shell: ShellPolicy{
-			Allow: []string{
-				// Docker
-				"docker", "docker-compose",
-				// Terraform
-				"terraform", "tofu",
-				// Ansible
-				"ansible", "ansible-playbook", "ansible-galaxy", "ansible-vault",
-				// Common utilities the agent needs
-				"ls", "cat", "grep", "find", "head", "tail", "wc",
-				"mkdir", "cp", "mv", "touch",
-				"git", "curl", "wget",
-				"make", "go", "npm", "yarn", "pip",
-			},
-			Deny: []string{
-				// Dangerous commands - always ask
-				"rm", "sudo", "chmod", "chown",
-				"shutdown", "reboot", "halt",
-				"dd", "mkfs", "fdisk",
-			},
+			Allow:        cfg.Policy.ShellAllow,
+			Deny:         cfg.Policy.ShellDeny,
 			SessionAllow: make(map[string]bool),
 		},
 		Tools: ToolPolicy{
-			Allow: []string{
-				// Safe read operations
-				"read_file", "list_directory", "find_file", "search_content",
-			},
-			Deny:         []string{},
+			Allow:        cfg.Policy.ToolsAllow,
+			Deny:         cfg.Policy.ToolsDeny,
 			SessionAllow: make(map[string]bool),
 		},
 	}

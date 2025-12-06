@@ -11,6 +11,7 @@ import (
 )
 
 func TestExecuteWithTimeout_Success(t *testing.T) {
+	const testSampleSize = 4096
 	mock := &MockProcess{
 		WaitDelay: 10 * time.Millisecond,
 	}
@@ -97,7 +98,7 @@ func TestCollectProcessOutput(t *testing.T) {
 			stdoutReader := strings.NewReader(tt.stdout)
 			stderrReader := strings.NewReader(tt.stderr)
 
-			gotStdout, gotStderr, gotTruncated, err := CollectProcessOutput(stdoutReader, stderrReader, tt.maxBytes)
+			gotStdout, gotStderr, gotTruncated, err := CollectProcessOutput(stdoutReader, stderrReader, tt.maxBytes, testSampleSize)
 			if err != nil {
 				t.Fatalf("CollectProcessOutput() error = %v", err)
 			}
@@ -123,7 +124,7 @@ func TestCollectProcessOutput_Concurrent(t *testing.T) {
 	stdoutReader := strings.NewReader(largeStdout)
 	stderrReader := strings.NewReader(largeStderr)
 
-	gotStdout, gotStderr, _, err := CollectProcessOutput(stdoutReader, stderrReader, models.DefaultMaxCommandOutputSize)
+	gotStdout, gotStderr, _, err := CollectProcessOutput(stdoutReader, stderrReader, models.DefaultMaxCommandOutputSize, testSampleSize)
 	if err != nil {
 		t.Fatalf("CollectProcessOutput() error = %v", err)
 	}
@@ -140,7 +141,7 @@ func TestCollectProcessOutput_SlowReader(t *testing.T) {
 	// Test with a slow reader to ensure goroutines complete
 	slowReader := &slowReader{data: []byte("slow data"), delay: 0}
 
-	gotStdout, gotStderr, _, err := CollectProcessOutput(slowReader, strings.NewReader(""), 1024)
+	gotStdout, gotStderr, _, err := CollectProcessOutput(slowReader, strings.NewReader(""), 1024, testSampleSize)
 	if err != nil {
 		t.Fatalf("CollectProcessOutput() error = %v", err)
 	}

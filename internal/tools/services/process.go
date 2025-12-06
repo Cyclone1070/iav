@@ -45,9 +45,9 @@ func ExecuteWithTimeout(ctx context.Context, timeout time.Duration, proc models.
 // CollectProcessOutput reads stdout and stderr concurrently and returns them as strings.
 // It enforces a maximum size limit for the collected output and detects binary content.
 // Returns the stdout string, stderr string, whether output was truncated, and any error.
-func CollectProcessOutput(stdout, stderr io.Reader, maxBytes int) (string, string, bool, error) {
-	stdoutCollector := NewCollector(maxBytes)
-	stderrCollector := NewCollector(maxBytes)
+func CollectProcessOutput(stdout, stderr io.Reader, maxBytes int, sampleSize int) (string, string, bool, error) {
+	stdoutCollector := NewCollector(maxBytes, sampleSize)
+	stderrCollector := NewCollector(maxBytes, sampleSize)
 
 	var wg sync.WaitGroup
 	wg.Add(2)

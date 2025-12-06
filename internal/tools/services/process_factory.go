@@ -36,7 +36,9 @@ func (p *OSProcess) Signal(sig os.Signal) error {
 }
 
 // OSCommandExecutor implements models.CommandExecutor using os/exec for real system commands.
-type OSCommandExecutor struct{}
+type OSCommandExecutor struct {
+	MaxOutputSize int64 // Maximum size for command output
+}
 
 // Run executes a command and returns the combined output (stdout + stderr).
 // This is a convenience method for simple command execution.

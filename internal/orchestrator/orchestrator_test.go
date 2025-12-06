@@ -6,6 +6,7 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/Cyclone1070/iav/internal/config"
 	"github.com/Cyclone1070/iav/internal/orchestrator/adapter"
 	"github.com/Cyclone1070/iav/internal/orchestrator/models"
 	provider "github.com/Cyclone1070/iav/internal/provider/models"
@@ -202,6 +203,11 @@ func (m *MockUI) Start() error {
 	return nil
 }
 
+// newTestOrchestrator creates an orchestrator with default config for testing
+func newTestOrchestrator(p provider.Provider, pol models.PolicyService, ui ui.UserInterface, tools []adapter.Tool) *Orchestrator {
+	return New(config.DefaultConfig(), p, pol, ui, tools)
+}
+
 // Test Case 1: Happy Path - Text Response
 func TestRun_HappyPath_TextResponse(t *testing.T) {
 	mockProvider := &MockProvider{
@@ -224,7 +230,7 @@ func TestRun_HappyPath_TextResponse(t *testing.T) {
 
 	mockPolicy := &MockPolicy{}
 
-	orchestrator := New(mockProvider, mockPolicy, mockUI, []adapter.Tool{})
+	orchestrator := New(config.DefaultConfig(), mockProvider, mockPolicy, mockUI, []adapter.Tool{})
 
 	err := orchestrator.Run(context.Background(), "test goal")
 
@@ -299,7 +305,7 @@ func TestRun_HappyPath_ToolCall(t *testing.T) {
 
 	mockPolicy := &MockPolicy{}
 
-	orchestrator := New(mockProvider, mockPolicy, mockUI, []adapter.Tool{mockTool})
+	orchestrator := New(config.DefaultConfig(), mockProvider, mockPolicy, mockUI, []adapter.Tool{mockTool})
 
 	_ = orchestrator.Run(context.Background(), "test goal")
 
@@ -384,7 +390,7 @@ func TestRun_MultipleToolCalls(t *testing.T) {
 
 	mockPolicy := &MockPolicy{}
 
-	orchestrator := New(mockProvider, mockPolicy, mockUI, []adapter.Tool{mockTool1, mockTool2})
+	orchestrator := New(config.DefaultConfig(), mockProvider, mockPolicy, mockUI, []adapter.Tool{mockTool1, mockTool2})
 
 	_ = orchestrator.Run(context.Background(), "test goal")
 
@@ -433,7 +439,7 @@ func TestRun_Refusal(t *testing.T) {
 
 	mockPolicy := &MockPolicy{}
 
-	orchestrator := New(mockProvider, mockPolicy, mockUI, []adapter.Tool{})
+	orchestrator := newTestOrchestrator(mockProvider, mockPolicy, mockUI, []adapter.Tool{})
 
 	_ = orchestrator.Run(context.Background(), "test goal")
 
@@ -464,7 +470,7 @@ func TestRun_ProviderError(t *testing.T) {
 	mockUI := &MockUI{}
 	mockPolicy := &MockPolicy{}
 
-	orchestrator := New(mockProvider, mockPolicy, mockUI, []adapter.Tool{})
+	orchestrator := newTestOrchestrator(mockProvider, mockPolicy, mockUI, []adapter.Tool{})
 
 	err := orchestrator.Run(context.Background(), "test goal")
 
@@ -501,7 +507,7 @@ func TestRun_MaxTurnsReached(t *testing.T) {
 	mockUI := &MockUI{}
 	mockPolicy := &MockPolicy{}
 
-	orchestrator := New(mockProvider, mockPolicy, mockUI, []adapter.Tool{mockTool})
+	orchestrator := newTestOrchestrator(mockProvider, mockPolicy, mockUI, []adapter.Tool{mockTool})
 
 	err := orchestrator.Run(context.Background(), "test goal")
 
@@ -519,7 +525,7 @@ func TestRun_ContextCancellation(t *testing.T) {
 	mockUI := &MockUI{}
 	mockPolicy := &MockPolicy{}
 
-	orchestrator := New(mockProvider, mockPolicy, mockUI, []adapter.Tool{})
+	orchestrator := newTestOrchestrator(mockProvider, mockPolicy, mockUI, []adapter.Tool{})
 
 	err := orchestrator.Run(ctx, "test goal")
 
@@ -559,7 +565,7 @@ func TestRun_EmptyToolList(t *testing.T) {
 
 	mockPolicy := &MockPolicy{}
 
-	orchestrator := New(mockProvider, mockPolicy, mockUI, []adapter.Tool{})
+	orchestrator := newTestOrchestrator(mockProvider, mockPolicy, mockUI, []adapter.Tool{})
 
 	_ = orchestrator.Run(context.Background(), "test goal")
 
@@ -606,7 +612,7 @@ func TestRun_UnknownTool(t *testing.T) {
 
 	mockPolicy := &MockPolicy{}
 
-	orchestrator := New(mockProvider, mockPolicy, mockUI, []adapter.Tool{})
+	orchestrator := newTestOrchestrator(mockProvider, mockPolicy, mockUI, []adapter.Tool{})
 
 	_ = orchestrator.Run(context.Background(), "test goal")
 
@@ -663,7 +669,7 @@ func TestRun_PolicyDenial(t *testing.T) {
 		},
 	}
 
-	orchestrator := New(mockProvider, mockPolicy, mockUI, []adapter.Tool{mockTool})
+	orchestrator := newTestOrchestrator(mockProvider, mockPolicy, mockUI, []adapter.Tool{mockTool})
 
 	_ = orchestrator.Run(context.Background(), "test goal")
 
@@ -719,7 +725,7 @@ func TestRun_ToolExecutionError(t *testing.T) {
 		},
 	}
 
-	orchestrator := New(mockProvider, mockPolicy, mockUI, []adapter.Tool{mockTool})
+	orchestrator := newTestOrchestrator(mockProvider, mockPolicy, mockUI, []adapter.Tool{mockTool})
 
 	_ = orchestrator.Run(context.Background(), "test goal")
 
@@ -754,7 +760,7 @@ func TestRun_UserInputError(t *testing.T) {
 
 	mockPolicy := &MockPolicy{}
 
-	orchestrator := New(mockProvider, mockPolicy, mockUI, []adapter.Tool{})
+	orchestrator := newTestOrchestrator(mockProvider, mockPolicy, mockUI, []adapter.Tool{})
 
 	err := orchestrator.Run(context.Background(), "test goal")
 

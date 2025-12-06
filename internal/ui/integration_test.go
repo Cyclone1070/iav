@@ -18,7 +18,7 @@ func TestUIOrchestrator_MessageFlow(t *testing.T) {
 	t.Parallel()
 
 	// Create UI with real channels
-	channels := NewUIChannels()
+	channels := NewUIChannels(nil)
 	renderer := uiservices.NewGlamourRenderer()
 	spinnerFactory := func() spinner.Model {
 		return spinner.New(spinner.WithSpinner(spinner.Dot))
@@ -67,7 +67,7 @@ func TestUIOrchestrator_InputRequest(t *testing.T) {
 	t.Parallel()
 
 	// Create UI with real channels
-	channels := NewUIChannels()
+	channels := NewUIChannels(nil)
 	renderer := uiservices.NewGlamourRenderer()
 	spinnerFactory := func() spinner.Model {
 		return spinner.New(spinner.WithSpinner(spinner.Dot))
@@ -117,7 +117,7 @@ func TestUIOrchestrator_Deadlock(t *testing.T) {
 	initialGoroutines := runtime.NumGoroutine()
 
 	// Create UI with real channels
-	channels := NewUIChannels()
+	channels := NewUIChannels(nil)
 	renderer := uiservices.NewGlamourRenderer()
 	spinnerFactory := func() spinner.Model {
 		return spinner.New(spinner.WithSpinner(spinner.Dot))

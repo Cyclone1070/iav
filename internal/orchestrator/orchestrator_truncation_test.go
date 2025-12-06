@@ -99,7 +99,7 @@ func TestHistoryTruncation_BuildsAndTruncates(t *testing.T) {
 		},
 	}
 
-	orchestrator := New(mockProvider, mockPolicy, mockUI, []adapter.Tool{mockTool})
+	orchestrator := newTestOrchestrator(mockProvider, mockPolicy, mockUI, []adapter.Tool{mockTool})
 	_ = orchestrator.Run(context.Background(), "goal")
 
 	// Verify truncation was triggered (CountTokens called multiple times)
@@ -193,7 +193,7 @@ func TestHistoryTruncation_GoalNeverRemoved(t *testing.T) {
 		},
 	}
 
-	orchestrator := New(mockProvider, mockPolicy, mockUI, []adapter.Tool{mockTool})
+	orchestrator := newTestOrchestrator(mockProvider, mockPolicy, mockUI, []adapter.Tool{mockTool})
 	_ = orchestrator.Run(context.Background(), goalText)
 
 	// THE CRITICAL ASSERTION: Goal must be preserved
@@ -272,7 +272,7 @@ func TestHistoryTruncation_PreservesToolResultPairs(t *testing.T) {
 		},
 	}
 
-	orchestrator := New(mockProvider, mockPolicy, mockUI, []adapter.Tool{mockTool})
+	orchestrator := newTestOrchestrator(mockProvider, mockPolicy, mockUI, []adapter.Tool{mockTool})
 	_ = orchestrator.Run(context.Background(), "goal")
 
 	// Verify no orphaned function messages
@@ -311,7 +311,7 @@ func TestHistoryTruncation_CountTokensError_NoInfiniteLoop(t *testing.T) {
 		},
 	}
 
-	orchestrator := New(mockProvider, &MockPolicy{}, &MockUI{}, []adapter.Tool{})
+	orchestrator := newTestOrchestrator(mockProvider, &MockPolicy{}, &MockUI{}, []adapter.Tool{})
 	err := orchestrator.Run(context.Background(), "test goal")
 
 	// Should return error, not hang
@@ -386,7 +386,7 @@ func TestHistoryTruncation_SafetyMarginExceedsContext(t *testing.T) {
 		},
 	}
 
-	orchestrator := New(mockProvider, mockPolicy, mockUI, []adapter.Tool{mockTool})
+	orchestrator := newTestOrchestrator(mockProvider, mockPolicy, mockUI, []adapter.Tool{mockTool})
 	_ = orchestrator.Run(context.Background(), "goal")
 
 	// CRITICAL ASSERTION: With 150 tokens and 1000 context window,
@@ -420,7 +420,7 @@ func TestHistoryTruncation_TokensNeverDecrease(t *testing.T) {
 		},
 	}
 
-	orchestrator := New(mockProvider, &MockPolicy{}, &MockUI{}, []adapter.Tool{})
+	orchestrator := newTestOrchestrator(mockProvider, &MockPolicy{}, &MockUI{}, []adapter.Tool{})
 
 	// Set up minimal history - just goal will be there after Run starts
 	_ = orchestrator.Run(context.Background(), "goal")
@@ -496,7 +496,7 @@ func TestHistoryTruncation_ThreeMessageEdgeCase(t *testing.T) {
 		},
 	}
 
-	orchestrator := New(mockProvider, mockPolicy, mockUI, []adapter.Tool{mockTool})
+	orchestrator := newTestOrchestrator(mockProvider, mockPolicy, mockUI, []adapter.Tool{mockTool})
 	_ = orchestrator.Run(context.Background(), "goal")
 
 	// BUG: With history of [goal, model, function] and len==3,
@@ -580,7 +580,7 @@ func TestHistoryTruncation_NonPairedMessages(t *testing.T) {
 		},
 	}
 
-	orchestrator := New(mockProvider, mockPolicy, mockUI, []adapter.Tool{mockTool})
+	orchestrator := newTestOrchestrator(mockProvider, mockPolicy, mockUI, []adapter.Tool{mockTool})
 	_ = orchestrator.Run(context.Background(), "goal")
 
 	// Verify no orphaned function messages after truncation
@@ -628,7 +628,7 @@ func TestHistoryTruncation_EmptyHistory(t *testing.T) {
 		},
 	}
 
-	orchestrator := New(mockProvider, &MockPolicy{}, mockUI, []adapter.Tool{})
+	orchestrator := newTestOrchestrator(mockProvider, &MockPolicy{}, mockUI, []adapter.Tool{})
 	err := orchestrator.Run(context.Background(), "goal")
 
 	// Should complete without panicking

@@ -82,7 +82,11 @@ func SearchContent(ctx context.Context, wCtx *models.WorkspaceContext, req model
 	var matches []models.SearchContentMatch
 	scanner := bufio.NewScanner(stdout)
 	// Increase buffer size to handle very long lines (e.g. minified JS)
-	const maxScanTokenSize = 10 * 1024 * 1024 // 10MB
+	// Increase buffer size to handle very long lines (e.g. minified JS)
+	maxScanTokenSize := 10 * 1024 * 1024 // Default fallback (10MB)
+	if wCtx.Config != nil {
+		maxScanTokenSize = wCtx.Config.Tools.MaxScanTokenSize
+	}
 	buf := make([]byte, 0, 64*1024)
 	scanner.Buffer(buf, maxScanTokenSize)
 

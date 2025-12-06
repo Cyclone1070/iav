@@ -7,14 +7,19 @@ import (
 )
 
 const (
+	// Deprecated: Use config.DefaultConfig().Tools.MaxFileSize instead
 	// DefaultMaxFileSize is the default maximum file size (5 MB)
 	DefaultMaxFileSize = 5 * 1024 * 1024
+	// Deprecated: Use config.DefaultConfig().Tools.BinaryDetectionSampleSize instead
 	// BinaryDetectionSampleSize is how many bytes to sample for binary detection
 	BinaryDetectionSampleSize = 4096
+	// Deprecated: Use config.DefaultConfig().Tools.DefaultListDirectoryLimit instead
 	// DefaultListDirectoryLimit is the default limit for directory listing pagination
 	DefaultListDirectoryLimit = 1000
+	// Deprecated: Use config.DefaultConfig().Tools.MaxListDirectoryLimit instead
 	// MaxListDirectoryLimit is the maximum allowed limit for directory listing pagination
 	MaxListDirectoryLimit = 10000
+	// Deprecated: Use config.DefaultConfig().Tools.DefaultMaxCommandOutputSize instead
 	// DefaultMaxCommandOutputSize is the default maximum size for command output (10 MB)
 	DefaultMaxCommandOutputSize = 10 * 1024 * 1024
 )

@@ -9,12 +9,17 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/Cyclone1070/iav/internal/config"
 	"github.com/Cyclone1070/iav/internal/orchestrator/models"
 	provider "github.com/Cyclone1070/iav/internal/provider/models"
 )
 
+// versionRegex is compiled once at package initialization for performance
+var versionRegex = regexp.MustCompile(`models/gemini-(\d+(?:\.\d+)?)`)
+
 // GeminiProvider implements the Provider interface for Google Gemini.
 type GeminiProvider struct {
+	config     *config.Config
 	client     GeminiClient
 	model      string // Renamed from modelName
 	mu         sync.RWMutex
@@ -34,8 +39,7 @@ type modelVersion struct {
 func extractVersion(modelName string) (float64, bool) {
 	// Pattern to match "models/gemini-X" or "models/gemini-X.Y" where X or X.Y is the version
 	// This handles formats like "models/gemini-2.0-flash", "models/gemini-1.5-pro", or "models/gemini-3-pro"
-	re := regexp.MustCompile(`models/gemini-(\d+(?:\.\d+)?)`)
-	matches := re.FindStringSubmatch(modelName)
+	matches := versionRegex.FindStringSubmatch(modelName)
 	if len(matches) < 2 {
 		return 0.0, false
 	}
@@ -85,16 +89,16 @@ func hasLatestSuffix(modelName string) bool {
 }
 
 // getModelTypePriority returns a priority value for model types.
-// Higher values are preferred. pro=2, flash=1, others=0
+// Priority values come from config. Defaults: pro=2, flash=1, others=0
 // Handles models with additional suffixes like "-pro-latest", "-flash-exp", etc.
-func getModelTypePriority(modelName string) int {
+func getModelTypePriority(cfg *config.Config, modelName string) int {
 	// Match "-pro" or "-pro-" followed by optional suffix (e.g., "-pro-latest", "-pro-exp")
 	if strings.Contains(modelName, "-pro") {
-		return 2
+		return cfg.Provider.ModelTypePriorityPro
 	}
 	// Match "-flash" or "-flash-" followed by optional suffix (e.g., "-flash-latest", "-flash-exp")
 	if strings.Contains(modelName, "-flash") {
-		return 1
+		return cfg.Provider.ModelTypePriorityFlash
 	}
 	return 0
 }
@@ -102,9 +106,9 @@ func getModelTypePriority(modelName string) int {
 // sortModelsByVersion sorts models with the following priority (highest to lowest):
 // 1. Models with "-latest" suffix (regardless of version)
 // 2. Version number (descending: 3.0 > 2.5 > 2.0 > 1.5)
-// 3. Model type (pro > flash > others)
+// 3. Model type (pro > flash > others, priorities from config)
 // 4. Original API order (stable sort)
-func sortModelsByVersion(models []ModelInfo) []ModelInfo {
+func sortModelsByVersion(cfg *config.Config, models []ModelInfo) []ModelInfo {
 	// Copy to avoid mutating input
 	result := make([]ModelInfo, len(models))
 	copy(result, models)
@@ -132,8 +136,8 @@ func sortModelsByVersion(models []ModelInfo) []ModelInfo {
 		}
 
 		// Third priority: If versions are equal, prefer pro over flash
-		aPri := getModelTypePriority(a.Name)
-		bPri := getModelTypePriority(b.Name)
+		aPri := getModelTypePriority(cfg, a.Name)
+		bPri := getModelTypePriority(cfg, b.Name)
 		if aPri > bPri {
 			return -1
 		}
@@ -150,10 +154,11 @@ func sortModelsByVersion(models []ModelInfo) []ModelInfo {
 // NewGeminiProviderWithLatest creates a new Gemini provider with the latest available gemini-* model.
 // It fetches the list of available models, filters to gemini-* models, sorts by version (highest first),
 // and uses the first model as the default.
-// NewGeminiProviderWithLatest creates a new Gemini provider with the latest available gemini-* model.
-// It fetches the list of available models, filters to gemini-* models, sorts by version (highest first),
-// and uses the first model as the default.
-func NewGeminiProviderWithLatest(ctx context.Context, client GeminiClient) (*GeminiProvider, error) {
+func NewGeminiProviderWithLatest(ctx context.Context, cfg *config.Config, client GeminiClient) (*GeminiProvider, error) {
+	if cfg == nil {
+		cfg = config.DefaultConfig()
+	}
+
 	models, err := client.ListModels(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list models: %w", err)
@@ -164,10 +169,11 @@ func NewGeminiProviderWithLatest(ctx context.Context, client GeminiClient) (*Gem
 	}
 
 	// Sort models by version (highest first), preserving API order for equal versions
-	sortedModels := sortModelsByVersion(models)
+	sortedModels := sortModelsByVersion(cfg, models)
 	latestModel := sortedModels[0].Name
 
 	p := &GeminiProvider{
+		config:     cfg,
 		client:     client,
 		model:      latestModel,
 		modelCache: sortedModels,
@@ -179,7 +185,11 @@ func NewGeminiProviderWithLatest(ctx context.Context, client GeminiClient) (*Gem
 // NewGeminiProvider creates a new Gemini provider with the given client and model.
 // It validates that the provided model exists in the filtered list of available gemini-* models.
 // The model parameter can be provided with or without the "models/" prefix.
-func NewGeminiProvider(ctx context.Context, client GeminiClient, model string) (*GeminiProvider, error) {
+func NewGeminiProvider(ctx context.Context, cfg *config.Config, client GeminiClient, model string) (*GeminiProvider, error) {
+	if cfg == nil {
+		cfg = config.DefaultConfig()
+	}
+
 	// Add "models/" prefix if not present (user input may not have it)
 	modelWithPrefix := addModelPrefix(model)
 
@@ -202,6 +212,7 @@ func NewGeminiProvider(ctx context.Context, client GeminiClient, model string) (
 	}
 
 	p := &GeminiProvider{
+		config:     cfg,
 		client:     client,
 		model:      modelWithPrefix,
 		modelCache: models,
@@ -297,7 +308,7 @@ func (p *GeminiProvider) GetContextWindow() int {
 	if info != nil {
 		return info.InputTokenLimit
 	}
-	return 1_000_000 // fallback
+	return p.config.Provider.FallbackContextWindow
 }
 
 // SetModel sets the model to use for generation
@@ -344,8 +355,8 @@ func (p *GeminiProvider) GetCapabilities() provider.Capabilities {
 			SupportsStreaming:   true,
 			SupportsToolCalling: true,
 			SupportsJSONMode:    true,
-			MaxContextTokens:    1_000_000,
-			MaxOutputTokens:     8192,
+			MaxContextTokens:    p.config.Provider.FallbackContextWindow,
+			MaxOutputTokens:     p.config.Provider.FallbackMaxOutputTokens,
 		}
 	}
 

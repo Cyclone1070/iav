@@ -497,6 +497,7 @@ func (f *MockFileSystem) GetTempFiles() []string {
 type MockBinaryDetector struct {
 	binaryPaths   map[string]bool
 	binaryContent map[string]bool // content hash -> is binary
+	SampleSize    int             // Number of bytes to sample for binary detection
 }
 
 // NewMockBinaryDetector creates a new mock binary detector
@@ -504,6 +505,7 @@ func NewMockBinaryDetector() *MockBinaryDetector {
 	return &MockBinaryDetector{
 		binaryPaths:   make(map[string]bool),
 		binaryContent: make(map[string]bool),
+		SampleSize:    4096, // Default matches config
 	}
 }
 
@@ -514,7 +516,21 @@ func (f *MockBinaryDetector) SetBinaryPath(path string, isBinary bool) {
 }
 
 func (f *MockBinaryDetector) IsBinaryContent(content []byte) bool {
-	sampleSize := min(len(content), models.BinaryDetectionSampleSize)
+	// Check for common text file BOMs (UTF-16, UTF-32)
+	if len(content) >= 2 {
+		if (content[0] == 0xFF && content[1] == 0xFE) ||
+			(content[0] == 0xFE && content[1] == 0xFF) {
+			return false
+		}
+	}
+	if len(content) >= 4 {
+		if (content[0] == 0xFF && content[1] == 0xFE && content[2] == 0x00 && content[3] == 0x00) ||
+			(content[0] == 0x00 && content[1] == 0x00 && content[2] == 0xFE && content[3] == 0xFF) {
+			return false
+		}
+	}
+
+	sampleSize := min(len(content), f.SampleSize)
 
 	for i := range sampleSize {
 		if content[i] == 0 {

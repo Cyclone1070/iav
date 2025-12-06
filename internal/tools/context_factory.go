@@ -1,19 +1,23 @@
 package tools
 
 import (
+	"github.com/Cyclone1070/iav/internal/config"
 	"github.com/Cyclone1070/iav/internal/tools/models"
 	"github.com/Cyclone1070/iav/internal/tools/services"
 )
 
 // NewWorkspaceContext returns a default workspace context with system implementations.
 // The workspaceRoot is canonicalised (absolute and symlink-resolved).
-// Each context gets its own checksum cache instance and file size limit.
-func NewWorkspaceContext(workspaceRoot string) (*models.WorkspaceContext, error) {
-	return NewWorkspaceContextWithOptions(workspaceRoot, models.DefaultMaxFileSize)
+// Each context gets its own checksum cache instance and file size limit from config.
+func NewWorkspaceContext(cfg *config.Config, workspaceRoot string) (*models.WorkspaceContext, error) {
+	if cfg == nil {
+		cfg = config.DefaultConfig()
+	}
+	return NewWorkspaceContextWithOptions(cfg, workspaceRoot, cfg.Tools.MaxFileSize)
 }
 
 // NewWorkspaceContextWithOptions creates a workspace context with custom max file size.
-func NewWorkspaceContextWithOptions(workspaceRoot string, maxFileSize int64) (*models.WorkspaceContext, error) {
+func NewWorkspaceContextWithOptions(cfg *config.Config, workspaceRoot string, maxFileSize int64) (*models.WorkspaceContext, error) {
 	canonicalRoot, err := services.CanonicaliseRoot(workspaceRoot)
 	if err != nil {
 		return nil, err
@@ -31,13 +35,14 @@ func NewWorkspaceContextWithOptions(workspaceRoot string, maxFileSize int64) (*m
 	}
 
 	return &models.WorkspaceContext{
+		Config:           cfg,
 		FS:               fs,
-		BinaryDetector:   &services.SystemBinaryDetector{},
+		BinaryDetector:   &services.SystemBinaryDetector{SampleSize: cfg.Tools.BinaryDetectionSampleSize},
 		ChecksumManager:  services.NewChecksumManager(),
 		MaxFileSize:      maxFileSize,
 		WorkspaceRoot:    canonicalRoot,
 		GitignoreService: gitignoreSvc,
-		CommandExecutor:  &services.OSCommandExecutor{},
+		CommandExecutor:  &services.OSCommandExecutor{MaxOutputSize: cfg.Tools.DefaultMaxCommandOutputSize},
 		TodoStore:        NewInMemoryTodoStore(),
 		DockerConfig: models.DockerConfig{
 			CheckCommand: []string{"docker", "info"},

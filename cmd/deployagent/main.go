@@ -8,6 +8,7 @@ import (
 	"os"
 	"sync"
 
+	"github.com/Cyclone1070/iav/internal/config"
 	"github.com/Cyclone1070/iav/internal/orchestrator"
 	orchadapter "github.com/Cyclone1070/iav/internal/orchestrator/adapter"
 	orchmodels "github.com/Cyclone1070/iav/internal/orchestrator/models"
@@ -23,13 +24,14 @@ import (
 
 // Dependencies holds the components required to run the application.
 type Dependencies struct {
+	Config          *config.Config
 	UI              ui.UserInterface
 	ProviderFactory func(context.Context) (provider.Provider, error)
 	Tools           []orchadapter.Tool
 }
 
-func createRealUI() ui.UserInterface {
-	channels := ui.NewUIChannels()
+func createRealUI(cfg *config.Config) ui.UserInterface {
+	channels := ui.NewUIChannels(cfg)
 	renderer := uiservices.NewGlamourRenderer()
 	spinnerFactory := func() spinner.Model {
 		return spinner.New(spinner.WithSpinner(spinner.Dot))
@@ -37,7 +39,7 @@ func createRealUI() ui.UserInterface {
 	return ui.NewUI(channels, renderer, spinnerFactory)
 }
 
-func createRealProviderFactory() func(context.Context) (provider.Provider, error) {
+func createRealProviderFactory(cfg *config.Config) func(context.Context) (provider.Provider, error) {
 	return func(ctx context.Context) (provider.Provider, error) {
 		apiKey := os.Getenv("GEMINI_API_KEY")
 		if apiKey == "" {
@@ -50,7 +52,7 @@ func createRealProviderFactory() func(context.Context) (provider.Provider, error
 		}
 
 		geminiClient := gemini.NewRealGeminiClient(genaiClient)
-		return gemini.NewGeminiProviderWithLatest(ctx, geminiClient)
+		return gemini.NewGeminiProviderWithLatest(ctx, cfg, geminiClient)
 	}
 }
 
@@ -69,10 +71,19 @@ func createTools(ctx *models.WorkspaceContext) []orchadapter.Tool {
 }
 
 func main() {
+	// Load configuration (from defaults + ~/.config/iav/config.json)
+	cfg, err := config.Load()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: failed to load config: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Using default configuration.\n")
+		cfg = config.DefaultConfig()
+	}
+
 	// Create dependencies
 	deps := Dependencies{
-		UI:              createRealUI(),
-		ProviderFactory: createRealProviderFactory(),
+		Config:          cfg,
+		UI:              createRealUI(cfg),
+		ProviderFactory: createRealProviderFactory(cfg),
 		Tools:           nil, // Will be created in runInteractive
 	}
 
@@ -111,7 +122,7 @@ func runInteractive(ctx context.Context, deps Dependencies) {
 			return // DEGRADED MODE: UI runs but app doesn't start
 		}
 
-		workspaceCtx, err := tools.NewWorkspaceContext(workspaceRoot)
+		workspaceCtx, err := tools.NewWorkspaceContext(deps.Config, workspaceRoot)
 		if err != nil {
 			userInterface.WriteStatus("error", "Initialization failed")
 			userInterface.WriteMessage(fmt.Sprintf("Error: failed to initialize workspace: %v", err))
@@ -141,9 +152,9 @@ func runInteractive(ctx context.Context, deps Dependencies) {
 		userInterface.SetModel(p.GetModel())
 
 		// === ORCHESTRATOR INITIALIZATION ===
-		policy := orchmodels.NewPolicy()
+		policy := orchmodels.NewPolicy(deps.Config)
 		policyService := orchestrator.NewPolicyService(policy, userInterface)
-		orch := orchestrator.New(providerClient, policyService, userInterface, toolList)
+		orch := orchestrator.New(deps.Config, providerClient, policyService, userInterface, toolList)
 
 		userInterface.WriteStatus("ready", "Ready")
 

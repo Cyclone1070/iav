@@ -3,6 +3,7 @@ package ui
 import (
 	"context"
 
+	"github.com/Cyclone1070/iav/internal/config"
 	"github.com/Cyclone1070/iav/internal/ui/models"
 	"github.com/Cyclone1070/iav/internal/ui/services"
 	tea "github.com/charmbracelet/bubbletea"
@@ -59,18 +60,22 @@ type UIChannels struct {
 	ReadyChan     chan struct{} // Signals when UI is ready to accept requests
 }
 
-// NewUIChannels creates a new UIChannels struct with default buffers
-func NewUIChannels() *UIChannels {
+// NewUIChannels creates a new UIChannels struct with buffer sizes from config
+func NewUIChannels(cfg *config.Config) *UIChannels {
+	if cfg == nil {
+		cfg = config.DefaultConfig()
+	}
+
 	return &UIChannels{
 		InputReq:      make(chan InputRequest),
 		InputResp:     make(chan string),
 		PermReq:       make(chan PermRequest),
 		PermResp:      make(chan PermissionDecision),
-		StatusChan:    make(chan StatusMsg, 10),
-		MessageChan:   make(chan string, 10),
+		StatusChan:    make(chan StatusMsg, cfg.UI.StatusChannelBuffer),
+		MessageChan:   make(chan string, cfg.UI.MessageChannelBuffer),
 		ModelListChan: make(chan []string),
-		SetModelChan:  make(chan string, 10),
-		CommandChan:   make(chan UICommand, 10),
+		SetModelChan:  make(chan string, cfg.UI.SetModelChannelBuffer),
+		CommandChan:   make(chan UICommand, cfg.UI.CommandChannelBuffer),
 		ReadyChan:     make(chan struct{}),
 	}
 }

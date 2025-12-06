@@ -2,8 +2,6 @@ package services
 
 import (
 	"bytes"
-
-	"github.com/Cyclone1070/iav/internal/tools/models"
 )
 
 // Collector captures command output with size limits and binary content detection.
@@ -16,12 +14,14 @@ type Collector struct {
 
 	// Internal state for binary detection
 	bytesChecked int
+	sampleSize   int // Number of bytes to check for binary content
 }
 
-// NewCollector creates a new output collector with the specified maximum byte limit.
-func NewCollector(maxBytes int) *Collector {
+// NewCollector creates a new output collector with the specified maximum byte limit and binary detection sample size.
+func NewCollector(maxBytes int, sampleSize int) *Collector {
 	return &Collector{
-		MaxBytes: maxBytes,
+		MaxBytes:   maxBytes,
+		sampleSize: sampleSize,
 	}
 }
 
@@ -33,8 +33,8 @@ func (c *Collector) Write(p []byte) (n int, err error) {
 	}
 
 	// Check for binary content in the first N bytes
-	if c.bytesChecked < models.BinaryDetectionSampleSize {
-		remainingCheck := models.BinaryDetectionSampleSize - c.bytesChecked
+	if c.bytesChecked < c.sampleSize {
+		remainingCheck := c.sampleSize - c.bytesChecked
 		toCheck := p
 		if len(toCheck) > remainingCheck {
 			toCheck = toCheck[:remainingCheck]
@@ -81,7 +81,9 @@ func (c *Collector) String() string {
 
 // SystemBinaryDetector implements BinaryDetector using null byte detection.
 // It checks for null bytes in the first 4KB of content, with special handling for UTF BOMs.
-type SystemBinaryDetector struct{}
+type SystemBinaryDetector struct {
+	SampleSize int // Number of bytes to sample for binary detection
+}
 
 // IsBinaryContent checks if content bytes contain binary data by looking for null bytes.
 // It handles UTF-16 and UTF-32 BOMs specially to avoid false positives.
@@ -100,8 +102,8 @@ func (r *SystemBinaryDetector) IsBinaryContent(content []byte) bool {
 		}
 	}
 
-	// Check for null bytes in first 4KB for files without BOM
-	sampleSize := min(len(content), models.BinaryDetectionSampleSize)
+	// Check for null bytes in configured sample size
+	sampleSize := min(len(content), r.SampleSize)
 	for i := range sampleSize {
 		if content[i] == 0 {
 			return true

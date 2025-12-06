@@ -5,6 +5,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/Cyclone1070/iav/internal/config"
 	"github.com/Cyclone1070/iav/internal/orchestrator/models"
 	provider "github.com/Cyclone1070/iav/internal/provider/models"
 	"google.golang.org/genai"
@@ -38,7 +39,7 @@ func TestGenerate_HappyPath_TextResponse(t *testing.T) {
 		},
 	}
 
-	p, _ := NewGeminiProvider(context.Background(), mockClient, "gemini-mock")
+	p, _ := NewGeminiProvider(context.Background(), config.DefaultConfig(), mockClient, "gemini-mock")
 
 	req := &provider.GenerateRequest{
 		Prompt:  "Hello",
@@ -97,7 +98,7 @@ func TestGenerate_HappyPath_ToolCall(t *testing.T) {
 		},
 	}
 
-	p, _ := NewGeminiProvider(context.Background(), mockClient, "gemini-mock")
+	p, _ := NewGeminiProvider(context.Background(), config.DefaultConfig(), mockClient, "gemini-mock")
 
 	req := &provider.GenerateRequest{
 		Prompt: "Read foo.txt",
@@ -140,7 +141,7 @@ func TestCountTokens_HappyPath(t *testing.T) {
 		},
 	}
 
-	p, _ := NewGeminiProvider(context.Background(), mockClient, "gemini-mock")
+	p, _ := NewGeminiProvider(context.Background(), config.DefaultConfig(), mockClient, "gemini-mock")
 
 	messages := []models.Message{
 		{Role: "user", Content: "Hello"},
@@ -170,7 +171,7 @@ func TestSetModel_GetModel(t *testing.T) {
 			}, nil
 		},
 	}
-	p, _ := NewGeminiProvider(context.Background(), mockClient, "gemini-mock-1")
+	p, _ := NewGeminiProvider(context.Background(), config.DefaultConfig(), mockClient, "gemini-mock-1")
 
 	if p.GetModel() != "gemini-mock-1" {
 		t.Errorf("expected 'gemini-mock-1', got %q", p.GetModel())
@@ -201,7 +202,7 @@ func TestGenerate_UnhappyPath_RateLimit(t *testing.T) {
 		},
 	}
 
-	p, _ := NewGeminiProvider(context.Background(), mockClient, "gemini-mock")
+	p, _ := NewGeminiProvider(context.Background(), config.DefaultConfig(), mockClient, "gemini-mock")
 
 	req := &provider.GenerateRequest{
 		Prompt: "Hello",
@@ -242,7 +243,7 @@ func TestGenerate_UnhappyPath_AuthFailure(t *testing.T) {
 		},
 	}
 
-	p, _ := NewGeminiProvider(context.Background(), mockClient, "gemini-mock")
+	p, _ := NewGeminiProvider(context.Background(), config.DefaultConfig(), mockClient, "gemini-mock")
 
 	req := &provider.GenerateRequest{
 		Prompt: "Hello",
@@ -282,7 +283,7 @@ func TestGenerate_EdgeCase_EmptyResponse(t *testing.T) {
 		},
 	}
 
-	p, _ := NewGeminiProvider(context.Background(), mockClient, "gemini-mock")
+	p, _ := NewGeminiProvider(context.Background(), config.DefaultConfig(), mockClient, "gemini-mock")
 
 	req := &provider.GenerateRequest{
 		Prompt: "Hello",
@@ -327,7 +328,7 @@ func TestGenerate_EdgeCase_SafetyBlock(t *testing.T) {
 		},
 	}
 
-	p, _ := NewGeminiProvider(context.Background(), mockClient, "gemini-mock")
+	p, _ := NewGeminiProvider(context.Background(), config.DefaultConfig(), mockClient, "gemini-mock")
 
 	req := &provider.GenerateRequest{
 		Prompt: "Dangerous content",
@@ -376,7 +377,7 @@ func TestGenerate_EdgeCase_NilConfig(t *testing.T) {
 		},
 	}
 
-	p, _ := NewGeminiProvider(context.Background(), mockClient, "gemini-mock")
+	p, _ := NewGeminiProvider(context.Background(), config.DefaultConfig(), mockClient, "gemini-mock")
 
 	req := &provider.GenerateRequest{
 		Prompt: "Hello",
@@ -417,7 +418,7 @@ func TestGenerate_EdgeCase_NilHistory(t *testing.T) {
 		},
 	}
 
-	p, _ := NewGeminiProvider(context.Background(), mockClient, "gemini-mock")
+	p, _ := NewGeminiProvider(context.Background(), config.DefaultConfig(), mockClient, "gemini-mock")
 
 	req := &provider.GenerateRequest{
 		Prompt:  "Hello",
@@ -439,7 +440,7 @@ func TestGetCapabilities(t *testing.T) {
 			return []ModelInfo{{Name: "models/gemini-1.5-pro", InputTokenLimit: 2_000_000, OutputTokenLimit: 8192}}, nil
 		},
 	}
-	p, _ := NewGeminiProvider(context.Background(), mockClient, "gemini-1.5-pro")
+	p, _ := NewGeminiProvider(context.Background(), config.DefaultConfig(), mockClient, "gemini-1.5-pro")
 
 	caps := p.GetCapabilities()
 
@@ -489,7 +490,7 @@ func TestDefineTools(t *testing.T) {
 		},
 	}
 
-	p, _ := NewGeminiProvider(context.Background(), mockClient, "gemini-mock")
+	p, _ := NewGeminiProvider(context.Background(), config.DefaultConfig(), mockClient, "gemini-mock")
 
 	tools := []provider.ToolDefinition{
 		{
@@ -648,7 +649,7 @@ func TestSortModelsByVersion(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := sortModelsByVersion(tt.models)
+			result := sortModelsByVersion(config.DefaultConfig(), tt.models)
 			if len(result) != len(tt.expected) {
 				t.Fatalf("sortModelsByVersion() length = %d, want %d", len(result), len(tt.expected))
 			}
@@ -712,7 +713,7 @@ func TestNewGeminiProviderWithLatest(t *testing.T) {
 				},
 			}
 
-			p, err := NewGeminiProviderWithLatest(context.Background(), mockClient)
+			p, err := NewGeminiProviderWithLatest(context.Background(), config.DefaultConfig(), mockClient)
 			if tt.expectError {
 				if err == nil {
 					t.Error("expected error, got nil")
@@ -752,7 +753,7 @@ func TestNewGeminiProvider_InvalidModel(t *testing.T) {
 		},
 	}
 
-	_, err := NewGeminiProvider(context.Background(), mockClient, "models/gemini-invalid-model")
+	_, err := NewGeminiProvider(context.Background(), config.DefaultConfig(), mockClient, "models/gemini-invalid-model")
 	if err == nil {
 		t.Error("expected error for invalid model, got nil")
 	}
@@ -770,7 +771,7 @@ func TestNewGeminiProvider_ListModelsError(t *testing.T) {
 		},
 	}
 
-	_, err := NewGeminiProvider(context.Background(), mockClient, "models/gemini-1.5-flash")
+	_, err := NewGeminiProvider(context.Background(), config.DefaultConfig(), mockClient, "models/gemini-1.5-flash")
 	if err == nil {
 		t.Error("expected error when ListModels fails, got nil")
 	}

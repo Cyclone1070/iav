@@ -4,13 +4,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Cyclone1070/iav/internal/config"
 	"github.com/Cyclone1070/iav/internal/ui/models"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/stretchr/testify/assert"
 )
 
 func createTestModel() BubbleTeaModel {
-	channels := NewUIChannels()
+	channels := NewUIChannels(config.DefaultConfig())
 	return newBubbleTeaModel(
 		channels.InputReq,
 		channels.InputResp,

@@ -26,7 +26,7 @@ func TestGeminiProvider_FreeAPI_ListModels(t *testing.T) {
 	geminiClient := NewRealGeminiClient(genaiClient)
 
 	// Test NewGeminiProviderWithLatest
-	provider, err := NewGeminiProviderWithLatest(context.Background(), geminiClient)
+	provider, err := NewGeminiProviderWithLatest(context.Background(), nil, geminiClient)
 	assert.NoError(t, err)
 
 	// Verify it selected a model
@@ -137,7 +137,7 @@ func TestGeminiProvider_FreeAPI_NamingConventions(t *testing.T) {
 	}
 
 	// Verify our filtering works correctly
-	provider, err := NewGeminiProviderWithLatest(context.Background(), geminiClient)
+	provider, err := NewGeminiProviderWithLatest(context.Background(), nil, geminiClient)
 	assert.NoError(t, err)
 
 	filteredModels, err := provider.ListModels(context.Background())
