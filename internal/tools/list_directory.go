@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"sort"
 
+	"github.com/Cyclone1070/iav/internal/config"
 	"github.com/Cyclone1070/iav/internal/tools/models"
 	"github.com/Cyclone1070/iav/internal/tools/services"
 )
@@ -21,7 +22,12 @@ func ListDirectory(ctx context.Context, wCtx *models.WorkspaceContext, req model
 	if req.Offset < 0 {
 		return nil, models.ErrInvalidPaginationOffset
 	}
-	if req.Limit < 1 || req.Limit > models.MaxListDirectoryLimit {
+	maxLimit := config.DefaultConfig().Tools.MaxListDirectoryLimit
+	if wCtx.Config != nil {
+		maxLimit = wCtx.Config.Tools.MaxListDirectoryLimit
+	}
+
+	if req.Limit < 1 || req.Limit > maxLimit {
 		return nil, models.ErrInvalidPaginationLimit
 	}
 

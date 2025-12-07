@@ -9,7 +9,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// MockFileSystem implements FileSystem for testing
+// MockFileSystem implements FileSystem for testing.
+// NOTE: This is a minimal mock for config loading tests.
+// For comprehensive filesystem mocking, see internal/tools/services/test_mocks.go.
 type MockFileSystem struct {
 	HomeDir     string
 	HomeDirErr  error

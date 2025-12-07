@@ -9,13 +9,9 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/Cyclone1070/iav/internal/config"
 	"github.com/Cyclone1070/iav/internal/tools/models"
 	"github.com/Cyclone1070/iav/internal/tools/services"
-)
-
-const (
-	// maxFindFileResults is the hard limit for find results to prevent resource exhaustion.
-	maxFindFileResults = 10000
 )
 
 // FindFile searches for files matching a glob pattern within the workspace.
@@ -57,16 +53,31 @@ func FindFile(ctx context.Context, wCtx *models.WorkspaceContext, req models.Fin
 	// Validate and set defaults for pagination
 	limit := req.Limit
 	if limit == 0 {
-		limit = models.DefaultListDirectoryLimit
+		if wCtx.Config != nil {
+			limit = wCtx.Config.Tools.DefaultListDirectoryLimit
+		} else {
+			limit = config.DefaultConfig().Tools.DefaultListDirectoryLimit
+		}
 	}
-	if limit > models.MaxListDirectoryLimit {
-		limit = models.MaxListDirectoryLimit
+
+	maxLimit := config.DefaultConfig().Tools.MaxListDirectoryLimit
+	if wCtx.Config != nil {
+		maxLimit = wCtx.Config.Tools.MaxListDirectoryLimit
+	}
+	if limit > maxLimit {
+		limit = maxLimit
 	}
 	if limit < 0 {
 		return nil, models.ErrInvalidPaginationLimit
 	}
 
 	offset := max(req.Offset, 0)
+
+	// Get config values
+	maxResults := config.DefaultConfig().Tools.MaxFindFileResults
+	if wCtx.Config != nil {
+		maxResults = wCtx.Config.Tools.MaxFindFileResults
+	}
 
 	// Build fd command
 	// fd -g "pattern" searchPath --max-depth N [--no-ignore]
@@ -108,7 +119,7 @@ func FindFile(ctx context.Context, wCtx *models.WorkspaceContext, req models.Fin
 		allMatches = append(allMatches, relPath)
 
 		// Safety limit to prevent unbounded growth
-		if len(allMatches) >= maxFindFileResults {
+		if len(allMatches) >= maxResults {
 			break
 		}
 	}

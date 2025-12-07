@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Cyclone1070/iav/internal/config"
 	"github.com/Cyclone1070/iav/internal/tools/models"
 	"github.com/Cyclone1070/iav/internal/tools/services"
 )
@@ -25,12 +26,14 @@ func TestEditFile(t *testing.T) {
 		fs.CreateFile("/workspace/test.txt", originalContent, 0o644)
 
 		// Read file to populate cache
+		cfg := config.DefaultConfig()
+		cfg.Tools.MaxFileSize = maxFileSize
 		ctx := &models.WorkspaceContext{
 			FS:              fs,
 			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: checksumManager,
-			MaxFileSize:     maxFileSize,
 			WorkspaceRoot:   workspaceRoot,
+			Config:          cfg,
 		}
 
 		_, err := ReadFile(context.Background(), ctx, models.ReadFileRequest{Path: "test.txt"})
@@ -67,7 +70,6 @@ func TestEditFile(t *testing.T) {
 			FS:              fs,
 			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: checksumManager,
-			MaxFileSize:     maxFileSize,
 			WorkspaceRoot:   workspaceRoot,
 		}
 
@@ -121,7 +123,6 @@ func TestEditFile(t *testing.T) {
 			FS:              fs,
 			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: checksumManager,
-			MaxFileSize:     maxFileSize,
 			WorkspaceRoot:   workspaceRoot,
 		}
 
@@ -154,7 +155,6 @@ func TestEditFile(t *testing.T) {
 			FS:              fs,
 			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: checksumManager,
-			MaxFileSize:     maxFileSize,
 			WorkspaceRoot:   workspaceRoot,
 		}
 
@@ -187,7 +187,6 @@ func TestEditFile(t *testing.T) {
 			FS:              fs,
 			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: checksumManager,
-			MaxFileSize:     maxFileSize,
 			WorkspaceRoot:   workspaceRoot,
 		}
 
@@ -235,7 +234,6 @@ func TestEditFile(t *testing.T) {
 			FS:              fs,
 			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: checksumManager,
-			MaxFileSize:     maxFileSize,
 			WorkspaceRoot:   workspaceRoot,
 		}
 
@@ -271,7 +269,6 @@ func TestEditFile(t *testing.T) {
 			FS:              fs,
 			BinaryDetector:  detector,
 			ChecksumManager: checksumManager,
-			MaxFileSize:     maxFileSize,
 			WorkspaceRoot:   workspaceRoot,
 		}
 
@@ -300,7 +297,6 @@ func TestEditFile(t *testing.T) {
 			FS:              fs,
 			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: checksumManager,
-			MaxFileSize:     maxFileSize,
 			WorkspaceRoot:   workspaceRoot,
 		}
 
@@ -343,7 +339,6 @@ func TestEditFile(t *testing.T) {
 			FS:              fs,
 			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: checksumManager,
-			MaxFileSize:     maxFileSize,
 			WorkspaceRoot:   workspaceRoot,
 		}
 
@@ -373,7 +368,6 @@ func TestEditFile(t *testing.T) {
 			FS:              fs,
 			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: checksumManager,
-			MaxFileSize:     maxFileSize,
 			WorkspaceRoot:   workspaceRoot,
 		}
 
@@ -403,12 +397,14 @@ func TestEditFile(t *testing.T) {
 		content := append(prefix, middle...)
 		fs.CreateFile("/workspace/test.txt", content, 0644)
 
+		cfg := config.DefaultConfig()
+		cfg.Tools.MaxFileSize = maxFileSize
 		ctx := &models.WorkspaceContext{
 			FS:              fs,
 			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: checksumManager,
-			MaxFileSize:     maxFileSize,
 			WorkspaceRoot:   workspaceRoot,
+			Config:          cfg,
 		}
 
 		_, err := ReadFile(context.Background(), ctx, models.ReadFileRequest{Path: "test.txt"})
@@ -446,7 +442,6 @@ func TestEditFile(t *testing.T) {
 			FS:              fs,
 			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: checksumManager,
-			MaxFileSize:     maxFileSize,
 			WorkspaceRoot:   workspaceRoot,
 		}
 
@@ -488,7 +483,6 @@ func TestEditFile(t *testing.T) {
 			FS:              fs,
 			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: checksumManager,
-			MaxFileSize:     maxFileSize,
 			WorkspaceRoot:   workspaceRoot,
 		}
 
@@ -539,7 +533,6 @@ func TestEditFile(t *testing.T) {
 			FS:              fs,
 			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: checksumManager,
-			MaxFileSize:     maxFileSize,
 			WorkspaceRoot:   workspaceRoot,
 		}
 

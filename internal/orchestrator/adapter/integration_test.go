@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/Cyclone1070/iav/internal/config"
 	orchadapter "github.com/Cyclone1070/iav/internal/orchestrator/adapter"
 	"github.com/Cyclone1070/iav/internal/tools"
 	"github.com/Cyclone1070/iav/internal/tools/models"
@@ -26,12 +27,11 @@ func TestToolAdapter_ReadFile(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Create workspace context
-	fileSystem := services.NewOSFileSystem(models.DefaultMaxFileSize)
+	fileSystem := services.NewOSFileSystem(config.DefaultConfig().Tools.MaxFileSize)
 	ctx := &models.WorkspaceContext{
 		FS:              fileSystem,
 		BinaryDetector:  &services.SystemBinaryDetector{},
 		ChecksumManager: services.NewChecksumManager(),
-		MaxFileSize:     models.DefaultMaxFileSize,
 		WorkspaceRoot:   workspaceRoot,
 		CommandExecutor: &services.OSCommandExecutor{},
 	}
@@ -66,14 +66,13 @@ func TestToolAdapter_AllTools(t *testing.T) {
 
 	// Create workspace context
 	workspaceRoot := t.TempDir()
-	fileSystem := services.NewOSFileSystem(models.DefaultMaxFileSize)
+	fileSystem := services.NewOSFileSystem(config.DefaultConfig().Tools.MaxFileSize)
 	gitignoreSvc, _ := services.NewGitignoreService(workspaceRoot, fileSystem)
 
 	ctx := &models.WorkspaceContext{
 		FS:               fileSystem,
 		BinaryDetector:   &services.SystemBinaryDetector{},
 		ChecksumManager:  services.NewChecksumManager(),
-		MaxFileSize:      models.DefaultMaxFileSize,
 		WorkspaceRoot:    workspaceRoot,
 		GitignoreService: gitignoreSvc,
 		CommandExecutor:  &services.OSCommandExecutor{},
@@ -122,7 +121,7 @@ func TestToolAdapter_ErrorHandling(t *testing.T) {
 	// Create workspace context
 	workspaceRoot := t.TempDir()
 	ctx := &models.WorkspaceContext{
-		FS:              services.NewOSFileSystem(models.DefaultMaxFileSize),
+		FS:              services.NewOSFileSystem(config.DefaultConfig().Tools.MaxFileSize),
 		BinaryDetector:  &services.SystemBinaryDetector{},
 		ChecksumManager: services.NewChecksumManager(),
 		WorkspaceRoot:   workspaceRoot,

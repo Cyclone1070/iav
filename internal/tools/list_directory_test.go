@@ -27,7 +27,6 @@ func TestListDirectory(t *testing.T) {
 			FS:              fs,
 			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: services.NewChecksumManager(),
-			MaxFileSize:     maxFileSize,
 			WorkspaceRoot:   workspaceRoot,
 		}
 
@@ -78,7 +77,6 @@ func TestListDirectory(t *testing.T) {
 			FS:              fs,
 			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: services.NewChecksumManager(),
-			MaxFileSize:     maxFileSize,
 			WorkspaceRoot:   workspaceRoot,
 		}
 
@@ -114,7 +112,6 @@ func TestListDirectory(t *testing.T) {
 			FS:              fs,
 			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: services.NewChecksumManager(),
-			MaxFileSize:     maxFileSize,
 			WorkspaceRoot:   workspaceRoot,
 		}
 
@@ -137,7 +134,6 @@ func TestListDirectory(t *testing.T) {
 			FS:              fs,
 			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: services.NewChecksumManager(),
-			MaxFileSize:     maxFileSize,
 			WorkspaceRoot:   workspaceRoot,
 		}
 
@@ -161,7 +157,6 @@ func TestListDirectory(t *testing.T) {
 			FS:              fs,
 			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: services.NewChecksumManager(),
-			MaxFileSize:     maxFileSize,
 			WorkspaceRoot:   workspaceRoot,
 		}
 
@@ -179,7 +174,6 @@ func TestListDirectory(t *testing.T) {
 			FS:              fs,
 			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: services.NewChecksumManager(),
-			MaxFileSize:     maxFileSize,
 			WorkspaceRoot:   workspaceRoot,
 		}
 
@@ -204,7 +198,6 @@ func TestListDirectory(t *testing.T) {
 			FS:              fs,
 			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: services.NewChecksumManager(),
-			MaxFileSize:     maxFileSize,
 			WorkspaceRoot:   workspaceRoot,
 		}
 
@@ -227,7 +220,6 @@ func TestListDirectory(t *testing.T) {
 			FS:              fs,
 			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: services.NewChecksumManager(),
-			MaxFileSize:     maxFileSize,
 			WorkspaceRoot:   workspaceRoot,
 		}
 
@@ -251,7 +243,6 @@ func TestListDirectory(t *testing.T) {
 			FS:              fs,
 			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: services.NewChecksumManager(),
-			MaxFileSize:     maxFileSize,
 			WorkspaceRoot:   workspaceRoot,
 		}
 
@@ -274,7 +265,6 @@ func TestListDirectory(t *testing.T) {
 			FS:              fs,
 			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: services.NewChecksumManager(),
-			MaxFileSize:     maxFileSize,
 			WorkspaceRoot:   workspaceRoot,
 		}
 
@@ -298,7 +288,6 @@ func TestListDirectory(t *testing.T) {
 			FS:              fs,
 			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: services.NewChecksumManager(),
-			MaxFileSize:     maxFileSize,
 			WorkspaceRoot:   workspaceRoot,
 		}
 
@@ -357,7 +346,6 @@ func TestListDirectory(t *testing.T) {
 			FS:              fs,
 			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: services.NewChecksumManager(),
-			MaxFileSize:     maxFileSize,
 			WorkspaceRoot:   workspaceRoot,
 		}
 
@@ -399,7 +387,6 @@ func TestListDirectory(t *testing.T) {
 			FS:              fs,
 			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: services.NewChecksumManager(),
-			MaxFileSize:     maxFileSize,
 			WorkspaceRoot:   workspaceRoot,
 		}
 
@@ -438,7 +425,6 @@ func TestListDirectory_Pagination(t *testing.T) {
 			FS:              fs,
 			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: services.NewChecksumManager(),
-			MaxFileSize:     maxFileSize,
 			WorkspaceRoot:   workspaceRoot,
 		}
 
@@ -514,7 +500,6 @@ func TestListDirectory_InvalidPagination(t *testing.T) {
 		FS:              fs,
 		BinaryDetector:  services.NewMockBinaryDetector(),
 		ChecksumManager: services.NewChecksumManager(),
-		MaxFileSize:     maxFileSize,
 		WorkspaceRoot:   workspaceRoot,
 	}
 
@@ -555,7 +540,6 @@ func TestListDirectory_WithSymlinks(t *testing.T) {
 			FS:              fs,
 			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: services.NewChecksumManager(),
-			MaxFileSize:     maxFileSize,
 			WorkspaceRoot:   workspaceRoot,
 		}
 
@@ -599,7 +583,6 @@ func TestListDirectory_UnicodeFilenames(t *testing.T) {
 			FS:              fs,
 			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: services.NewChecksumManager(),
-			MaxFileSize:     maxFileSize,
 			WorkspaceRoot:   workspaceRoot,
 		}
 
@@ -660,7 +643,6 @@ func TestListDirectory_DotfilesWithGitignore(t *testing.T) {
 			FS:               fs,
 			BinaryDetector:   services.NewMockBinaryDetector(),
 			ChecksumManager:  services.NewChecksumManager(),
-			MaxFileSize:      maxFileSize,
 			WorkspaceRoot:    workspaceRoot,
 			GitignoreService: gitignoreService,
 		}
@@ -714,7 +696,6 @@ func TestListDirectory_DotfilesWithoutGitignore(t *testing.T) {
 			FS:               fs,
 			BinaryDetector:   services.NewMockBinaryDetector(),
 			ChecksumManager:  services.NewChecksumManager(),
-			MaxFileSize:      maxFileSize,
 			WorkspaceRoot:    workspaceRoot,
 			GitignoreService: nil, // No gitignore service
 		}
@@ -762,7 +743,6 @@ func TestListDirectory_LargeDirectory(t *testing.T) {
 			FS:              fs,
 			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: services.NewChecksumManager(),
-			MaxFileSize:     maxFileSize,
 			WorkspaceRoot:   workspaceRoot,
 		}
 
@@ -825,7 +805,6 @@ func TestListDirectory_OffsetBeyondEnd(t *testing.T) {
 			FS:              fs,
 			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: services.NewChecksumManager(),
-			MaxFileSize:     maxFileSize,
 			WorkspaceRoot:   workspaceRoot,
 		}
 
@@ -862,7 +841,6 @@ func TestListDirectory_Recursive(t *testing.T) {
 		FS:              fs,
 		BinaryDetector:  services.NewMockBinaryDetector(),
 		ChecksumManager: services.NewChecksumManager(),
-		MaxFileSize:     maxFileSize,
 		WorkspaceRoot:   workspaceRoot,
 	}
 
@@ -914,7 +892,6 @@ func TestListDirectory_RecursiveWithDepthLimit(t *testing.T) {
 		FS:              fs,
 		BinaryDetector:  services.NewMockBinaryDetector(),
 		ChecksumManager: services.NewChecksumManager(),
-		MaxFileSize:     maxFileSize,
 		WorkspaceRoot:   workspaceRoot,
 	}
 
@@ -955,7 +932,6 @@ func TestListDirectory_SymlinkLoop(t *testing.T) {
 		FS:              fs,
 		BinaryDetector:  services.NewMockBinaryDetector(),
 		ChecksumManager: services.NewChecksumManager(),
-		MaxFileSize:     maxFileSize,
 		WorkspaceRoot:   workspaceRoot,
 	}
 
@@ -991,7 +967,6 @@ func TestListDirectory_RecursivePagination(t *testing.T) {
 		FS:              fs,
 		BinaryDetector:  services.NewMockBinaryDetector(),
 		ChecksumManager: services.NewChecksumManager(),
-		MaxFileSize:     maxFileSize,
 		WorkspaceRoot:   workspaceRoot,
 	}
 
@@ -1029,7 +1004,6 @@ func TestListDirectory_NonRecursive(t *testing.T) {
 		FS:              fs,
 		BinaryDetector:  services.NewMockBinaryDetector(),
 		ChecksumManager: services.NewChecksumManager(),
-		MaxFileSize:     maxFileSize,
 		WorkspaceRoot:   workspaceRoot,
 	}
 

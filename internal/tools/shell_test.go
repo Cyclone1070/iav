@@ -11,17 +11,20 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Cyclone1070/iav/internal/config"
 	"github.com/Cyclone1070/iav/internal/tools/models"
 	"github.com/Cyclone1070/iav/internal/tools/services"
 )
 
 func TestShellTool_Run_SimpleCommand(t *testing.T) {
-	mockFS := services.NewMockFileSystem(models.DefaultMaxFileSize)
+	mockFS := services.NewMockFileSystem(config.DefaultConfig().Tools.MaxFileSize)
 	mockFS.CreateDir("/workspace")
 
 	wCtx := &models.WorkspaceContext{
-		WorkspaceRoot: "/workspace",
-		FS:            mockFS,
+		WorkspaceRoot:   "/workspace",
+		FS:              mockFS,
+		BinaryDetector:  &services.MockBinaryDetector{SampleSize: config.DefaultConfig().Tools.BinaryDetectionSampleSize},
+		CommandExecutor: &services.MockCommandExecutor{},
 	}
 
 	factory := &services.MockCommandExecutor{
@@ -56,13 +59,15 @@ func TestShellTool_Run_SimpleCommand(t *testing.T) {
 }
 
 func TestShellTool_Run_WorkingDir(t *testing.T) {
-	mockFS := services.NewMockFileSystem(models.DefaultMaxFileSize)
+	mockFS := services.NewMockFileSystem(config.DefaultConfig().Tools.MaxFileSize)
 	mockFS.CreateDir("/workspace")
 	mockFS.CreateDir("/workspace/subdir")
 
 	wCtx := &models.WorkspaceContext{
-		WorkspaceRoot: "/workspace",
-		FS:            mockFS,
+		WorkspaceRoot:   "/workspace",
+		FS:              mockFS,
+		BinaryDetector:  &services.MockBinaryDetector{SampleSize: config.DefaultConfig().Tools.BinaryDetectionSampleSize},
+		CommandExecutor: &services.MockCommandExecutor{},
 	}
 
 	var capturedDir string
@@ -92,12 +97,14 @@ func TestShellTool_Run_WorkingDir(t *testing.T) {
 }
 
 func TestShellTool_Run_Env(t *testing.T) {
-	mockFS := services.NewMockFileSystem(models.DefaultMaxFileSize)
+	mockFS := services.NewMockFileSystem(config.DefaultConfig().Tools.MaxFileSize)
 	mockFS.CreateDir("/workspace")
 
 	wCtx := &models.WorkspaceContext{
-		WorkspaceRoot: "/workspace",
-		FS:            mockFS,
+		WorkspaceRoot:   "/workspace",
+		FS:              mockFS,
+		BinaryDetector:  &services.MockBinaryDetector{SampleSize: config.DefaultConfig().Tools.BinaryDetectionSampleSize},
+		CommandExecutor: &services.MockCommandExecutor{},
 	}
 
 	var capturedEnv []string
@@ -143,12 +150,14 @@ func TestShellTool_Run_Env(t *testing.T) {
 }
 
 func TestShellTool_Run_EmptyCommand(t *testing.T) {
-	mockFS := services.NewMockFileSystem(models.DefaultMaxFileSize)
+	mockFS := services.NewMockFileSystem(config.DefaultConfig().Tools.MaxFileSize)
 	mockFS.CreateDir("/workspace")
 
 	wCtx := &models.WorkspaceContext{
-		WorkspaceRoot: "/workspace",
-		FS:            mockFS,
+		WorkspaceRoot:   "/workspace",
+		FS:              mockFS,
+		BinaryDetector:  &services.MockBinaryDetector{SampleSize: config.DefaultConfig().Tools.BinaryDetectionSampleSize},
+		CommandExecutor: &services.MockCommandExecutor{},
 	}
 
 	tool := &ShellTool{CommandExecutor: &services.MockCommandExecutor{}}
@@ -161,7 +170,7 @@ func TestShellTool_Run_EmptyCommand(t *testing.T) {
 }
 
 func TestShellTool_Run_EnvFiles(t *testing.T) {
-	mockFS := services.NewMockFileSystem(models.DefaultMaxFileSize)
+	mockFS := services.NewMockFileSystem(config.DefaultConfig().Tools.MaxFileSize)
 	mockFS.CreateDir("/workspace")
 
 	// Create env files
@@ -175,8 +184,10 @@ CACHE_URL=redis://localhost`
 	mockFS.CreateFile("/workspace/.env.local", []byte(envFile2Content), 0644)
 
 	wCtx := &models.WorkspaceContext{
-		WorkspaceRoot: "/workspace",
-		FS:            mockFS,
+		WorkspaceRoot:   "/workspace",
+		FS:              mockFS,
+		BinaryDetector:  &services.MockBinaryDetector{SampleSize: config.DefaultConfig().Tools.BinaryDetectionSampleSize},
+		CommandExecutor: &services.MockCommandExecutor{},
 	}
 
 	var capturedEnv []string
@@ -316,12 +327,14 @@ CACHE_URL=redis://localhost`
 }
 
 func TestShellTool_Run_OutsideWorkspace(t *testing.T) {
-	mockFS := services.NewMockFileSystem(models.DefaultMaxFileSize)
+	mockFS := services.NewMockFileSystem(config.DefaultConfig().Tools.MaxFileSize)
 	mockFS.CreateDir("/workspace")
 
 	wCtx := &models.WorkspaceContext{
-		WorkspaceRoot: "/workspace",
-		FS:            mockFS,
+		WorkspaceRoot:   "/workspace",
+		FS:              mockFS,
+		BinaryDetector:  &services.MockBinaryDetector{SampleSize: config.DefaultConfig().Tools.BinaryDetectionSampleSize},
+		CommandExecutor: &services.MockCommandExecutor{},
 	}
 
 	tool := &ShellTool{CommandExecutor: &services.MockCommandExecutor{}}
@@ -337,12 +350,14 @@ func TestShellTool_Run_OutsideWorkspace(t *testing.T) {
 }
 
 func TestShellTool_Run_NonZeroExit(t *testing.T) {
-	mockFS := services.NewMockFileSystem(models.DefaultMaxFileSize)
+	mockFS := services.NewMockFileSystem(config.DefaultConfig().Tools.MaxFileSize)
 	mockFS.CreateDir("/workspace")
 
 	wCtx := &models.WorkspaceContext{
-		WorkspaceRoot: "/workspace",
-		FS:            mockFS,
+		WorkspaceRoot:   "/workspace",
+		FS:              mockFS,
+		BinaryDetector:  &services.MockBinaryDetector{SampleSize: config.DefaultConfig().Tools.BinaryDetectionSampleSize},
+		CommandExecutor: &services.MockCommandExecutor{},
 	}
 
 	factory := &services.MockCommandExecutor{
@@ -369,12 +384,14 @@ func TestShellTool_Run_NonZeroExit(t *testing.T) {
 }
 
 func TestShellTool_Run_BinaryOutput(t *testing.T) {
-	mockFS := services.NewMockFileSystem(models.DefaultMaxFileSize)
+	mockFS := services.NewMockFileSystem(config.DefaultConfig().Tools.MaxFileSize)
 	mockFS.CreateDir("/workspace")
 
 	wCtx := &models.WorkspaceContext{
-		WorkspaceRoot: "/workspace",
-		FS:            mockFS,
+		WorkspaceRoot:   "/workspace",
+		FS:              mockFS,
+		BinaryDetector:  &services.MockBinaryDetector{SampleSize: config.DefaultConfig().Tools.BinaryDetectionSampleSize},
+		CommandExecutor: &services.MockCommandExecutor{},
 	}
 
 	binaryData := []byte{0x00, 0x01, 0x02, 0xFF, 0xFE}
@@ -398,12 +415,14 @@ func TestShellTool_Run_BinaryOutput(t *testing.T) {
 }
 
 func TestShellTool_Run_CommandInjection(t *testing.T) {
-	mockFS := services.NewMockFileSystem(models.DefaultMaxFileSize)
+	mockFS := services.NewMockFileSystem(config.DefaultConfig().Tools.MaxFileSize)
 	mockFS.CreateDir("/workspace")
 
 	wCtx := &models.WorkspaceContext{
-		WorkspaceRoot: "/workspace",
-		FS:            mockFS,
+		WorkspaceRoot:   "/workspace",
+		FS:              mockFS,
+		BinaryDetector:  &services.MockBinaryDetector{SampleSize: config.DefaultConfig().Tools.BinaryDetectionSampleSize},
+		CommandExecutor: &services.MockCommandExecutor{},
 	}
 
 	var capturedCommand []string
@@ -432,12 +451,14 @@ func TestShellTool_Run_CommandInjection(t *testing.T) {
 }
 
 func TestShellTool_Run_HugeOutput(t *testing.T) {
-	mockFS := services.NewMockFileSystem(models.DefaultMaxFileSize)
+	mockFS := services.NewMockFileSystem(config.DefaultConfig().Tools.MaxFileSize)
 	mockFS.CreateDir("/workspace")
 
 	wCtx := &models.WorkspaceContext{
-		WorkspaceRoot: "/workspace",
-		FS:            mockFS,
+		WorkspaceRoot:   "/workspace",
+		FS:              mockFS,
+		BinaryDetector:  &services.MockBinaryDetector{SampleSize: config.DefaultConfig().Tools.BinaryDetectionSampleSize},
+		CommandExecutor: &services.MockCommandExecutor{},
 	}
 
 	hugeData := make([]byte, 50*1024*1024)
@@ -462,18 +483,20 @@ func TestShellTool_Run_HugeOutput(t *testing.T) {
 	if !resp.Truncated {
 		t.Error("Expected Truncated=true for huge output")
 	}
-	if len(resp.Stdout) > int(models.DefaultMaxCommandOutputSize) {
-		t.Errorf("Output size %d exceeds limit %d", len(resp.Stdout), models.DefaultMaxCommandOutputSize)
+	if len(resp.Stdout) > int(config.DefaultConfig().Tools.DefaultMaxCommandOutputSize) {
+		t.Errorf("Output size %d exceeds limit %d", len(resp.Stdout), config.DefaultConfig().Tools.DefaultMaxCommandOutputSize)
 	}
 }
 
 func TestShellTool_Run_Timeout(t *testing.T) {
-	mockFS := services.NewMockFileSystem(models.DefaultMaxFileSize)
+	mockFS := services.NewMockFileSystem(config.DefaultConfig().Tools.MaxFileSize)
 	mockFS.CreateDir("/workspace")
 
 	wCtx := &models.WorkspaceContext{
-		WorkspaceRoot: "/workspace",
-		FS:            mockFS,
+		WorkspaceRoot:   "/workspace",
+		FS:              mockFS,
+		BinaryDetector:  &services.MockBinaryDetector{SampleSize: config.DefaultConfig().Tools.BinaryDetectionSampleSize},
+		CommandExecutor: &services.MockCommandExecutor{},
 	}
 
 	factory := &services.MockCommandExecutor{
@@ -507,12 +530,14 @@ func TestShellTool_Run_Timeout(t *testing.T) {
 }
 
 func TestShellTool_Run_DockerCheck(t *testing.T) {
-	mockFS := services.NewMockFileSystem(models.DefaultMaxFileSize)
+	mockFS := services.NewMockFileSystem(config.DefaultConfig().Tools.MaxFileSize)
 	mockFS.CreateDir("/workspace")
 
 	wCtx := &models.WorkspaceContext{
-		WorkspaceRoot: "/workspace",
-		FS:            mockFS,
+		WorkspaceRoot:   "/workspace",
+		FS:              mockFS,
+		BinaryDetector:  &services.MockBinaryDetector{SampleSize: config.DefaultConfig().Tools.BinaryDetectionSampleSize},
+		CommandExecutor: &services.MockCommandExecutor{},
 		DockerConfig: models.DockerConfig{
 			CheckCommand: []string{"docker", "info"},
 		},
@@ -547,12 +572,14 @@ func TestShellTool_Run_DockerCheck(t *testing.T) {
 }
 
 func TestShellTool_Run_EnvInjection(t *testing.T) {
-	mockFS := services.NewMockFileSystem(models.DefaultMaxFileSize)
+	mockFS := services.NewMockFileSystem(config.DefaultConfig().Tools.MaxFileSize)
 	mockFS.CreateDir("/workspace")
 
 	wCtx := &models.WorkspaceContext{
-		WorkspaceRoot: "/workspace",
-		FS:            mockFS,
+		WorkspaceRoot:   "/workspace",
+		FS:              mockFS,
+		BinaryDetector:  &services.MockBinaryDetector{SampleSize: config.DefaultConfig().Tools.BinaryDetectionSampleSize},
+		CommandExecutor: &services.MockCommandExecutor{},
 	}
 
 	var capturedEnv []string
@@ -582,12 +609,14 @@ func TestShellTool_Run_EnvInjection(t *testing.T) {
 }
 
 func TestShellTool_Run_ContextCancellation(t *testing.T) {
-	mockFS := services.NewMockFileSystem(models.DefaultMaxFileSize)
+	mockFS := services.NewMockFileSystem(config.DefaultConfig().Tools.MaxFileSize)
 	mockFS.CreateDir("/workspace")
 
 	wCtx := &models.WorkspaceContext{
-		WorkspaceRoot: "/workspace",
-		FS:            mockFS,
+		WorkspaceRoot:   "/workspace",
+		FS:              mockFS,
+		BinaryDetector:  &services.MockBinaryDetector{SampleSize: config.DefaultConfig().Tools.BinaryDetectionSampleSize},
+		CommandExecutor: &services.MockCommandExecutor{},
 	}
 
 	factory := &services.MockCommandExecutor{
@@ -628,12 +657,14 @@ func TestShellTool_Run_ContextCancellation(t *testing.T) {
 }
 
 func TestShellTool_Run_SpecificExitCode(t *testing.T) {
-	mockFS := services.NewMockFileSystem(models.DefaultMaxFileSize)
+	mockFS := services.NewMockFileSystem(config.DefaultConfig().Tools.MaxFileSize)
 	mockFS.CreateDir("/workspace")
 
 	wCtx := &models.WorkspaceContext{
-		WorkspaceRoot: "/workspace",
-		FS:            mockFS,
+		WorkspaceRoot:   "/workspace",
+		FS:              mockFS,
+		BinaryDetector:  &services.MockBinaryDetector{SampleSize: config.DefaultConfig().Tools.BinaryDetectionSampleSize},
+		CommandExecutor: &services.MockCommandExecutor{},
 	}
 
 	factory := &services.MockCommandExecutor{

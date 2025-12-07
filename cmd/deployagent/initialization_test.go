@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Cyclone1070/iav/internal/config"
 	providermodels "github.com/Cyclone1070/iav/internal/provider/models"
 	"github.com/Cyclone1070/iav/internal/testing/testhelpers"
 	"github.com/Cyclone1070/iav/internal/tools/models"
@@ -21,7 +22,7 @@ func TestMain_InitTools(t *testing.T) {
 
 	// Create workspace context
 	workspaceRoot := t.TempDir()
-	fileSystem := services.NewOSFileSystem(models.DefaultMaxFileSize)
+	fileSystem := services.NewOSFileSystem(config.DefaultConfig().Tools.MaxFileSize)
 	binaryDetector := &services.SystemBinaryDetector{}
 	checksumMgr := services.NewChecksumManager()
 	gitignoreSvc, _ := services.NewGitignoreService(workspaceRoot, fileSystem)
@@ -30,7 +31,6 @@ func TestMain_InitTools(t *testing.T) {
 		FS:               fileSystem,
 		BinaryDetector:   binaryDetector,
 		ChecksumManager:  checksumMgr,
-		MaxFileSize:      models.DefaultMaxFileSize,
 		WorkspaceRoot:    workspaceRoot,
 		GitignoreService: gitignoreSvc,
 		CommandExecutor:  &services.OSCommandExecutor{},

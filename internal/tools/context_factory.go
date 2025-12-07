@@ -35,15 +35,16 @@ func NewWorkspaceContextWithOptions(cfg *config.Config, workspaceRoot string, ma
 	}
 
 	return &models.WorkspaceContext{
-		Config:           cfg,
-		FS:               fs,
-		BinaryDetector:   &services.SystemBinaryDetector{SampleSize: cfg.Tools.BinaryDetectionSampleSize},
-		ChecksumManager:  services.NewChecksumManager(),
-		MaxFileSize:      maxFileSize,
+		Config:          cfg,
+		FS:              fs,
+		BinaryDetector:  &services.SystemBinaryDetector{SampleSize: cfg.Tools.BinaryDetectionSampleSize},
+		ChecksumManager: services.NewChecksumManager(),
+
 		WorkspaceRoot:    canonicalRoot,
 		GitignoreService: gitignoreSvc,
-		CommandExecutor:  &services.OSCommandExecutor{MaxOutputSize: cfg.Tools.DefaultMaxCommandOutputSize},
-		TodoStore:        NewInMemoryTodoStore(),
+		CommandExecutor:  &services.OSCommandExecutor{},
+
+		TodoStore: NewInMemoryTodoStore(),
 		DockerConfig: models.DockerConfig{
 			CheckCommand: []string{"docker", "info"},
 			// TODO(MVP): MacOS-specific. Linux uses systemd, Windows uses different command.

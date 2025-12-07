@@ -31,7 +31,6 @@ func TestFindFile_BasicGlob(t *testing.T) {
 		FS:              fs,
 		BinaryDetector:  services.NewMockBinaryDetector(),
 		ChecksumManager: services.NewChecksumManager(),
-		MaxFileSize:     maxFileSize,
 		WorkspaceRoot:   workspaceRoot,
 		CommandExecutor: mockRunner,
 	}
@@ -77,7 +76,6 @@ func TestFindFile_Pagination(t *testing.T) {
 		FS:              fs,
 		BinaryDetector:  services.NewMockBinaryDetector(),
 		ChecksumManager: services.NewChecksumManager(),
-		MaxFileSize:     maxFileSize,
 		WorkspaceRoot:   workspaceRoot,
 		CommandExecutor: mockRunner,
 	}
@@ -128,7 +126,6 @@ func TestFindFile_InvalidGlob(t *testing.T) {
 		FS:              fs,
 		BinaryDetector:  services.NewMockBinaryDetector(),
 		ChecksumManager: services.NewChecksumManager(),
-		MaxFileSize:     maxFileSize,
 		WorkspaceRoot:   workspaceRoot,
 		CommandExecutor: mockRunner,
 	}
@@ -150,7 +147,6 @@ func TestFindFile_PathOutsideWorkspace(t *testing.T) {
 		FS:              fs,
 		BinaryDetector:  services.NewMockBinaryDetector(),
 		ChecksumManager: services.NewChecksumManager(),
-		MaxFileSize:     maxFileSize,
 		WorkspaceRoot:   workspaceRoot,
 		CommandExecutor: &services.MockCommandExecutor{},
 	}
@@ -172,7 +168,6 @@ func TestFindFile_NonExistentPath(t *testing.T) {
 		FS:              fs,
 		BinaryDetector:  services.NewMockBinaryDetector(),
 		ChecksumManager: services.NewChecksumManager(),
-		MaxFileSize:     maxFileSize,
 		WorkspaceRoot:   workspaceRoot,
 		CommandExecutor: &services.MockCommandExecutor{},
 	}
@@ -194,7 +189,6 @@ func TestFindFile_NegativeLimit(t *testing.T) {
 		FS:              fs,
 		BinaryDetector:  services.NewMockBinaryDetector(),
 		ChecksumManager: services.NewChecksumManager(),
-		MaxFileSize:     maxFileSize,
 		WorkspaceRoot:   workspaceRoot,
 		CommandExecutor: &services.MockCommandExecutor{},
 	}
@@ -226,7 +220,6 @@ func TestFindFile_CommandFailure(t *testing.T) {
 		FS:              fs,
 		BinaryDetector:  services.NewMockBinaryDetector(),
 		ChecksumManager: services.NewChecksumManager(),
-		MaxFileSize:     maxFileSize,
 		WorkspaceRoot:   workspaceRoot,
 		CommandExecutor: mockRunner,
 	}
@@ -256,7 +249,6 @@ func TestFindFile_ShellInjection(t *testing.T) {
 		FS:              fs,
 		BinaryDetector:  services.NewMockBinaryDetector(),
 		ChecksumManager: services.NewChecksumManager(),
-		MaxFileSize:     maxFileSize,
 		WorkspaceRoot:   workspaceRoot,
 		CommandExecutor: mockRunner,
 	}
@@ -290,7 +282,6 @@ func TestFindFile_UnicodeFilenames(t *testing.T) {
 		FS:              fs,
 		BinaryDetector:  services.NewMockBinaryDetector(),
 		ChecksumManager: services.NewChecksumManager(),
-		MaxFileSize:     maxFileSize,
 		WorkspaceRoot:   workspaceRoot,
 		CommandExecutor: mockRunner,
 	}
@@ -348,7 +339,6 @@ func TestFindFile_DeeplyNested(t *testing.T) {
 		FS:              fs,
 		BinaryDetector:  services.NewMockBinaryDetector(),
 		ChecksumManager: services.NewChecksumManager(),
-		MaxFileSize:     maxFileSize,
 		WorkspaceRoot:   workspaceRoot,
 		CommandExecutor: mockRunner,
 	}
@@ -374,7 +364,6 @@ func TestFindFile_PatternTraversal(t *testing.T) {
 		FS:              fs,
 		BinaryDetector:  services.NewMockBinaryDetector(),
 		ChecksumManager: services.NewChecksumManager(),
-		MaxFileSize:     maxFileSize,
 		WorkspaceRoot:   workspaceRoot,
 		CommandExecutor: &services.MockCommandExecutor{},
 	}
@@ -396,7 +385,6 @@ func TestFindFile_AbsolutePattern(t *testing.T) {
 		FS:              fs,
 		BinaryDetector:  services.NewMockBinaryDetector(),
 		ChecksumManager: services.NewChecksumManager(),
-		MaxFileSize:     maxFileSize,
 		WorkspaceRoot:   workspaceRoot,
 		CommandExecutor: &services.MockCommandExecutor{},
 	}
@@ -425,7 +413,6 @@ func TestFindFile_NoMatches(t *testing.T) {
 		FS:              fs,
 		BinaryDetector:  services.NewMockBinaryDetector(),
 		ChecksumManager: services.NewChecksumManager(),
-		MaxFileSize:     maxFileSize,
 		WorkspaceRoot:   workspaceRoot,
 		CommandExecutor: mockRunner,
 	}
@@ -467,7 +454,6 @@ func TestFindFile_IncludeIgnored(t *testing.T) {
 		FS:              fs,
 		BinaryDetector:  services.NewMockBinaryDetector(),
 		ChecksumManager: services.NewChecksumManager(),
-		MaxFileSize:     maxFileSize,
 		WorkspaceRoot:   workspaceRoot,
 		CommandExecutor: mockRunner,
 	}

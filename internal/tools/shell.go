@@ -77,19 +77,20 @@ func (t *ShellTool) Run(ctx context.Context, wCtx *models.WorkspaceContext, req 
 		return nil, err
 	}
 
-	// Get binary detection sample size from workspace context
-	sampleSize := config.DefaultConfig().Tools.BinaryDetectionSampleSize // Default fallback
-	if detector, ok := wCtx.BinaryDetector.(*services.SystemBinaryDetector); ok {
-		sampleSize = detector.SampleSize
+
+	// Get binary detection sample size from config
+	sampleSize := config.DefaultConfig().Tools.BinaryDetectionSampleSize
+	if wCtx.Config != nil {
+		sampleSize = wCtx.Config.Tools.BinaryDetectionSampleSize
 	}
 
-	// Get max output size from workspace context
-	maxOutputSize := int(config.DefaultConfig().Tools.DefaultMaxCommandOutputSize) // Default fallback
-	if executor, ok := wCtx.CommandExecutor.(*services.OSCommandExecutor); ok {
-		maxOutputSize = int(executor.MaxOutputSize)
+	// Get max output size from config
+	maxOutputSize := config.DefaultConfig().Tools.DefaultMaxCommandOutputSize
+	if wCtx.Config != nil {
+		maxOutputSize = int64(wCtx.Config.Tools.DefaultMaxCommandOutputSize)
 	}
 
-	stdoutStr, stderrStr, truncated, _ := services.CollectProcessOutput(stdout, stderr, maxOutputSize, sampleSize)
+	stdoutStr, stderrStr, truncated, _ := services.CollectProcessOutput(stdout, stderr, int(maxOutputSize), sampleSize)
 
 	timeout := time.Duration(req.TimeoutSeconds) * time.Second
 	if timeout == 0 {

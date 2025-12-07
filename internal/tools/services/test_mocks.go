@@ -85,7 +85,8 @@ func (h *mockFileHandle) Close() error {
 	return nil
 }
 
-// MockFileSystem implements models.FileSystem with in-memory storage
+// MockFileSystem implements models.FileSystem with in-memory storage.
+// This is the comprehensive mock for tool tests.
 type MockFileSystem struct {
 	mu          sync.RWMutex
 	files       map[string][]byte          // path -> content

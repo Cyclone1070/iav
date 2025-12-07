@@ -9,6 +9,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/Cyclone1070/iav/internal/config"
 	orchadapter "github.com/Cyclone1070/iav/internal/orchestrator/adapter"
 	orchmodels "github.com/Cyclone1070/iav/internal/orchestrator/models"
 	pmodels "github.com/Cyclone1070/iav/internal/provider/models"
@@ -26,7 +27,7 @@ func TestOrchestratorProvider_ToolCallResponse(t *testing.T) {
 
 	// Create workspace context
 	workspaceRoot := t.TempDir()
-	fileSystem := services.NewOSFileSystem(models.DefaultMaxFileSize)
+	fileSystem := services.NewOSFileSystem(config.DefaultConfig().Tools.MaxFileSize)
 	binaryDetector := &services.SystemBinaryDetector{}
 	checksumMgr := services.NewChecksumManager()
 	gitignoreSvc, _ := services.NewGitignoreService(workspaceRoot, fileSystem)
@@ -35,7 +36,6 @@ func TestOrchestratorProvider_ToolCallResponse(t *testing.T) {
 		FS:               fileSystem,
 		BinaryDetector:   binaryDetector,
 		ChecksumManager:  checksumMgr,
-		MaxFileSize:      models.DefaultMaxFileSize,
 		WorkspaceRoot:    workspaceRoot,
 		GitignoreService: gitignoreSvc,
 		CommandExecutor:  &services.OSCommandExecutor{},
@@ -227,13 +227,16 @@ func TestOrchestratorProvider_ContextTruncation(t *testing.T) {
 
 	// Create workspace context
 	workspaceRoot := t.TempDir()
-	fileSystem := services.NewOSFileSystem(models.DefaultMaxFileSize)
-	ctx := &models.WorkspaceContext{
-		FS:              fileSystem,
-		BinaryDetector:  &services.SystemBinaryDetector{},
-		ChecksumManager: services.NewChecksumManager(),
-		MaxFileSize:     models.DefaultMaxFileSize,
+	fileSystem := services.NewOSFileSystem(config.DefaultConfig().Tools.MaxFileSize)
+	if err := fileSystem.EnsureDirs(workspaceRoot); err != nil {
+		t.Fatalf("Failed to create workspace: %v", err)
+	}
+
+	wCtx := &models.WorkspaceContext{
 		WorkspaceRoot:   workspaceRoot,
+		FS:              fileSystem,
+		BinaryDetector:  &services.SystemBinaryDetector{SampleSize: 4096},
+		ChecksumManager: services.NewChecksumManager(),
 		CommandExecutor: &services.OSCommandExecutor{},
 	}
 
@@ -264,7 +267,7 @@ func TestOrchestratorProvider_ContextTruncation(t *testing.T) {
 
 	// Create orchestrator with tools
 	toolList := []orchadapter.Tool{
-		orchadapter.NewListDirectory(ctx),
+		orchadapter.NewListDirectory(wCtx),
 	}
 
 	orch := New(nil, mockProvider, policyService, userInterface, toolList)

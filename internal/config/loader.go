@@ -19,14 +19,14 @@ type FileSystem interface {
 	ReadFile(path string) ([]byte, error)
 }
 
-// OSFileSystem implements FileSystem using the real OS
-type OSFileSystem struct{}
+// ConfigFileReader implements FileSystem using the real OS for config loading
+type ConfigFileReader struct{}
 
-func (OSFileSystem) UserHomeDir() (string, error) {
+func (ConfigFileReader) UserHomeDir() (string, error) {
 	return os.UserHomeDir()
 }
 
-func (OSFileSystem) ReadFile(path string) ([]byte, error) {
+func (ConfigFileReader) ReadFile(path string) ([]byte, error) {
 	return os.ReadFile(path)
 }
 
@@ -37,7 +37,7 @@ type Loader struct {
 
 // NewLoader creates a production Loader using the real filesystem
 func NewLoader() *Loader {
-	return &Loader{fs: OSFileSystem{}}
+	return &Loader{fs: ConfigFileReader{}}
 }
 
 // NewLoaderWithFS creates a Loader with a custom filesystem (for testing)
@@ -89,6 +89,8 @@ func (l *Loader) Load() (*Config, error) {
 }
 
 // mergeConfig merges src into dst, overriding non-zero values
+// NOTE: This function intentionally uses explicit field-by-field merging instead
+// of reflection. While verbose, this approach is type-safe, explicit, and performant.
 func mergeConfig(dst, src *Config) {
 	// Orchestrator
 	if src.Orchestrator.MaxTurns != 0 {

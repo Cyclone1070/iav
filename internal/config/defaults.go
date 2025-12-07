@@ -2,6 +2,8 @@ package config
 
 // Config holds all application configuration values.
 // Defaults are set in DefaultConfig() and can be overridden via dotfile.
+// NOTE: Zero values (0, false, "") in config files are treated as "unset" and
+// will NOT override defaults. Use explicit values (e.g. 1) if needed.
 type Config struct {
 	Orchestrator OrchestratorConfig `json:"orchestrator"`
 	Provider     ProviderConfig     `json:"provider"`
@@ -140,7 +142,7 @@ func DefaultConfig() *Config {
 				"make", "go", "npm", "yarn", "pip",
 			},
 			ShellDeny: []string{
-				"rm", "sudo", "chmod", "chown",
+				"sudo", "chmod", "chown",
 				"shutdown", "reboot", "halt",
 				"dd", "mkfs", "fdisk",
 			},

@@ -7,11 +7,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Cyclone1070/iav/internal/config"
 	"github.com/Cyclone1070/iav/internal/tools/models"
 )
 
 func TestExecuteWithTimeout_Success(t *testing.T) {
-	const testSampleSize = 4096
+
 	mock := &MockProcess{
 		WaitDelay: 10 * time.Millisecond,
 	}
@@ -98,7 +99,7 @@ func TestCollectProcessOutput(t *testing.T) {
 			stdoutReader := strings.NewReader(tt.stdout)
 			stderrReader := strings.NewReader(tt.stderr)
 
-			gotStdout, gotStderr, gotTruncated, err := CollectProcessOutput(stdoutReader, stderrReader, tt.maxBytes, testSampleSize)
+			gotStdout, gotStderr, gotTruncated, err := CollectProcessOutput(stdoutReader, stderrReader, tt.maxBytes, config.DefaultConfig().Tools.BinaryDetectionSampleSize)
 			if err != nil {
 				t.Fatalf("CollectProcessOutput() error = %v", err)
 			}
@@ -124,9 +125,12 @@ func TestCollectProcessOutput_Concurrent(t *testing.T) {
 	stdoutReader := strings.NewReader(largeStdout)
 	stderrReader := strings.NewReader(largeStderr)
 
-	gotStdout, gotStderr, _, err := CollectProcessOutput(stdoutReader, stderrReader, models.DefaultMaxCommandOutputSize, testSampleSize)
+	sampleSize := config.DefaultConfig().Tools.BinaryDetectionSampleSize
+
+	// Use config default for output size
+	gotStdout, gotStderr, _, err := CollectProcessOutput(stdoutReader, stderrReader, int(config.DefaultConfig().Tools.DefaultMaxCommandOutputSize), sampleSize)
 	if err != nil {
-		t.Fatalf("CollectProcessOutput() error = %v", err)
+		t.Fatalf("CollectProcessOutput failed: %v", err)
 	}
 
 	if gotStdout != largeStdout {
@@ -141,7 +145,7 @@ func TestCollectProcessOutput_SlowReader(t *testing.T) {
 	// Test with a slow reader to ensure goroutines complete
 	slowReader := &slowReader{data: []byte("slow data"), delay: 0}
 
-	gotStdout, gotStderr, _, err := CollectProcessOutput(slowReader, strings.NewReader(""), 1024, testSampleSize)
+	gotStdout, gotStderr, _, err := CollectProcessOutput(slowReader, strings.NewReader(""), 1024, config.DefaultConfig().Tools.BinaryDetectionSampleSize)
 	if err != nil {
 		t.Fatalf("CollectProcessOutput() error = %v", err)
 	}

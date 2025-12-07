@@ -88,6 +88,10 @@ func main() {
 	}
 
 	// Run interactive mode (blocks until exit)
+	// NOTE: We use context.Background() intentionally for TUI mode because:
+	// 1. The UI manages its own lifecycle via Ctrl+C / Quit messages
+	// 2. We don't need external cancellation in interactive mode
+	// TODO: For future headless/CI mode, accept a cancellable context and handle SIGTERM/SIGINT.
 	runInteractive(context.Background(), deps)
 }
 

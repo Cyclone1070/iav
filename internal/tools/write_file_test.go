@@ -6,6 +6,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/Cyclone1070/iav/internal/config"
 	"github.com/Cyclone1070/iav/internal/tools/models"
 	"github.com/Cyclone1070/iav/internal/tools/services"
 )
@@ -17,12 +18,14 @@ func TestWriteFile(t *testing.T) {
 	t.Run("create new file succeeds and updates cache", func(t *testing.T) {
 		fs := services.NewMockFileSystem(maxFileSize)
 		checksumManager := services.NewChecksumManager()
+		cfg := config.DefaultConfig()
+		cfg.Tools.MaxFileSize = maxFileSize
 		ctx := &models.WorkspaceContext{
 			FS:              fs,
 			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: checksumManager,
-			MaxFileSize:     maxFileSize,
 			WorkspaceRoot:   workspaceRoot,
+			Config:          cfg,
 		}
 
 		content := "test content"
@@ -63,7 +66,6 @@ func TestWriteFile(t *testing.T) {
 			FS:              fs,
 			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: checksumManager,
-			MaxFileSize:     maxFileSize,
 			WorkspaceRoot:   workspaceRoot,
 		}
 
@@ -83,7 +85,6 @@ func TestWriteFile(t *testing.T) {
 			FS:              fs,
 			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: checksumManager,
-			MaxFileSize:     maxFileSize,
 			WorkspaceRoot:   workspaceRoot,
 		}
 
@@ -96,12 +97,14 @@ func TestWriteFile(t *testing.T) {
 	t.Run("large content rejection", func(t *testing.T) {
 		fs := services.NewMockFileSystem(maxFileSize)
 		checksumManager := services.NewChecksumManager()
+		cfg := config.DefaultConfig()
+		cfg.Tools.MaxFileSize = maxFileSize
 		ctx := &models.WorkspaceContext{
 			FS:              fs,
 			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: checksumManager,
-			MaxFileSize:     maxFileSize,
 			WorkspaceRoot:   workspaceRoot,
+			Config:          cfg,
 		}
 
 		// Create content larger than limit
@@ -123,7 +126,6 @@ func TestWriteFile(t *testing.T) {
 			FS:              fs,
 			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: checksumManager,
-			MaxFileSize:     maxFileSize,
 			WorkspaceRoot:   workspaceRoot,
 		}
 
@@ -142,7 +144,6 @@ func TestWriteFile(t *testing.T) {
 			FS:              fs,
 			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: checksumManager,
-			MaxFileSize:     maxFileSize,
 			WorkspaceRoot:   workspaceRoot,
 		}
 
@@ -173,7 +174,6 @@ func TestWriteFile(t *testing.T) {
 			FS:              fs,
 			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: checksumManager,
-			MaxFileSize:     maxFileSize,
 			WorkspaceRoot:   workspaceRoot,
 		}
 
@@ -203,7 +203,6 @@ func TestWriteFile(t *testing.T) {
 			FS:              fs,
 			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: checksumManager,
-			MaxFileSize:     maxFileSize,
 			WorkspaceRoot:   workspaceRoot,
 		}
 
@@ -230,7 +229,6 @@ func TestWriteFile(t *testing.T) {
 			FS:              fs,
 			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: checksumManager,
-			MaxFileSize:     maxFileSize,
 			WorkspaceRoot:   workspaceRoot,
 		}
 
@@ -253,7 +251,6 @@ func TestWriteFile(t *testing.T) {
 			FS:              fs,
 			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: checksumManager,
-			MaxFileSize:     maxFileSize,
 			WorkspaceRoot:   workspaceRoot,
 		}
 
@@ -290,7 +287,6 @@ func TestWriteFile(t *testing.T) {
 			FS:              fs,
 			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: checksumManager,
-			MaxFileSize:     maxFileSize,
 			WorkspaceRoot:   workspaceRoot,
 		}
 
@@ -316,7 +312,6 @@ func TestAtomicWriteCrashScenarios(t *testing.T) {
 			FS:              fs,
 			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: checksumManager,
-			MaxFileSize:     maxFileSize,
 			WorkspaceRoot:   workspaceRoot,
 		}
 
@@ -348,7 +343,6 @@ func TestAtomicWriteCrashScenarios(t *testing.T) {
 			FS:              fs,
 			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: checksumManager,
-			MaxFileSize:     maxFileSize,
 			WorkspaceRoot:   workspaceRoot,
 		}
 
@@ -380,7 +374,6 @@ func TestAtomicWriteCrashScenarios(t *testing.T) {
 			FS:              fs,
 			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: checksumManager,
-			MaxFileSize:     maxFileSize,
 			WorkspaceRoot:   workspaceRoot,
 		}
 
@@ -412,7 +405,6 @@ func TestAtomicWriteCrashScenarios(t *testing.T) {
 			FS:              fs,
 			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: checksumManager,
-			MaxFileSize:     maxFileSize,
 			WorkspaceRoot:   workspaceRoot,
 		}
 
@@ -447,7 +439,6 @@ func TestAtomicWriteCrashScenarios(t *testing.T) {
 			FS:              fs,
 			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: checksumManager,
-			MaxFileSize:     maxFileSize,
 			WorkspaceRoot:   workspaceRoot,
 		}
 
@@ -490,7 +481,6 @@ func TestAtomicWriteCrashScenarios(t *testing.T) {
 			FS:              fs,
 			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: checksumManager,
-			MaxFileSize:     maxFileSize,
 			WorkspaceRoot:   workspaceRoot,
 		}
 
@@ -515,7 +505,6 @@ func TestAtomicWriteCrashScenarios(t *testing.T) {
 			FS:              fs,
 			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: checksumManager,
-			MaxFileSize:     maxFileSize,
 			WorkspaceRoot:   workspaceRoot,
 		}
 

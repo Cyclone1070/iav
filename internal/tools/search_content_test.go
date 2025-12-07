@@ -33,7 +33,6 @@ func TestSearchContent_BasicRegex(t *testing.T) {
 		FS:              fs,
 		BinaryDetector:  services.NewMockBinaryDetector(),
 		ChecksumManager: services.NewChecksumManager(),
-		MaxFileSize:     maxFileSize,
 		WorkspaceRoot:   workspaceRoot,
 		CommandExecutor: mockRunner,
 	}
@@ -82,7 +81,6 @@ func TestSearchContent_CaseInsensitive(t *testing.T) {
 		FS:              fs,
 		BinaryDetector:  services.NewMockBinaryDetector(),
 		ChecksumManager: services.NewChecksumManager(),
-		MaxFileSize:     maxFileSize,
 		WorkspaceRoot:   workspaceRoot,
 		CommandExecutor: mockRunner,
 	}
@@ -108,7 +106,6 @@ func TestSearchContent_PathOutsideWorkspace(t *testing.T) {
 		FS:              fs,
 		BinaryDetector:  services.NewMockBinaryDetector(),
 		ChecksumManager: services.NewChecksumManager(),
-		MaxFileSize:     maxFileSize,
 		WorkspaceRoot:   workspaceRoot,
 		CommandExecutor: &services.MockCommandExecutor{},
 	}
@@ -130,7 +127,6 @@ func TestSearchContent_EmptyQuery(t *testing.T) {
 		FS:              fs,
 		BinaryDetector:  services.NewMockBinaryDetector(),
 		ChecksumManager: services.NewChecksumManager(),
-		MaxFileSize:     maxFileSize,
 		WorkspaceRoot:   workspaceRoot,
 		CommandExecutor: &services.MockCommandExecutor{},
 	}
@@ -152,7 +148,6 @@ func TestSearchContent_HugeLimit(t *testing.T) {
 		FS:              fs,
 		BinaryDetector:  services.NewMockBinaryDetector(),
 		ChecksumManager: services.NewChecksumManager(),
-		MaxFileSize:     maxFileSize,
 		WorkspaceRoot:   workspaceRoot,
 		CommandExecutor: &services.MockCommandExecutor{},
 	}
@@ -184,7 +179,6 @@ func TestSearchContent_VeryLongLine(t *testing.T) {
 		FS:              fs,
 		BinaryDetector:  services.NewMockBinaryDetector(),
 		ChecksumManager: services.NewChecksumManager(),
-		MaxFileSize:     maxFileSize,
 		WorkspaceRoot:   workspaceRoot,
 		CommandExecutor: mockRunner,
 	}
@@ -231,7 +225,6 @@ func TestSearchContent_CommandInjection(t *testing.T) {
 		FS:              fs,
 		BinaryDetector:  services.NewMockBinaryDetector(),
 		ChecksumManager: services.NewChecksumManager(),
-		MaxFileSize:     maxFileSize,
 		WorkspaceRoot:   workspaceRoot,
 		CommandExecutor: mockRunner,
 	}
@@ -269,7 +262,6 @@ func TestSearchContent_NoMatches(t *testing.T) {
 		FS:              fs,
 		BinaryDetector:  services.NewMockBinaryDetector(),
 		ChecksumManager: services.NewChecksumManager(),
-		MaxFileSize:     maxFileSize,
 		WorkspaceRoot:   workspaceRoot,
 		CommandExecutor: mockRunner,
 	}
@@ -312,7 +304,6 @@ func TestSearchContent_Pagination(t *testing.T) {
 		FS:              fs,
 		BinaryDetector:  services.NewMockBinaryDetector(),
 		ChecksumManager: services.NewChecksumManager(),
-		MaxFileSize:     maxFileSize,
 		WorkspaceRoot:   workspaceRoot,
 		CommandExecutor: mockRunner,
 	}
@@ -363,7 +354,6 @@ func TestSearchContent_MultipleFiles(t *testing.T) {
 		FS:              fs,
 		BinaryDetector:  services.NewMockBinaryDetector(),
 		ChecksumManager: services.NewChecksumManager(),
-		MaxFileSize:     maxFileSize,
 		WorkspaceRoot:   workspaceRoot,
 		CommandExecutor: mockRunner,
 	}
@@ -412,7 +402,6 @@ invalid json line
 		FS:              fs,
 		BinaryDetector:  services.NewMockBinaryDetector(),
 		ChecksumManager: services.NewChecksumManager(),
-		MaxFileSize:     maxFileSize,
 		WorkspaceRoot:   workspaceRoot,
 		CommandExecutor: mockRunner,
 	}
@@ -449,7 +438,6 @@ func TestSearchContent_CommandFailure(t *testing.T) {
 		FS:              fs,
 		BinaryDetector:  services.NewMockBinaryDetector(),
 		ChecksumManager: services.NewChecksumManager(),
-		MaxFileSize:     maxFileSize,
 		WorkspaceRoot:   workspaceRoot,
 		CommandExecutor: mockRunner,
 	}
@@ -483,7 +471,6 @@ func TestSearchContent_IncludeIgnored(t *testing.T) {
 		FS:              fs,
 		BinaryDetector:  services.NewMockBinaryDetector(),
 		ChecksumManager: services.NewChecksumManager(),
-		MaxFileSize:     maxFileSize,
 		WorkspaceRoot:   workspaceRoot,
 		CommandExecutor: mockRunner,
 	}

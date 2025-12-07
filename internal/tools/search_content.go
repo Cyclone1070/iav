@@ -10,15 +10,9 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/Cyclone1070/iav/internal/config"
 	"github.com/Cyclone1070/iav/internal/tools/models"
 	"github.com/Cyclone1070/iav/internal/tools/services"
-)
-
-const (
-	// maxSearchContentResults is the hard limit for search results to prevent resource exhaustion.
-	maxSearchContentResults = 10000
-	// maxLineLength is the maximum length of a line before truncation.
-	maxLineLength = 10000
 )
 
 // SearchContent searches for content matching a regex pattern using ripgrep.
@@ -51,14 +45,36 @@ func SearchContent(ctx context.Context, wCtx *models.WorkspaceContext, req model
 
 	// Validate and set defaults for pagination
 	limit := req.Limit
+	// Default limit
 	if limit == 0 {
-		limit = models.DefaultListDirectoryLimit
+		if wCtx.Config != nil {
+			limit = wCtx.Config.Tools.DefaultListDirectoryLimit
+		} else {
+			limit = config.DefaultConfig().Tools.DefaultListDirectoryLimit
+		}
 	}
-	if limit < 1 || limit > models.MaxListDirectoryLimit {
+
+	// Validate limit
+	maxLimit := config.DefaultConfig().Tools.MaxListDirectoryLimit
+	if wCtx.Config != nil {
+		maxLimit = wCtx.Config.Tools.MaxListDirectoryLimit
+	}
+	if limit < 1 || limit > maxLimit {
 		return nil, models.ErrInvalidPaginationLimit
 	}
 
 	offset := max(req.Offset, 0)
+
+	// Get config values
+	maxLineLength := config.DefaultConfig().Tools.MaxLineLength
+	if wCtx.Config != nil {
+		maxLineLength = wCtx.Config.Tools.MaxLineLength
+	}
+
+	maxResults := config.DefaultConfig().Tools.MaxSearchContentResults
+	if wCtx.Config != nil {
+		maxResults = wCtx.Config.Tools.MaxSearchContentResults
+	}
 
 	// Build ripgrep command
 	// rg --json "query" searchPath [--no-ignore]
@@ -130,7 +146,6 @@ func SearchContent(ctx context.Context, wCtx *models.WorkspaceContext, req model
 		// Normalize to forward slashes
 		relPath = filepath.ToSlash(relPath)
 
-		// Truncate very long lines
 		lineContent := rgMatch.Data.Lines.Text
 		if len(lineContent) > maxLineLength {
 			lineContent = lineContent[:maxLineLength] + "... [truncated]"
@@ -143,7 +158,7 @@ func SearchContent(ctx context.Context, wCtx *models.WorkspaceContext, req model
 		})
 
 		// Hard limit to prevent resource exhaustion
-		if len(matches) >= maxSearchContentResults {
+		if len(matches) >= maxResults {
 			break
 		}
 	}

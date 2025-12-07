@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/Cyclone1070/iav/internal/config"
 	"github.com/Cyclone1070/iav/internal/tools/models"
 	"github.com/Cyclone1070/iav/internal/tools/services"
 )
@@ -18,12 +19,14 @@ func TestReadFile(t *testing.T) {
 		content := []byte("test content")
 		fs.CreateFile("/workspace/test.txt", content, 0644)
 
+		cfg := config.DefaultConfig()
+		cfg.Tools.MaxFileSize = maxFileSize
 		ctx := &models.WorkspaceContext{
 			FS:              fs,
 			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: checksumManager,
-			MaxFileSize:     maxFileSize,
 			WorkspaceRoot:   workspaceRoot,
+			Config:          cfg,
 		}
 
 		resp, err := ReadFile(context.Background(), ctx, models.ReadFileRequest{Path: "test.txt"})
@@ -55,7 +58,6 @@ func TestReadFile(t *testing.T) {
 			FS:              fs,
 			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: checksumManager,
-			MaxFileSize:     maxFileSize,
 			WorkspaceRoot:   workspaceRoot,
 		}
 
@@ -86,12 +88,14 @@ func TestReadFile(t *testing.T) {
 		content := []byte{0x00, 0x01, 0x02, 't', 'e', 's', 't'}
 		fs.CreateFile("/workspace/binary.bin", content, 0644)
 
+		cfg := config.DefaultConfig()
+		cfg.Tools.MaxFileSize = maxFileSize
 		ctx := &models.WorkspaceContext{
 			FS:              fs,
 			BinaryDetector:  detector,
 			ChecksumManager: checksumManager,
-			MaxFileSize:     maxFileSize,
 			WorkspaceRoot:   workspaceRoot,
+			Config:          cfg,
 		}
 
 		_, err := ReadFile(context.Background(), ctx, models.ReadFileRequest{Path: "binary.bin"})
@@ -107,12 +111,14 @@ func TestReadFile(t *testing.T) {
 		largeContent := make([]byte, maxFileSize+1)
 		fs.CreateFile("/workspace/large.txt", largeContent, 0644)
 
+		cfg := config.DefaultConfig()
+		cfg.Tools.MaxFileSize = maxFileSize
 		ctx := &models.WorkspaceContext{
 			FS:              fs,
 			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: checksumManager,
-			MaxFileSize:     maxFileSize,
 			WorkspaceRoot:   workspaceRoot,
+			Config:          cfg,
 		}
 
 		_, err := ReadFile(context.Background(), ctx, models.ReadFileRequest{Path: "large.txt"})
@@ -131,7 +137,6 @@ func TestReadFile(t *testing.T) {
 			FS:              fs,
 			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: checksumManager,
-			MaxFileSize:     maxFileSize,
 			WorkspaceRoot:   workspaceRoot,
 		}
 
@@ -152,7 +157,6 @@ func TestReadFile(t *testing.T) {
 			FS:              fs,
 			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: checksumManager,
-			MaxFileSize:     maxFileSize,
 			WorkspaceRoot:   workspaceRoot,
 		}
 
@@ -173,7 +177,6 @@ func TestReadFile(t *testing.T) {
 			FS:              fs,
 			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: checksumManager,
-			MaxFileSize:     maxFileSize,
 			WorkspaceRoot:   workspaceRoot,
 		}
 
@@ -196,7 +199,6 @@ func TestReadFile(t *testing.T) {
 			FS:              fs,
 			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: checksumManager,
-			MaxFileSize:     maxFileSize,
 			WorkspaceRoot:   workspaceRoot,
 		}
 
@@ -213,7 +215,6 @@ func TestReadFile(t *testing.T) {
 			FS:              fs,
 			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: checksumManager,
-			MaxFileSize:     maxFileSize,
 			WorkspaceRoot:   workspaceRoot,
 		}
 
@@ -233,7 +234,6 @@ func TestReadFile(t *testing.T) {
 			FS:              fs,
 			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: checksumManager,
-			MaxFileSize:     maxFileSize,
 			WorkspaceRoot:   workspaceRoot,
 		}
 

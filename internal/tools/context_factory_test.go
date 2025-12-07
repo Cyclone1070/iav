@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/Cyclone1070/iav/internal/config"
 	"github.com/Cyclone1070/iav/internal/tools/models"
 	"github.com/Cyclone1070/iav/internal/tools/services"
 )
@@ -22,7 +23,6 @@ func TestMultiContextIsolation(t *testing.T) {
 		FS:              fs1,
 		BinaryDetector:  services.NewMockBinaryDetector(),
 		ChecksumManager: checksumManager1,
-		MaxFileSize:     maxFileSize,
 		WorkspaceRoot:   "/workspace1",
 	}
 
@@ -30,7 +30,6 @@ func TestMultiContextIsolation(t *testing.T) {
 		FS:              fs2,
 		BinaryDetector:  services.NewMockBinaryDetector(),
 		ChecksumManager: checksumManager2,
-		MaxFileSize:     maxFileSize,
 		WorkspaceRoot:   "/workspace2",
 	}
 
@@ -104,12 +103,14 @@ func TestCustomFileSizeLimit(t *testing.T) {
 		fs := services.NewMockFileSystem(smallLimit)
 		checksumManager := services.NewChecksumManager()
 
+		cfg := config.DefaultConfig()
+		cfg.Tools.MaxFileSize = smallLimit
 		ctx := &models.WorkspaceContext{
 			FS:              fs,
 			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: checksumManager,
-			MaxFileSize:     smallLimit,
 			WorkspaceRoot:   workspaceRoot,
+			Config:          cfg,
 		}
 
 		// Create content that exceeds the limit
@@ -128,12 +129,14 @@ func TestCustomFileSizeLimit(t *testing.T) {
 		fs := services.NewMockFileSystem(largeLimit)
 		checksumManager := services.NewChecksumManager()
 
+		cfg := config.DefaultConfig()
+		cfg.Tools.MaxFileSize = largeLimit
 		ctx := &models.WorkspaceContext{
 			FS:              fs,
 			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: checksumManager,
-			MaxFileSize:     largeLimit,
 			WorkspaceRoot:   workspaceRoot,
+			Config:          cfg,
 		}
 
 		// Create content within the large limit but exceeding default
@@ -155,20 +158,24 @@ func TestCustomFileSizeLimit(t *testing.T) {
 		fs2 := services.NewMockFileSystem(largeLimit)
 		checksumManager2 := services.NewChecksumManager()
 
+		cfg1 := config.DefaultConfig()
+		cfg1.Tools.MaxFileSize = smallLimit
 		ctx1 := &models.WorkspaceContext{
 			FS:              fs1,
 			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: checksumManager1,
-			MaxFileSize:     smallLimit,
 			WorkspaceRoot:   workspaceRoot,
+			Config:          cfg1,
 		}
 
+		cfg2 := config.DefaultConfig()
+		cfg2.Tools.MaxFileSize = largeLimit
 		ctx2 := &models.WorkspaceContext{
 			FS:              fs2,
 			BinaryDetector:  services.NewMockBinaryDetector(),
 			ChecksumManager: checksumManager2,
-			MaxFileSize:     largeLimit,
 			WorkspaceRoot:   workspaceRoot,
+			Config:          cfg2,
 		}
 
 		// Content that fits in ctx2 but not ctx1
