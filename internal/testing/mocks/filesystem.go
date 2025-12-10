@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/Cyclone1070/iav/internal/tools/models"
 )
@@ -555,29 +554,19 @@ type MockProcess struct {
 	WaitFunc   func() error
 	KillFunc   func() error
 	SignalFunc func(sig os.Signal) error
-
-	// Fields for backward compatibility with process_test.go
-	WaitDelay    time.Duration
-	WaitError    error
-	KillCalled   bool
-	SignalCalled bool
 }
 
 func (p *MockProcess) Wait() error {
 	if p.WaitFunc != nil {
 		return p.WaitFunc()
 	}
-	if p.WaitDelay > 0 {
-		time.Sleep(p.WaitDelay)
-	}
-	return p.WaitError
+	return nil
 }
 
 func (p *MockProcess) Kill() error {
 	if p.KillFunc != nil {
 		return p.KillFunc()
 	}
-	p.KillCalled = true
 	return nil
 }
 
@@ -585,6 +574,5 @@ func (p *MockProcess) Signal(sig os.Signal) error {
 	if p.SignalFunc != nil {
 		return p.SignalFunc(sig)
 	}
-	p.SignalCalled = true
 	return nil
 }

@@ -7,9 +7,9 @@ import (
 	"testing"
 
 	"github.com/Cyclone1070/iav/internal/config"
+	"github.com/Cyclone1070/iav/internal/testing/mocks"
 	"github.com/Cyclone1070/iav/internal/tools/models"
 	"github.com/Cyclone1070/iav/internal/tools/services"
-	"github.com/Cyclone1070/iav/internal/testing/mocks"
 )
 
 func TestWriteFile(t *testing.T) {
@@ -125,9 +125,14 @@ func TestWriteFile(t *testing.T) {
 	t.Run("binary content rejection", func(t *testing.T) {
 		fs := mocks.NewMockFileSystem(maxFileSize)
 		checksumManager := services.NewChecksumManager()
+		detector := mocks.NewMockBinaryDetector()
+		detector.IsBinaryContentFunc = func(content []byte) bool {
+			return true
+		}
+
 		ctx := &models.WorkspaceContext{
 			FS:              fs,
-			BinaryDetector:  mocks.NewMockBinaryDetector(),
+			BinaryDetector:  detector,
 			ChecksumManager: checksumManager,
 			WorkspaceRoot:   workspaceRoot,
 			Config:          *config.DefaultConfig(),

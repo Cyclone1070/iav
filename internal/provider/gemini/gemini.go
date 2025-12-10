@@ -1,7 +1,7 @@
 package gemini
 
 import (
-	"context" // Added for fmt.Errorf
+	"context"
 	"fmt"
 	"regexp"
 	"slices"

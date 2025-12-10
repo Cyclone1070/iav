@@ -5,9 +5,9 @@ import (
 	"testing"
 
 	"github.com/Cyclone1070/iav/internal/config"
+	"github.com/Cyclone1070/iav/internal/testing/mocks"
 	"github.com/Cyclone1070/iav/internal/tools/models"
 	"github.com/Cyclone1070/iav/internal/tools/services"
-	"github.com/Cyclone1070/iav/internal/testing/mocks"
 )
 
 func TestReadFile(t *testing.T) {
@@ -85,6 +85,9 @@ func TestReadFile(t *testing.T) {
 		fs := mocks.NewMockFileSystem(maxFileSize)
 		checksumManager := services.NewChecksumManager()
 		detector := mocks.NewMockBinaryDetector()
+		detector.IsBinaryContentFunc = func(content []byte) bool {
+			return true
+		}
 
 		// Create file with null bytes (actual binary content)
 		content := []byte{0x00, 0x01, 0x02, 't', 'e', 's', 't'}

@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"io"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -15,7 +16,10 @@ import (
 func TestExecuteWithTimeout_Success(t *testing.T) {
 
 	mock := &mocks.MockProcess{
-		WaitDelay: 10 * time.Millisecond,
+		WaitFunc: func() error {
+			time.Sleep(10 * time.Millisecond)
+			return nil
+		},
 	}
 
 	err := ExecuteWithTimeout(context.Background(), 100*time.Millisecond, 2000, mock)
@@ -25,15 +29,23 @@ func TestExecuteWithTimeout_Success(t *testing.T) {
 }
 
 func TestExecuteWithTimeout_Fail(t *testing.T) {
+	signalCalled := false
 	mock := &mocks.MockProcess{
-		WaitDelay: 200 * time.Millisecond,
+		WaitFunc: func() error {
+			time.Sleep(200 * time.Millisecond)
+			return nil
+		},
+		SignalFunc: func(sig os.Signal) error {
+			signalCalled = true
+			return nil
+		},
 	}
 
 	err := ExecuteWithTimeout(context.Background(), 50*time.Millisecond, 2000, mock)
 	if err != models.ErrShellTimeout {
 		t.Errorf("Error = %v, want ErrShellTimeout", err)
 	}
-	if !mock.SignalCalled {
+	if !signalCalled {
 		t.Error("Signal (SIGTERM) not called")
 	}
 }

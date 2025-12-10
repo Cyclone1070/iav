@@ -50,9 +50,6 @@ func NewLoaderWithFS(fs FileSystem) *Loader {
 // Returns default config if dotfile doesn't exist.
 // Returns error only for parse errors, permission issues, or validation failures.
 //
-// LIMITATION: Zero values (0, false, "") in the config file are treated as "not set"
-// and will NOT override defaults. To disable a feature, use validation-passing minimum
-// values (e.g., 1 instead of 0). This is a known limitation of the merge strategy.
 // Load reads configuration from ~/.config/iav/config.json
 // and merges it with defaults. Dotfile values override defaults.
 // Returns default config if dotfile doesn't exist.
