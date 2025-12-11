@@ -9,16 +9,15 @@ import (
 	"testing"
 
 	"github.com/Cyclone1070/iav/internal/config"
+	"github.com/Cyclone1070/iav/internal/testing/mocks"
 	"github.com/Cyclone1070/iav/internal/tools/models"
 	"github.com/Cyclone1070/iav/internal/tools/services"
-	"github.com/Cyclone1070/iav/internal/testing/mocks"
 )
 
 func TestSearchContent_BasicRegex(t *testing.T) {
 	workspaceRoot := "/workspace"
-	maxFileSize := int64(1024 * 1024)
 
-	fs := mocks.NewMockFileSystem(maxFileSize)
+	fs := mocks.NewMockFileSystem()
 	fs.CreateDir("/workspace")
 
 	// Simulate rg JSON output
@@ -63,9 +62,8 @@ func TestSearchContent_BasicRegex(t *testing.T) {
 
 func TestSearchContent_CaseInsensitive(t *testing.T) {
 	workspaceRoot := "/workspace"
-	maxFileSize := int64(1024 * 1024)
 
-	fs := mocks.NewMockFileSystem(maxFileSize)
+	fs := mocks.NewMockFileSystem()
 	fs.CreateDir("/workspace")
 
 	var capturedCmd []string
@@ -101,9 +99,8 @@ func TestSearchContent_CaseInsensitive(t *testing.T) {
 
 func TestSearchContent_PathOutsideWorkspace(t *testing.T) {
 	workspaceRoot := "/workspace"
-	maxFileSize := int64(1024 * 1024)
 
-	fs := mocks.NewMockFileSystem(maxFileSize)
+	fs := mocks.NewMockFileSystem()
 	fs.CreateDir("/workspace")
 
 	ctx := &models.WorkspaceContext{
@@ -123,9 +120,8 @@ func TestSearchContent_PathOutsideWorkspace(t *testing.T) {
 
 func TestSearchContent_VeryLongLine(t *testing.T) {
 	workspaceRoot := "/workspace"
-	maxFileSize := int64(1024 * 1024)
 
-	fs := mocks.NewMockFileSystem(maxFileSize)
+	fs := mocks.NewMockFileSystem()
 	fs.CreateDir("/workspace")
 
 	// Create a very long line (1MB)
@@ -168,9 +164,8 @@ func TestSearchContent_VeryLongLine(t *testing.T) {
 
 func TestSearchContent_CommandInjection(t *testing.T) {
 	workspaceRoot := "/workspace"
-	maxFileSize := int64(1024 * 1024)
 
-	fs := mocks.NewMockFileSystem(maxFileSize)
+	fs := mocks.NewMockFileSystem()
 	fs.CreateDir("/workspace")
 
 	var capturedCmd []string
@@ -207,9 +202,8 @@ func TestSearchContent_CommandInjection(t *testing.T) {
 
 func TestSearchContent_NoMatches(t *testing.T) {
 	workspaceRoot := "/workspace"
-	maxFileSize := int64(1024 * 1024)
 
-	fs := mocks.NewMockFileSystem(maxFileSize)
+	fs := mocks.NewMockFileSystem()
 	fs.CreateDir("/workspace")
 
 	mockRunner := &mocks.MockCommandExecutor{
@@ -248,9 +242,8 @@ func TestSearchContent_NoMatches(t *testing.T) {
 
 func TestSearchContent_Pagination(t *testing.T) {
 	workspaceRoot := "/workspace"
-	maxFileSize := int64(1024 * 1024)
 
-	fs := mocks.NewMockFileSystem(maxFileSize)
+	fs := mocks.NewMockFileSystem()
 	fs.CreateDir("/workspace")
 
 	// Simulate 10 matches
@@ -301,9 +294,8 @@ func TestSearchContent_Pagination(t *testing.T) {
 
 func TestSearchContent_MultipleFiles(t *testing.T) {
 	workspaceRoot := "/workspace"
-	maxFileSize := int64(1024 * 1024)
 
-	fs := mocks.NewMockFileSystem(maxFileSize)
+	fs := mocks.NewMockFileSystem()
 	fs.CreateDir("/workspace")
 
 	// Simulate matches from multiple files
@@ -350,9 +342,8 @@ func TestSearchContent_MultipleFiles(t *testing.T) {
 
 func TestSearchContent_InvalidJSON(t *testing.T) {
 	workspaceRoot := "/workspace"
-	maxFileSize := int64(1024 * 1024)
 
-	fs := mocks.NewMockFileSystem(maxFileSize)
+	fs := mocks.NewMockFileSystem()
 	fs.CreateDir("/workspace")
 
 	// Mix valid and invalid JSON
@@ -388,9 +379,8 @@ invalid json line
 
 func TestSearchContent_CommandFailure(t *testing.T) {
 	workspaceRoot := "/workspace"
-	maxFileSize := int64(1024 * 1024)
 
-	fs := mocks.NewMockFileSystem(maxFileSize)
+	fs := mocks.NewMockFileSystem()
 	fs.CreateDir("/workspace")
 
 	mockRunner := &mocks.MockCommandExecutor{
@@ -419,9 +409,8 @@ func TestSearchContent_CommandFailure(t *testing.T) {
 }
 func TestSearchContent_IncludeIgnored(t *testing.T) {
 	workspaceRoot := "/workspace"
-	maxFileSize := int64(1024 * 1024)
 
-	fs := mocks.NewMockFileSystem(maxFileSize)
+	fs := mocks.NewMockFileSystem()
 	fs.CreateDir("/workspace")
 
 	// Test with includeIgnored=false (default behavior, should respect gitignore)
@@ -498,9 +487,8 @@ func TestSearchContent_IncludeIgnored(t *testing.T) {
 
 func TestSearchContent_LimitValidation(t *testing.T) {
 	workspaceRoot := "/workspace"
-	maxFileSize := int64(1024 * 1024)
 
-	fs := mocks.NewMockFileSystem(maxFileSize)
+	fs := mocks.NewMockFileSystem()
 	fs.CreateDir("/workspace")
 
 	mockRunner := &mocks.MockCommandExecutor{
@@ -556,7 +544,7 @@ func TestSearchContent_LimitValidation(t *testing.T) {
 
 func TestSearchContent_OffsetValidation(t *testing.T) {
 	workspaceRoot := "/workspace"
-	fs := mocks.NewMockFileSystem(1024 * 1024)
+	fs := mocks.NewMockFileSystem()
 	fs.CreateDir("/workspace")
 
 	mockRunner := &mocks.MockCommandExecutor{

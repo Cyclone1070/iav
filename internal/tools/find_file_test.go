@@ -16,9 +16,8 @@ import (
 
 func TestFindFile_BasicGlob(t *testing.T) {
 	workspaceRoot := "/workspace"
-	maxFileSize := int64(1024 * 1024)
 
-	fs := mocks.NewMockFileSystem(maxFileSize)
+	fs := mocks.NewMockFileSystem()
 	fs.CreateDir("/workspace")
 
 	mockRunner := &mocks.MockCommandExecutor{
@@ -58,9 +57,8 @@ func TestFindFile_BasicGlob(t *testing.T) {
 
 func TestFindFile_Pagination(t *testing.T) {
 	workspaceRoot := "/workspace"
-	maxFileSize := int64(1024 * 1024)
 
-	fs := mocks.NewMockFileSystem(maxFileSize)
+	fs := mocks.NewMockFileSystem()
 	fs.CreateDir("/workspace")
 
 	// Simulate 10 files
@@ -110,9 +108,8 @@ func TestFindFile_Pagination(t *testing.T) {
 
 func TestFindFile_InvalidGlob(t *testing.T) {
 	workspaceRoot := "/workspace"
-	maxFileSize := int64(1024 * 1024)
 
-	fs := mocks.NewMockFileSystem(maxFileSize)
+	fs := mocks.NewMockFileSystem()
 	fs.CreateDir("/workspace")
 
 	mockRunner := &mocks.MockCommandExecutor{
@@ -143,9 +140,8 @@ func TestFindFile_InvalidGlob(t *testing.T) {
 
 func TestFindFile_PathOutsideWorkspace(t *testing.T) {
 	workspaceRoot := "/workspace"
-	maxFileSize := int64(1024 * 1024)
 
-	fs := mocks.NewMockFileSystem(maxFileSize)
+	fs := mocks.NewMockFileSystem()
 	fs.CreateDir("/workspace")
 
 	ctx := &models.WorkspaceContext{
@@ -165,9 +161,8 @@ func TestFindFile_PathOutsideWorkspace(t *testing.T) {
 
 func TestFindFile_NonExistentPath(t *testing.T) {
 	workspaceRoot := "/workspace"
-	maxFileSize := int64(1024 * 1024)
 
-	fs := mocks.NewMockFileSystem(maxFileSize)
+	fs := mocks.NewMockFileSystem()
 	fs.CreateDir("/workspace")
 
 	ctx := &models.WorkspaceContext{
@@ -187,9 +182,8 @@ func TestFindFile_NonExistentPath(t *testing.T) {
 
 func TestFindFile_CommandFailure(t *testing.T) {
 	workspaceRoot := "/workspace"
-	maxFileSize := int64(1024 * 1024)
 
-	fs := mocks.NewMockFileSystem(maxFileSize)
+	fs := mocks.NewMockFileSystem()
 	fs.CreateDir("/workspace")
 
 	mockRunner := &mocks.MockCommandExecutor{
@@ -219,9 +213,8 @@ func TestFindFile_CommandFailure(t *testing.T) {
 
 func TestFindFile_ShellInjection(t *testing.T) {
 	workspaceRoot := "/workspace"
-	maxFileSize := int64(1024 * 1024)
 
-	fs := mocks.NewMockFileSystem(maxFileSize)
+	fs := mocks.NewMockFileSystem()
 	fs.CreateDir("/workspace")
 
 	var capturedCmd []string
@@ -254,9 +247,8 @@ func TestFindFile_ShellInjection(t *testing.T) {
 
 func TestFindFile_UnicodeFilenames(t *testing.T) {
 	workspaceRoot := "/workspace"
-	maxFileSize := int64(1024 * 1024)
 
-	fs := mocks.NewMockFileSystem(maxFileSize)
+	fs := mocks.NewMockFileSystem()
 	fs.CreateDir("/workspace")
 
 	mockRunner := &mocks.MockCommandExecutor{
@@ -306,9 +298,8 @@ func TestFindFile_UnicodeFilenames(t *testing.T) {
 
 func TestFindFile_DeeplyNested(t *testing.T) {
 	workspaceRoot := "/workspace"
-	maxFileSize := int64(1024 * 1024)
 
-	fs := mocks.NewMockFileSystem(maxFileSize)
+	fs := mocks.NewMockFileSystem()
 	fs.CreateDir("/workspace")
 
 	// Simulate path with 100 segments
@@ -345,9 +336,8 @@ func TestFindFile_DeeplyNested(t *testing.T) {
 
 func TestFindFile_NoMatches(t *testing.T) {
 	workspaceRoot := "/workspace"
-	maxFileSize := int64(1024 * 1024)
 
-	fs := mocks.NewMockFileSystem(maxFileSize)
+	fs := mocks.NewMockFileSystem()
 	fs.CreateDir("/workspace")
 
 	mockRunner := &mocks.MockCommandExecutor{
@@ -381,9 +371,8 @@ func TestFindFile_NoMatches(t *testing.T) {
 }
 func TestFindFile_IncludeIgnored(t *testing.T) {
 	workspaceRoot := "/workspace"
-	maxFileSize := int64(1024 * 1024)
 
-	fs := mocks.NewMockFileSystem(maxFileSize)
+	fs := mocks.NewMockFileSystem()
 	fs.CreateDir("/workspace")
 
 	// Test with includeIgnored=false (default behavior, should respect gitignore)
@@ -459,9 +448,8 @@ func TestFindFile_IncludeIgnored(t *testing.T) {
 
 func TestFindFile_LimitValidation(t *testing.T) {
 	workspaceRoot := "/workspace"
-	maxFileSize := int64(1024 * 1024)
 
-	fs := mocks.NewMockFileSystem(maxFileSize)
+	fs := mocks.NewMockFileSystem()
 	fs.CreateDir("/workspace")
 
 	mockRunner := &mocks.MockCommandExecutor{

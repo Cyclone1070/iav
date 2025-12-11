@@ -27,7 +27,7 @@ func TestToolAdapter_ReadFile(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Create workspace context
-	fileSystem := services.NewOSFileSystem(config.DefaultConfig().Tools.MaxFileSize)
+	fileSystem := services.NewOSFileSystem()
 	ctx := &models.WorkspaceContext{
 		Config:          *config.DefaultConfig(),
 		FS:              fileSystem,
@@ -67,7 +67,7 @@ func TestToolAdapter_AllTools(t *testing.T) {
 
 	// Create workspace context
 	workspaceRoot := t.TempDir()
-	fileSystem := services.NewOSFileSystem(config.DefaultConfig().Tools.MaxFileSize)
+	fileSystem := services.NewOSFileSystem()
 	gitignoreSvc, _ := services.NewGitignoreService(workspaceRoot, fileSystem)
 
 	ctx := &models.WorkspaceContext{
@@ -124,7 +124,7 @@ func TestToolAdapter_ErrorHandling(t *testing.T) {
 	workspaceRoot := t.TempDir()
 	ctx := &models.WorkspaceContext{
 		Config:          *config.DefaultConfig(),
-		FS:              services.NewOSFileSystem(config.DefaultConfig().Tools.MaxFileSize),
+		FS:              services.NewOSFileSystem(),
 		BinaryDetector:  &services.SystemBinaryDetector{},
 		ChecksumManager: services.NewChecksumManager(),
 		WorkspaceRoot:   workspaceRoot,

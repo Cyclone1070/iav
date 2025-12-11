@@ -21,7 +21,7 @@ func TestEditFile(t *testing.T) {
 	maxFileSize := int64(1024 * 1024) // 1MB
 
 	t.Run("conflict detection when cache checksum differs", func(t *testing.T) {
-		fs := mocks.NewMockFileSystem(maxFileSize)
+		fs := mocks.NewMockFileSystem()
 		checksumManager := services.NewChecksumManager()
 		originalContent := []byte("original content")
 		fs.CreateFile("/workspace/test.txt", originalContent, 0o644)
@@ -62,7 +62,7 @@ func TestEditFile(t *testing.T) {
 	})
 
 	t.Run("multiple operations", func(t *testing.T) {
-		fs := mocks.NewMockFileSystem(maxFileSize)
+		fs := mocks.NewMockFileSystem()
 		checksumManager := services.NewChecksumManager()
 		content := []byte("line1\nline2\nline3")
 		fs.CreateFile("/workspace/test.txt", content, 0644)
@@ -116,7 +116,7 @@ func TestEditFile(t *testing.T) {
 	})
 
 	t.Run("snippet not found", func(t *testing.T) {
-		fs := mocks.NewMockFileSystem(maxFileSize)
+		fs := mocks.NewMockFileSystem()
 		checksumManager := services.NewChecksumManager()
 		content := []byte("test content")
 		fs.CreateFile("/workspace/test.txt", content, 0644)
@@ -149,7 +149,7 @@ func TestEditFile(t *testing.T) {
 	})
 
 	t.Run("expected replacements mismatch", func(t *testing.T) {
-		fs := mocks.NewMockFileSystem(maxFileSize)
+		fs := mocks.NewMockFileSystem()
 		checksumManager := services.NewChecksumManager()
 		content := []byte("test test test")
 		fs.CreateFile("/workspace/test.txt", content, 0644)
@@ -182,7 +182,7 @@ func TestEditFile(t *testing.T) {
 	})
 
 	t.Run("default ExpectedReplacements to 1 when omitted", func(t *testing.T) {
-		fs := mocks.NewMockFileSystem(maxFileSize)
+		fs := mocks.NewMockFileSystem()
 		checksumManager := services.NewChecksumManager()
 		content := []byte("replace me")
 		fs.CreateFile("/workspace/test.txt", content, 0644)
@@ -230,7 +230,7 @@ func TestEditFile(t *testing.T) {
 	})
 
 	t.Run("default ExpectedReplacements fails on multiple matches", func(t *testing.T) {
-		fs := mocks.NewMockFileSystem(maxFileSize)
+		fs := mocks.NewMockFileSystem()
 		checksumManager := services.NewChecksumManager()
 		content := []byte("test test")
 		fs.CreateFile("/workspace/test.txt", content, 0644)
@@ -263,7 +263,7 @@ func TestEditFile(t *testing.T) {
 	})
 
 	t.Run("binary file rejection", func(t *testing.T) {
-		fs := mocks.NewMockFileSystem(maxFileSize)
+		fs := mocks.NewMockFileSystem()
 		checksumManager := services.NewChecksumManager()
 		detector := mocks.NewMockBinaryDetector()
 		detector.IsBinaryContentFunc = func(content []byte) bool {
@@ -297,7 +297,7 @@ func TestEditFile(t *testing.T) {
 	})
 
 	t.Run("permission preservation", func(t *testing.T) {
-		fs := mocks.NewMockFileSystem(maxFileSize)
+		fs := mocks.NewMockFileSystem()
 		checksumManager := services.NewChecksumManager()
 		originalPerm := os.FileMode(0755)
 		content := []byte("test content")
@@ -341,7 +341,7 @@ func TestEditFile(t *testing.T) {
 	})
 
 	t.Run("file not found", func(t *testing.T) {
-		fs := mocks.NewMockFileSystem(maxFileSize)
+		fs := mocks.NewMockFileSystem()
 		checksumManager := services.NewChecksumManager()
 		ctx := &models.WorkspaceContext{
 			FS:              fs,
@@ -366,7 +366,7 @@ func TestEditFile(t *testing.T) {
 	})
 
 	t.Run("large content after edit", func(t *testing.T) {
-		fs := mocks.NewMockFileSystem(maxFileSize)
+		fs := mocks.NewMockFileSystem()
 		checksumManager := services.NewChecksumManager()
 		// Create file with unique marker just under limit
 		prefix := []byte("UNIQUE_MARKER_12345")
@@ -413,7 +413,7 @@ func TestEditFile(t *testing.T) {
 	})
 
 	t.Run("race condition detection - file modified between read and write", func(t *testing.T) {
-		fs := mocks.NewMockFileSystem(maxFileSize)
+		fs := mocks.NewMockFileSystem()
 		checksumManager := services.NewChecksumManager()
 		originalContent := []byte("original content")
 		fs.CreateFile("/workspace/test.txt", originalContent, 0o644)
@@ -452,7 +452,7 @@ func TestEditFile(t *testing.T) {
 	})
 
 	t.Run("edit through symlink chain inside workspace", func(t *testing.T) {
-		fs := mocks.NewMockFileSystem(maxFileSize)
+		fs := mocks.NewMockFileSystem()
 		checksumManager := services.NewChecksumManager()
 		// Create symlink chain: link1 -> link2 -> target.txt
 		fs.CreateSymlink("/workspace/link1", "/workspace/link2")
@@ -503,7 +503,7 @@ func TestEditFile(t *testing.T) {
 	})
 
 	t.Run("edit through symlink chain escaping workspace", func(t *testing.T) {
-		fs := mocks.NewMockFileSystem(maxFileSize)
+		fs := mocks.NewMockFileSystem()
 		checksumManager := services.NewChecksumManager()
 		// Create chain: link1 -> link2 -> /tmp/outside/file.txt
 		fs.CreateSymlink("/workspace/link1", "/workspace/link2")

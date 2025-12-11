@@ -16,10 +16,9 @@ import (
 
 func TestResolve(t *testing.T) {
 	workspaceRoot := "/workspace"
-	maxFileSize := int64(1024 * 1024)
 
 	t.Run("relative path resolution", func(t *testing.T) {
-		fs := mocks.NewMockFileSystem(maxFileSize)
+		fs := mocks.NewMockFileSystem()
 		ctx := &models.WorkspaceContext{
 			FS:            fs,
 			WorkspaceRoot: workspaceRoot,
@@ -39,7 +38,7 @@ func TestResolve(t *testing.T) {
 	})
 
 	t.Run("absolute path within workspace", func(t *testing.T) {
-		fs := mocks.NewMockFileSystem(maxFileSize)
+		fs := mocks.NewMockFileSystem()
 		ctx := &models.WorkspaceContext{
 			FS:            fs,
 			WorkspaceRoot: workspaceRoot,
@@ -59,7 +58,7 @@ func TestResolve(t *testing.T) {
 	})
 
 	t.Run("path outside workspace rejected", func(t *testing.T) {
-		fs := mocks.NewMockFileSystem(maxFileSize)
+		fs := mocks.NewMockFileSystem()
 		ctx := &models.WorkspaceContext{
 			FS:            fs,
 			WorkspaceRoot: workspaceRoot,
@@ -72,7 +71,7 @@ func TestResolve(t *testing.T) {
 	})
 
 	t.Run("path traversal rejected", func(t *testing.T) {
-		fs := mocks.NewMockFileSystem(maxFileSize)
+		fs := mocks.NewMockFileSystem()
 		ctx := &models.WorkspaceContext{
 			FS:            fs,
 			WorkspaceRoot: workspaceRoot,
@@ -85,7 +84,7 @@ func TestResolve(t *testing.T) {
 	})
 
 	t.Run(".. within workspace allowed", func(t *testing.T) {
-		fs := mocks.NewMockFileSystem(maxFileSize)
+		fs := mocks.NewMockFileSystem()
 		ctx := &models.WorkspaceContext{
 			FS:            fs,
 			WorkspaceRoot: workspaceRoot,
@@ -110,7 +109,7 @@ func TestResolve(t *testing.T) {
 	})
 
 	t.Run(".. escaping workspace rejected", func(t *testing.T) {
-		fs := mocks.NewMockFileSystem(maxFileSize)
+		fs := mocks.NewMockFileSystem()
 		ctx := &models.WorkspaceContext{
 			FS:            fs,
 			WorkspaceRoot: workspaceRoot,
@@ -124,7 +123,7 @@ func TestResolve(t *testing.T) {
 	})
 
 	t.Run(".. at workspace root rejected", func(t *testing.T) {
-		fs := mocks.NewMockFileSystem(maxFileSize)
+		fs := mocks.NewMockFileSystem()
 		ctx := &models.WorkspaceContext{
 			FS:            fs,
 			WorkspaceRoot: workspaceRoot,
@@ -138,7 +137,7 @@ func TestResolve(t *testing.T) {
 	})
 
 	t.Run("symlink target with .. within workspace allowed", func(t *testing.T) {
-		fs := mocks.NewMockFileSystem(maxFileSize)
+		fs := mocks.NewMockFileSystem()
 		ctx := &models.WorkspaceContext{
 			FS:            fs,
 			WorkspaceRoot: workspaceRoot,
@@ -165,7 +164,7 @@ func TestResolve(t *testing.T) {
 	})
 
 	t.Run("symlink target with .. escaping workspace rejected", func(t *testing.T) {
-		fs := mocks.NewMockFileSystem(maxFileSize)
+		fs := mocks.NewMockFileSystem()
 		ctx := &models.WorkspaceContext{
 			FS:            fs,
 			WorkspaceRoot: workspaceRoot,
@@ -184,7 +183,7 @@ func TestResolve(t *testing.T) {
 	t.Run("direct path with .. component (bypassing Clean)", func(t *testing.T) {
 		// This test directly calls resolveRelativePath with a path containing ..
 		// to verify the .. handling logic works correctly
-		fs := mocks.NewMockFileSystem(maxFileSize)
+		fs := mocks.NewMockFileSystem()
 		ctx := &models.WorkspaceContext{
 			FS:            fs,
 			WorkspaceRoot: workspaceRoot,
@@ -207,7 +206,7 @@ func TestResolve(t *testing.T) {
 	})
 
 	t.Run("symlink escape rejected", func(t *testing.T) {
-		fs := mocks.NewMockFileSystem(maxFileSize)
+		fs := mocks.NewMockFileSystem()
 		ctx := &models.WorkspaceContext{
 			FS:            fs,
 			WorkspaceRoot: workspaceRoot,
@@ -223,7 +222,7 @@ func TestResolve(t *testing.T) {
 	})
 
 	t.Run("symlink inside workspace allowed", func(t *testing.T) {
-		fs := mocks.NewMockFileSystem(maxFileSize)
+		fs := mocks.NewMockFileSystem()
 		ctx := &models.WorkspaceContext{
 			FS:            fs,
 			WorkspaceRoot: workspaceRoot,
@@ -248,7 +247,7 @@ func TestResolve(t *testing.T) {
 	})
 
 	t.Run("symlink chain", func(t *testing.T) {
-		fs := mocks.NewMockFileSystem(maxFileSize)
+		fs := mocks.NewMockFileSystem()
 		ctx := &models.WorkspaceContext{
 			FS:            fs,
 			WorkspaceRoot: workspaceRoot,
@@ -270,7 +269,7 @@ func TestResolve(t *testing.T) {
 	})
 
 	t.Run("filename with dots allowed", func(t *testing.T) {
-		fs := mocks.NewMockFileSystem(maxFileSize)
+		fs := mocks.NewMockFileSystem()
 		ctx := &models.WorkspaceContext{
 			FS:            fs,
 			WorkspaceRoot: workspaceRoot,
@@ -290,7 +289,7 @@ func TestResolve(t *testing.T) {
 	})
 
 	t.Run("empty workspace root error", func(t *testing.T) {
-		fs := mocks.NewMockFileSystem(maxFileSize)
+		fs := mocks.NewMockFileSystem()
 		ctx := &models.WorkspaceContext{
 			FS:            fs,
 			WorkspaceRoot: "",
@@ -305,10 +304,9 @@ func TestResolve(t *testing.T) {
 
 func TestResolveSymlinkEscapePrevention(t *testing.T) {
 	workspaceRoot := "/workspace"
-	maxFileSize := int64(1024 * 1024)
 
 	t.Run("symlink directory escape rejected", func(t *testing.T) {
-		fs := mocks.NewMockFileSystem(maxFileSize)
+		fs := mocks.NewMockFileSystem()
 		ctx := &models.WorkspaceContext{
 			FS:            fs,
 			WorkspaceRoot: workspaceRoot,
@@ -326,7 +324,7 @@ func TestResolveSymlinkEscapePrevention(t *testing.T) {
 	})
 
 	t.Run("symlink directory inside workspace allowed", func(t *testing.T) {
-		fs := mocks.NewMockFileSystem(maxFileSize)
+		fs := mocks.NewMockFileSystem()
 		ctx := &models.WorkspaceContext{
 			FS:            fs,
 			WorkspaceRoot: workspaceRoot,
@@ -351,7 +349,7 @@ func TestResolveSymlinkEscapePrevention(t *testing.T) {
 	})
 
 	t.Run("nested symlink escape rejected", func(t *testing.T) {
-		fs := mocks.NewMockFileSystem(maxFileSize)
+		fs := mocks.NewMockFileSystem()
 		ctx := &models.WorkspaceContext{
 			FS:            fs,
 			WorkspaceRoot: workspaceRoot,
@@ -372,10 +370,9 @@ func TestResolveSymlinkEscapePrevention(t *testing.T) {
 
 func TestResolveMissingDirectories(t *testing.T) {
 	workspaceRoot := "/workspace"
-	maxFileSize := int64(1024 * 1024)
 
 	t.Run("missing intermediate directories resolve successfully", func(t *testing.T) {
-		fs := mocks.NewMockFileSystem(maxFileSize)
+		fs := mocks.NewMockFileSystem()
 		ctx := &models.WorkspaceContext{
 			FS:            fs,
 			WorkspaceRoot: workspaceRoot,
@@ -397,7 +394,7 @@ func TestResolveMissingDirectories(t *testing.T) {
 	})
 
 	t.Run("missing directories with symlink parent", func(t *testing.T) {
-		fs := mocks.NewMockFileSystem(maxFileSize)
+		fs := mocks.NewMockFileSystem()
 		ctx := &models.WorkspaceContext{
 			FS:            fs,
 			WorkspaceRoot: workspaceRoot,
@@ -425,10 +422,9 @@ func TestResolveMissingDirectories(t *testing.T) {
 
 func TestResolveSymlinkChains(t *testing.T) {
 	workspaceRoot := "/workspace"
-	maxFileSize := int64(1024 * 1024)
 
 	t.Run("symlink chain entirely inside workspace", func(t *testing.T) {
-		fs := mocks.NewMockFileSystem(maxFileSize)
+		fs := mocks.NewMockFileSystem()
 		ctx := &models.WorkspaceContext{
 			FS:            fs,
 			WorkspaceRoot: workspaceRoot,
@@ -453,7 +449,7 @@ func TestResolveSymlinkChains(t *testing.T) {
 	})
 
 	t.Run("symlink chain escaping workspace at first hop", func(t *testing.T) {
-		fs := mocks.NewMockFileSystem(maxFileSize)
+		fs := mocks.NewMockFileSystem()
 		ctx := &models.WorkspaceContext{
 			FS:            fs,
 			WorkspaceRoot: workspaceRoot,
@@ -470,7 +466,7 @@ func TestResolveSymlinkChains(t *testing.T) {
 	})
 
 	t.Run("symlink chain escaping workspace at second hop", func(t *testing.T) {
-		fs := mocks.NewMockFileSystem(maxFileSize)
+		fs := mocks.NewMockFileSystem()
 		ctx := &models.WorkspaceContext{
 			FS:            fs,
 			WorkspaceRoot: workspaceRoot,
@@ -488,7 +484,7 @@ func TestResolveSymlinkChains(t *testing.T) {
 	})
 
 	t.Run("symlink loop detection", func(t *testing.T) {
-		fs := mocks.NewMockFileSystem(maxFileSize)
+		fs := mocks.NewMockFileSystem()
 		ctx := &models.WorkspaceContext{
 			FS:            fs,
 			WorkspaceRoot: workspaceRoot,
@@ -509,7 +505,7 @@ func TestResolveSymlinkChains(t *testing.T) {
 	})
 
 	t.Run("dangling symlink pointing inside workspace", func(t *testing.T) {
-		fs := mocks.NewMockFileSystem(maxFileSize)
+		fs := mocks.NewMockFileSystem()
 		ctx := &models.WorkspaceContext{
 			FS:            fs,
 			WorkspaceRoot: workspaceRoot,
@@ -533,7 +529,7 @@ func TestResolveSymlinkChains(t *testing.T) {
 	})
 
 	t.Run("dangling symlink pointing outside workspace", func(t *testing.T) {
-		fs := mocks.NewMockFileSystem(maxFileSize)
+		fs := mocks.NewMockFileSystem()
 		ctx := &models.WorkspaceContext{
 			FS:            fs,
 			WorkspaceRoot: workspaceRoot,
@@ -549,7 +545,7 @@ func TestResolveSymlinkChains(t *testing.T) {
 	})
 
 	t.Run("symlink chain exceeding max hops limit (65 hops)", func(t *testing.T) {
-		fs := mocks.NewMockFileSystem(maxFileSize)
+		fs := mocks.NewMockFileSystem()
 		ctx := &models.WorkspaceContext{
 			FS:            fs,
 			WorkspaceRoot: workspaceRoot,
@@ -590,7 +586,7 @@ func TestResolveSymlinkChains(t *testing.T) {
 	})
 
 	t.Run("symlink chain at max hops limit (64 hops)", func(t *testing.T) {
-		fs := mocks.NewMockFileSystem(maxFileSize)
+		fs := mocks.NewMockFileSystem()
 		ctx := &models.WorkspaceContext{
 			FS:            fs,
 			WorkspaceRoot: workspaceRoot,
@@ -634,10 +630,9 @@ func TestResolveSymlinkChains(t *testing.T) {
 
 func TestResolveTildeExpansion(t *testing.T) {
 	workspaceRoot := "/workspace"
-	maxFileSize := int64(1024 * 1024)
 
 	t.Run("tilde expansion outside workspace rejected", func(t *testing.T) {
-		fs := mocks.NewMockFileSystem(maxFileSize)
+		fs := mocks.NewMockFileSystem()
 		ctx := &models.WorkspaceContext{
 			FS:            fs,
 			WorkspaceRoot: workspaceRoot,
@@ -654,10 +649,9 @@ func TestResolveTildeExpansion(t *testing.T) {
 
 func TestResolveAbsoluteVsRelative(t *testing.T) {
 	workspaceRoot := "/workspace"
-	maxFileSize := int64(1024 * 1024)
 
 	t.Run("absolute path within workspace", func(t *testing.T) {
-		fs := mocks.NewMockFileSystem(maxFileSize)
+		fs := mocks.NewMockFileSystem()
 		ctx := &models.WorkspaceContext{
 			FS:            fs,
 			WorkspaceRoot: workspaceRoot,
@@ -677,7 +671,7 @@ func TestResolveAbsoluteVsRelative(t *testing.T) {
 	})
 
 	t.Run("relative path resolves correctly", func(t *testing.T) {
-		fs := mocks.NewMockFileSystem(maxFileSize)
+		fs := mocks.NewMockFileSystem()
 		ctx := &models.WorkspaceContext{
 			FS:            fs,
 			WorkspaceRoot: workspaceRoot,

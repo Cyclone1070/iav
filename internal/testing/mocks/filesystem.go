@@ -87,15 +87,14 @@ func (h *MockFileHandle) Close() error {
 // MockFileSystem implements models.FileSystem with in-memory storage.
 // This is the comprehensive mock for tool tests.
 type MockFileSystem struct {
-	Mu          sync.RWMutex
-	Files       map[string][]byte          // path -> content
-	FileInfos   map[string]*MockFileInfo   // path -> metadata
-	Symlinks    map[string]string          // symlink path -> target path
-	Dirs        map[string]bool            // path -> is directory
-	Errors      map[string]error           // path -> error to return
-	OpErrors    map[string]error           // operation -> error to return
-	TempFiles   map[string]*MockFileHandle // temp path -> handle
-	MaxFileSize int64
+	Mu        sync.RWMutex
+	Files     map[string][]byte          // path -> content
+	FileInfos map[string]*MockFileInfo   // path -> metadata
+	Symlinks  map[string]string          // symlink path -> target path
+	Dirs      map[string]bool            // path -> is directory
+	Errors    map[string]error           // path -> error to return
+	OpErrors  map[string]error           // operation -> error to return
+	TempFiles map[string]*MockFileHandle // temp path -> handle
 	// Counter for unique temp files
 	TempCounter int
 	HomeDir     string
@@ -103,7 +102,7 @@ type MockFileSystem struct {
 }
 
 // NewMockFileSystem creates a new mock filesystem
-func NewMockFileSystem(maxFileSize int64) *MockFileSystem {
+func NewMockFileSystem() *MockFileSystem {
 	return &MockFileSystem{
 		Files:       make(map[string][]byte),
 		FileInfos:   make(map[string]*MockFileInfo),
@@ -112,7 +111,6 @@ func NewMockFileSystem(maxFileSize int64) *MockFileSystem {
 		Errors:      make(map[string]error),
 		OpErrors:    make(map[string]error),
 		TempFiles:   make(map[string]*MockFileHandle),
-		MaxFileSize: maxFileSize,
 		TempCounter: 0,
 		HomeDir:     "/home/user",
 	}
@@ -224,10 +222,6 @@ func (f *MockFileSystem) ReadFileRange(path string, offset, limit int64) ([]byte
 	}
 
 	fileSize := int64(len(content))
-
-	if fileSize > f.MaxFileSize {
-		return nil, models.ErrTooLarge
-	}
 
 	if offset == 0 && limit == 0 {
 		return content, nil

@@ -12,13 +12,13 @@ import (
 	"time"
 
 	"github.com/Cyclone1070/iav/internal/config"
+	"github.com/Cyclone1070/iav/internal/testing/mocks"
 	"github.com/Cyclone1070/iav/internal/tools/models"
 	"github.com/Cyclone1070/iav/internal/tools/services"
-	"github.com/Cyclone1070/iav/internal/testing/mocks"
 )
 
 func TestShellTool_Run_SimpleCommand(t *testing.T) {
-	mockFS := mocks.NewMockFileSystem(config.DefaultConfig().Tools.MaxFileSize)
+	mockFS := mocks.NewMockFileSystem()
 	mockFS.CreateDir("/workspace")
 
 	wCtx := &models.WorkspaceContext{
@@ -61,7 +61,7 @@ func TestShellTool_Run_SimpleCommand(t *testing.T) {
 }
 
 func TestShellTool_Run_WorkingDir(t *testing.T) {
-	mockFS := mocks.NewMockFileSystem(config.DefaultConfig().Tools.MaxFileSize)
+	mockFS := mocks.NewMockFileSystem()
 	mockFS.CreateDir("/workspace")
 	mockFS.CreateDir("/workspace/subdir")
 
@@ -100,7 +100,7 @@ func TestShellTool_Run_WorkingDir(t *testing.T) {
 }
 
 func TestShellTool_Run_Env(t *testing.T) {
-	mockFS := mocks.NewMockFileSystem(config.DefaultConfig().Tools.MaxFileSize)
+	mockFS := mocks.NewMockFileSystem()
 	mockFS.CreateDir("/workspace")
 
 	wCtx := &models.WorkspaceContext{
@@ -154,7 +154,7 @@ func TestShellTool_Run_Env(t *testing.T) {
 }
 
 func TestShellTool_Run_EnvFiles(t *testing.T) {
-	mockFS := mocks.NewMockFileSystem(config.DefaultConfig().Tools.MaxFileSize)
+	mockFS := mocks.NewMockFileSystem()
 	mockFS.CreateDir("/workspace")
 
 	// Create env files
@@ -312,7 +312,7 @@ CACHE_URL=redis://localhost`
 }
 
 func TestShellTool_Run_OutsideWorkspace(t *testing.T) {
-	mockFS := mocks.NewMockFileSystem(config.DefaultConfig().Tools.MaxFileSize)
+	mockFS := mocks.NewMockFileSystem()
 	mockFS.CreateDir("/workspace")
 
 	wCtx := &models.WorkspaceContext{
@@ -336,7 +336,7 @@ func TestShellTool_Run_OutsideWorkspace(t *testing.T) {
 }
 
 func TestShellTool_Run_NonZeroExit(t *testing.T) {
-	mockFS := mocks.NewMockFileSystem(config.DefaultConfig().Tools.MaxFileSize)
+	mockFS := mocks.NewMockFileSystem()
 	mockFS.CreateDir("/workspace")
 
 	wCtx := &models.WorkspaceContext{
@@ -371,7 +371,7 @@ func TestShellTool_Run_NonZeroExit(t *testing.T) {
 }
 
 func TestShellTool_Run_BinaryOutput(t *testing.T) {
-	mockFS := mocks.NewMockFileSystem(config.DefaultConfig().Tools.MaxFileSize)
+	mockFS := mocks.NewMockFileSystem()
 	mockFS.CreateDir("/workspace")
 
 	wCtx := &models.WorkspaceContext{
@@ -403,7 +403,7 @@ func TestShellTool_Run_BinaryOutput(t *testing.T) {
 }
 
 func TestShellTool_Run_CommandInjection(t *testing.T) {
-	mockFS := mocks.NewMockFileSystem(config.DefaultConfig().Tools.MaxFileSize)
+	mockFS := mocks.NewMockFileSystem()
 	mockFS.CreateDir("/workspace")
 
 	wCtx := &models.WorkspaceContext{
@@ -440,7 +440,7 @@ func TestShellTool_Run_CommandInjection(t *testing.T) {
 }
 
 func TestShellTool_Run_HugeOutput(t *testing.T) {
-	mockFS := mocks.NewMockFileSystem(config.DefaultConfig().Tools.MaxFileSize)
+	mockFS := mocks.NewMockFileSystem()
 	mockFS.CreateDir("/workspace")
 
 	wCtx := &models.WorkspaceContext{
@@ -479,7 +479,7 @@ func TestShellTool_Run_HugeOutput(t *testing.T) {
 }
 
 func TestShellTool_Run_Timeout(t *testing.T) {
-	mockFS := mocks.NewMockFileSystem(config.DefaultConfig().Tools.MaxFileSize)
+	mockFS := mocks.NewMockFileSystem()
 	mockFS.CreateDir("/workspace")
 
 	wCtx := &models.WorkspaceContext{
@@ -521,7 +521,7 @@ func TestShellTool_Run_Timeout(t *testing.T) {
 }
 
 func TestShellTool_Run_DockerCheck(t *testing.T) {
-	mockFS := mocks.NewMockFileSystem(config.DefaultConfig().Tools.MaxFileSize)
+	mockFS := mocks.NewMockFileSystem()
 	mockFS.CreateDir("/workspace")
 
 	workspaceRoot := "/workspace"
@@ -569,7 +569,7 @@ func TestShellTool_Run_DockerCheck(t *testing.T) {
 }
 
 func TestShellTool_Run_EnvInjection(t *testing.T) {
-	mockFS := mocks.NewMockFileSystem(config.DefaultConfig().Tools.MaxFileSize)
+	mockFS := mocks.NewMockFileSystem()
 	mockFS.CreateDir("/workspace")
 
 	wCtx := &models.WorkspaceContext{
@@ -607,7 +607,7 @@ func TestShellTool_Run_EnvInjection(t *testing.T) {
 }
 
 func TestShellTool_Run_ContextCancellation(t *testing.T) {
-	mockFS := mocks.NewMockFileSystem(config.DefaultConfig().Tools.MaxFileSize)
+	mockFS := mocks.NewMockFileSystem()
 	mockFS.CreateDir("/workspace")
 
 	wCtx := &models.WorkspaceContext{
@@ -656,7 +656,7 @@ func TestShellTool_Run_ContextCancellation(t *testing.T) {
 }
 
 func TestShellTool_Run_SpecificExitCode(t *testing.T) {
-	mockFS := mocks.NewMockFileSystem(config.DefaultConfig().Tools.MaxFileSize)
+	mockFS := mocks.NewMockFileSystem()
 	mockFS.CreateDir("/workspace")
 
 	wCtx := &models.WorkspaceContext{

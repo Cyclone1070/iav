@@ -5,19 +5,18 @@ import (
 	"testing"
 
 	"github.com/Cyclone1070/iav/internal/config"
+	"github.com/Cyclone1070/iav/internal/testing/mocks"
 	"github.com/Cyclone1070/iav/internal/tools/models"
 	"github.com/Cyclone1070/iav/internal/tools/services"
-	"github.com/Cyclone1070/iav/internal/testing/mocks"
 )
 
 func TestMultiContextIsolation(t *testing.T) {
-	maxFileSize := int64(1024 * 1024) // 1MB
 
 	// Create two separate contexts with different workspace roots
-	fs1 := mocks.NewMockFileSystem(maxFileSize)
+	fs1 := mocks.NewMockFileSystem()
 	checksumManager1 := services.NewChecksumManager()
 
-	fs2 := mocks.NewMockFileSystem(maxFileSize)
+	fs2 := mocks.NewMockFileSystem()
 	checksumManager2 := services.NewChecksumManager()
 
 	ctx1 := &models.WorkspaceContext{
@@ -103,7 +102,7 @@ func TestCustomFileSizeLimit(t *testing.T) {
 	largeLimit := int64(10 * 1024 * 1024) // 10MB
 
 	t.Run("small limit enforced", func(t *testing.T) {
-		fs := mocks.NewMockFileSystem(smallLimit)
+		fs := mocks.NewMockFileSystem()
 		checksumManager := services.NewChecksumManager()
 
 		cfg := config.DefaultConfig()
@@ -129,7 +128,7 @@ func TestCustomFileSizeLimit(t *testing.T) {
 	})
 
 	t.Run("large limit allows bigger files", func(t *testing.T) {
-		fs := mocks.NewMockFileSystem(largeLimit)
+		fs := mocks.NewMockFileSystem()
 		checksumManager := services.NewChecksumManager()
 
 		cfg := config.DefaultConfig()
@@ -155,10 +154,10 @@ func TestCustomFileSizeLimit(t *testing.T) {
 	})
 
 	t.Run("different limits in different contexts", func(t *testing.T) {
-		fs1 := mocks.NewMockFileSystem(smallLimit)
+		fs1 := mocks.NewMockFileSystem()
 		checksumManager1 := services.NewChecksumManager()
 
-		fs2 := mocks.NewMockFileSystem(largeLimit)
+		fs2 := mocks.NewMockFileSystem()
 		checksumManager2 := services.NewChecksumManager()
 
 		cfg1 := config.DefaultConfig()

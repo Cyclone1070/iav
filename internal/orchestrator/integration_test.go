@@ -9,7 +9,6 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/Cyclone1070/iav/internal/config"
 	orchadapter "github.com/Cyclone1070/iav/internal/orchestrator/adapter"
 	orchmodels "github.com/Cyclone1070/iav/internal/orchestrator/models"
 	pmodels "github.com/Cyclone1070/iav/internal/provider/models"
@@ -27,7 +26,7 @@ func TestOrchestratorProvider_ToolCallResponse(t *testing.T) {
 
 	// Create workspace context
 	workspaceRoot := t.TempDir()
-	fileSystem := services.NewOSFileSystem(config.DefaultConfig().Tools.MaxFileSize)
+	fileSystem := services.NewOSFileSystem()
 	binaryDetector := &services.SystemBinaryDetector{}
 	checksumMgr := services.NewChecksumManager()
 	gitignoreSvc, _ := services.NewGitignoreService(workspaceRoot, fileSystem)
@@ -227,7 +226,7 @@ func TestOrchestratorProvider_ContextTruncation(t *testing.T) {
 
 	// Create workspace context
 	workspaceRoot := t.TempDir()
-	fileSystem := services.NewOSFileSystem(config.DefaultConfig().Tools.MaxFileSize)
+	fileSystem := services.NewOSFileSystem()
 	if err := fileSystem.EnsureDirs(workspaceRoot); err != nil {
 		t.Fatalf("Failed to create workspace: %v", err)
 	}

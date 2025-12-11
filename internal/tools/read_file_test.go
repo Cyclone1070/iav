@@ -15,7 +15,7 @@ func TestReadFile(t *testing.T) {
 	maxFileSize := int64(1024 * 1024) // 1MB
 
 	t.Run("full read caches checksum", func(t *testing.T) {
-		fs := mocks.NewMockFileSystem(maxFileSize)
+		fs := mocks.NewMockFileSystem()
 		checksumManager := services.NewChecksumManager()
 		content := []byte("test content")
 		fs.CreateFile("/workspace/test.txt", content, 0644)
@@ -50,7 +50,7 @@ func TestReadFile(t *testing.T) {
 	})
 
 	t.Run("partial read skips cache update", func(t *testing.T) {
-		fs := mocks.NewMockFileSystem(maxFileSize)
+		fs := mocks.NewMockFileSystem()
 		checksumManager := services.NewChecksumManager()
 		content := []byte("test content")
 		fs.CreateFile("/workspace/test.txt", content, 0644)
@@ -82,7 +82,7 @@ func TestReadFile(t *testing.T) {
 	})
 
 	t.Run("binary detection rejection", func(t *testing.T) {
-		fs := mocks.NewMockFileSystem(maxFileSize)
+		fs := mocks.NewMockFileSystem()
 		checksumManager := services.NewChecksumManager()
 		detector := mocks.NewMockBinaryDetector()
 		detector.IsBinaryContentFunc = func(content []byte) bool {
@@ -110,7 +110,7 @@ func TestReadFile(t *testing.T) {
 	})
 
 	t.Run("size limit enforcement", func(t *testing.T) {
-		fs := mocks.NewMockFileSystem(maxFileSize)
+		fs := mocks.NewMockFileSystem()
 		checksumManager := services.NewChecksumManager()
 		// Create file larger than limit
 		largeContent := make([]byte, maxFileSize+1)
@@ -133,7 +133,7 @@ func TestReadFile(t *testing.T) {
 	})
 
 	t.Run("offset beyond EOF", func(t *testing.T) {
-		fs := mocks.NewMockFileSystem(maxFileSize)
+		fs := mocks.NewMockFileSystem()
 		checksumManager := services.NewChecksumManager()
 		content := []byte("test")
 		fs.CreateFile("/workspace/test.txt", content, 0644)
@@ -157,7 +157,7 @@ func TestReadFile(t *testing.T) {
 	})
 
 	t.Run("directory rejection", func(t *testing.T) {
-		fs := mocks.NewMockFileSystem(maxFileSize)
+		fs := mocks.NewMockFileSystem()
 		checksumManager := services.NewChecksumManager()
 		fs.CreateDir("/workspace/subdir")
 
@@ -176,7 +176,7 @@ func TestReadFile(t *testing.T) {
 	})
 
 	t.Run("file not found", func(t *testing.T) {
-		fs := mocks.NewMockFileSystem(maxFileSize)
+		fs := mocks.NewMockFileSystem()
 		checksumManager := services.NewChecksumManager()
 		ctx := &models.WorkspaceContext{
 			FS:              fs,
@@ -193,7 +193,7 @@ func TestReadFile(t *testing.T) {
 	})
 
 	t.Run("limit truncation", func(t *testing.T) {
-		fs := mocks.NewMockFileSystem(maxFileSize)
+		fs := mocks.NewMockFileSystem()
 		checksumManager := services.NewChecksumManager()
 		content := []byte("test content")
 		fs.CreateFile("/workspace/test.txt", content, 0644)

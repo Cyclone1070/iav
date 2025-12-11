@@ -10,14 +10,11 @@ import (
 // OSFileSystem implements FileSystem using the local OS filesystem primitives.
 // It enforces file size limits based on the MaxFileSize field.
 type OSFileSystem struct {
-	MaxFileSize int64
 }
 
-// NewOSFileSystem creates a new OSFileSystem with the specified maximum file size limit.
-func NewOSFileSystem(maxFileSize int64) *OSFileSystem {
-	return &OSFileSystem{
-		MaxFileSize: maxFileSize,
-	}
+// NewOSFileSystem creates a new OSFileSystem.
+func NewOSFileSystem() *OSFileSystem {
+	return &OSFileSystem{}
 }
 
 // Stat returns file info for a path (follows symlinks).
@@ -46,11 +43,6 @@ func (r *OSFileSystem) ReadFileRange(path string, offset, limit int64) ([]byte, 
 	}
 
 	fileSize := info.Size()
-
-	// Check size limit
-	if fileSize > r.MaxFileSize {
-		return nil, models.ErrTooLarge
-	}
 
 	// If both offset and limit are 0, read entire file
 	if offset == 0 && limit == 0 {

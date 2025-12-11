@@ -19,7 +19,7 @@ func NewWorkspaceContext(cfg *config.Config, workspaceRoot string) (*models.Work
 		return nil, err
 	}
 
-	fs := services.NewOSFileSystem(cfg.Tools.MaxFileSize)
+	fs := services.NewOSFileSystem()
 
 	// Initialize gitignore service (handles missing .gitignore gracefully)
 	gitignoreSvc, err := services.NewGitignoreService(canonicalRoot, fs)

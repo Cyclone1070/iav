@@ -13,7 +13,7 @@ import (
 
 // createMockFS helper to reduce boilerplate
 func createMockFS(files map[string][]byte) *mocks.MockFileSystem {
-	fs := mocks.NewMockFileSystem(1024 * 1024)
+	fs := mocks.NewMockFileSystem()
 	if files != nil {
 		fs.Files = files
 	}
