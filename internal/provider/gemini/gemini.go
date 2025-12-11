@@ -52,11 +52,9 @@ func extractVersion(modelName string) (float64, bool) {
 	return version, true
 }
 
-// getModelInfo returns the provider.ModelInfo for the given model name from the cache
+// getModelInfo returns the provider.ModelInfo for the given model name from the cache.
+// Cache is immutable after construction, so no lock is needed.
 func (p *GeminiProvider) getModelInfo(name string) *provider.ModelInfo {
-	p.mu.RLock()
-	defer p.mu.RUnlock()
-
 	for i := range p.modelCache {
 		if p.modelCache[i].Name == name {
 			return &p.modelCache[i]
@@ -221,29 +219,15 @@ func NewGeminiProvider(ctx context.Context, cfg *config.Config, client GeminiCli
 	return p, nil
 }
 
-// ListModels returns a list of available model names (without "models/" prefix for display)
+// ListModels returns a list of available model names (without "models/" prefix for display).
+// The model cache is populated at construction time and is immutable.
 func (p *GeminiProvider) ListModels(ctx context.Context) ([]string, error) {
-	// Return cached list if available
-	if len(p.modelCache) > 0 {
-		names := make([]string, len(p.modelCache))
-		for i, m := range p.modelCache {
-			names[i] = stripModelPrefix(m.Name)
-		}
-		return names, nil
+	if len(p.modelCache) == 0 {
+		return nil, fmt.Errorf("model cache is empty: provider was not initialized correctly")
 	}
 
-	// Otherwise fetch from client
-	models, err := p.client.ListModels(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to list models: %w", err)
-	}
-
-	// Update cache
-	p.modelCache = models
-
-	// Extract names for return (strip prefix for display)
-	names := make([]string, len(models))
-	for i, m := range models {
+	names := make([]string, len(p.modelCache))
+	for i, m := range p.modelCache {
 		names[i] = stripModelPrefix(m.Name)
 	}
 	return names, nil

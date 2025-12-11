@@ -50,11 +50,6 @@ func NewLoaderWithFS(fs FileSystem) *Loader {
 // Returns default config if dotfile doesn't exist.
 // Returns error only for parse errors, permission issues, or validation failures.
 //
-// Load reads configuration from ~/.config/iav/config.json
-// and merges it with defaults. Dotfile values override defaults.
-// Returns default config if dotfile doesn't exist.
-// Returns error only for parse errors, permission issues, or validation failures.
-//
 // NOTE: This implementation unmarshals JSON keys directly over the default configuration.
 // This allows explicit zero values (e.g., 0, false, "") in the config file to override defaults.
 func (l *Loader) Load() (*Config, error) {

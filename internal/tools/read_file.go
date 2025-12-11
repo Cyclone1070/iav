@@ -37,7 +37,6 @@ func ReadFile(ctx context.Context, wCtx *models.WorkspaceContext, req models.Rea
 	}
 
 	// Derive offset and limit
-	// Derive offset and limit
 	var actualOffset, actualLimit int64
 	if req.Offset != nil {
 		actualOffset = *req.Offset

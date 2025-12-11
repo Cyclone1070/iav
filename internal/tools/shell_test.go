@@ -24,7 +24,7 @@ func TestShellTool_Run_SimpleCommand(t *testing.T) {
 	wCtx := &models.WorkspaceContext{
 		WorkspaceRoot:   "/workspace",
 		FS:              mockFS,
-		BinaryDetector:  &mocks.MockBinaryDetector{SampleSize: config.DefaultConfig().Tools.BinaryDetectionSampleSize},
+		BinaryDetector:  mocks.NewMockBinaryDetector(),
 		CommandExecutor: &mocks.MockCommandExecutor{},
 		Config:          *config.DefaultConfig(),
 	}
@@ -68,7 +68,7 @@ func TestShellTool_Run_WorkingDir(t *testing.T) {
 	wCtx := &models.WorkspaceContext{
 		WorkspaceRoot:   "/workspace",
 		FS:              mockFS,
-		BinaryDetector:  &mocks.MockBinaryDetector{SampleSize: config.DefaultConfig().Tools.BinaryDetectionSampleSize},
+		BinaryDetector:  mocks.NewMockBinaryDetector(),
 		CommandExecutor: &mocks.MockCommandExecutor{},
 		Config:          *config.DefaultConfig(),
 	}
@@ -106,7 +106,7 @@ func TestShellTool_Run_Env(t *testing.T) {
 	wCtx := &models.WorkspaceContext{
 		WorkspaceRoot:   "/workspace",
 		FS:              mockFS,
-		BinaryDetector:  &mocks.MockBinaryDetector{SampleSize: config.DefaultConfig().Tools.BinaryDetectionSampleSize},
+		BinaryDetector:  mocks.NewMockBinaryDetector(),
 		CommandExecutor: &mocks.MockCommandExecutor{},
 		Config:          *config.DefaultConfig(),
 	}
@@ -170,7 +170,7 @@ CACHE_URL=redis://localhost`
 	wCtx := &models.WorkspaceContext{
 		WorkspaceRoot:   "/workspace",
 		FS:              mockFS,
-		BinaryDetector:  &mocks.MockBinaryDetector{SampleSize: config.DefaultConfig().Tools.BinaryDetectionSampleSize},
+		BinaryDetector:  mocks.NewMockBinaryDetector(),
 		CommandExecutor: &mocks.MockCommandExecutor{},
 		Config:          *config.DefaultConfig(),
 	}
@@ -318,7 +318,7 @@ func TestShellTool_Run_OutsideWorkspace(t *testing.T) {
 	wCtx := &models.WorkspaceContext{
 		WorkspaceRoot:   "/workspace",
 		FS:              mockFS,
-		BinaryDetector:  &mocks.MockBinaryDetector{SampleSize: config.DefaultConfig().Tools.BinaryDetectionSampleSize},
+		BinaryDetector:  mocks.NewMockBinaryDetector(),
 		CommandExecutor: &mocks.MockCommandExecutor{},
 		Config:          *config.DefaultConfig(),
 	}
@@ -342,7 +342,7 @@ func TestShellTool_Run_NonZeroExit(t *testing.T) {
 	wCtx := &models.WorkspaceContext{
 		WorkspaceRoot:   "/workspace",
 		FS:              mockFS,
-		BinaryDetector:  &mocks.MockBinaryDetector{SampleSize: config.DefaultConfig().Tools.BinaryDetectionSampleSize},
+		BinaryDetector:  mocks.NewMockBinaryDetector(),
 		CommandExecutor: &mocks.MockCommandExecutor{},
 		Config:          *config.DefaultConfig(),
 	}
@@ -377,7 +377,7 @@ func TestShellTool_Run_BinaryOutput(t *testing.T) {
 	wCtx := &models.WorkspaceContext{
 		WorkspaceRoot:   "/workspace",
 		FS:              mockFS,
-		BinaryDetector:  &mocks.MockBinaryDetector{SampleSize: config.DefaultConfig().Tools.BinaryDetectionSampleSize},
+		BinaryDetector:  mocks.NewMockBinaryDetector(),
 		CommandExecutor: &mocks.MockCommandExecutor{},
 		Config:          *config.DefaultConfig(),
 	}
@@ -409,7 +409,7 @@ func TestShellTool_Run_CommandInjection(t *testing.T) {
 	wCtx := &models.WorkspaceContext{
 		WorkspaceRoot:   "/workspace",
 		FS:              mockFS,
-		BinaryDetector:  &mocks.MockBinaryDetector{SampleSize: config.DefaultConfig().Tools.BinaryDetectionSampleSize},
+		BinaryDetector:  mocks.NewMockBinaryDetector(),
 		CommandExecutor: &mocks.MockCommandExecutor{},
 		Config:          *config.DefaultConfig(),
 	}
@@ -446,7 +446,7 @@ func TestShellTool_Run_HugeOutput(t *testing.T) {
 	wCtx := &models.WorkspaceContext{
 		WorkspaceRoot:   "/workspace",
 		FS:              mockFS,
-		BinaryDetector:  &mocks.MockBinaryDetector{SampleSize: config.DefaultConfig().Tools.BinaryDetectionSampleSize},
+		BinaryDetector:  mocks.NewMockBinaryDetector(),
 		CommandExecutor: &mocks.MockCommandExecutor{},
 		Config:          *config.DefaultConfig(),
 	}
@@ -485,7 +485,7 @@ func TestShellTool_Run_Timeout(t *testing.T) {
 	wCtx := &models.WorkspaceContext{
 		WorkspaceRoot:   "/workspace",
 		FS:              mockFS,
-		BinaryDetector:  &mocks.MockBinaryDetector{SampleSize: config.DefaultConfig().Tools.BinaryDetectionSampleSize},
+		BinaryDetector:  mocks.NewMockBinaryDetector(),
 		CommandExecutor: &mocks.MockCommandExecutor{},
 		Config:          *config.DefaultConfig(),
 	}
@@ -575,7 +575,7 @@ func TestShellTool_Run_EnvInjection(t *testing.T) {
 	wCtx := &models.WorkspaceContext{
 		WorkspaceRoot:   "/workspace",
 		FS:              mockFS,
-		BinaryDetector:  &mocks.MockBinaryDetector{SampleSize: config.DefaultConfig().Tools.BinaryDetectionSampleSize},
+		BinaryDetector:  mocks.NewMockBinaryDetector(),
 		CommandExecutor: &mocks.MockCommandExecutor{},
 		Config:          *config.DefaultConfig(),
 	}
@@ -613,7 +613,7 @@ func TestShellTool_Run_ContextCancellation(t *testing.T) {
 	wCtx := &models.WorkspaceContext{
 		WorkspaceRoot:   "/workspace",
 		FS:              mockFS,
-		BinaryDetector:  &mocks.MockBinaryDetector{SampleSize: config.DefaultConfig().Tools.BinaryDetectionSampleSize},
+		BinaryDetector:  mocks.NewMockBinaryDetector(),
 		CommandExecutor: &mocks.MockCommandExecutor{},
 		Config:          *config.DefaultConfig(),
 	}
@@ -662,7 +662,7 @@ func TestShellTool_Run_SpecificExitCode(t *testing.T) {
 	wCtx := &models.WorkspaceContext{
 		WorkspaceRoot:   "/workspace",
 		FS:              mockFS,
-		BinaryDetector:  &mocks.MockBinaryDetector{SampleSize: config.DefaultConfig().Tools.BinaryDetectionSampleSize},
+		BinaryDetector:  mocks.NewMockBinaryDetector(),
 		CommandExecutor: &mocks.MockCommandExecutor{},
 		Config:          *config.DefaultConfig(),
 	}
