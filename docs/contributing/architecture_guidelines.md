@@ -102,9 +102,23 @@ Before submitting code, verify **every** item. A single unchecked box = rejectio
 *   **Hierarchy**: Nested packages are permitted for grouping related sub-features.
     *   **Why**: Hierarchy provides logical organization without violating single responsibility.
 
+*   **Parent Package Directionality**: A parent package must pick ONE interaction direction with its sub-packages.
+    *   **Option A (Composition Root)**: Parent imports sub-packages to wire them together. Sub-packages NEVER import the parent.
+    *   **Option B (Shared Definition)**: Parent contains shared types/interfaces. Sub-packages import the parent. Parent NEVER imports sub-packages.
+    *   **Why**: Mixing these directions guarantees circular dependencies. If `tools/` imports `tools/file`, then `tools/file` cannot import `tools/`.
+
 *   **No Circular Dependencies**: If you hit a circular dependency, your design is wrong.
     *   **Why**: Circular deps create tight coupling and make testing impossible.
     *   **Solution**: Extract common definitions to a third package or decouple via interfaces.
+
+> [!NOTE]
+> **Single-File Directories Are Acceptable**
+>
+> When extracting shared code to prevent circular dependencies, a directory with one file is fine. Correct structure matters more than file count.
+>
+> *   ✅ `feature/errors/errors.go` (prevents circular deps between parent and children)
+> *   ✅ `feature/pagination/pagination.go` (descriptive helper package)
+> *   ❌ `feature/utils/errors.go` (generic junk drawer)
 
 > [!CAUTION]
 > **ANTI-PATTERN**: Junk Drawer
@@ -178,6 +192,13 @@ type fileSystem interface {
 > *   **Bad**: `Save(u *User) (sql.Result, error)` — ties interface to SQL.
 > *   **Good**: `Save(u *User) (string, error)` — returns what you need without leaking implementation.
 > *   **Why**: Leaky interfaces prevent alternative implementations (file system, memory store).
+
+> [!CAUTION]
+> **ANTI-PATTERN**: Confusing Interface Sharing with Implementation Sharing
+>
+> *   **Interfaces**: Consumer-defined, NOT shared across packages.
+> *   **Implementations**: CAN be shared in dedicated packages (via dependency injection or direct import for pure helpers).
+> *   **Mistake**: Duplicating implementations because you're avoiding shared interfaces. Share the concrete type, not the interface.
 
 ---
 
@@ -288,6 +309,11 @@ func (u *User) Save(repo UserRepository) error {
 
 *   **No Temp Files/Dirs**: Do not touch the filesystem in unit tests. Mock the interface.
     *   **Why**: Filesystem operations are slow and create test pollution across runs.
+
+*   **Pure Helpers vs Dependencies**:
+    *   **Pure helpers** (stateless, no I/O, no side effects): Import directly. No interface needed.
+    *   **Dependencies** (stateful, does I/O, has side effects): Define interface in consumer, inject via constructor.
+    *   **Why**: DI is for swappable/mockable behavior. Pure functions don't need mocking.
 
 **Example**:
 
