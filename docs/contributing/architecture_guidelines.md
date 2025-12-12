@@ -34,119 +34,119 @@ Before submitting code, verify **every** item. A single unchecked box = rejectio
 
 ---
 
-## 1. Package Design principles
+## 1. Package Design
 **Goal**: Small, focused, reusable components.
 
 *   **Small & Focused**: Packages should do one thing and do it well.
+    *   **Why**: Single responsibility makes code easier to understand, test, and maintain.
 
-*   **File Organization**:
-    *   **Prefer Files over Directories**: Do not create generic sub-directories like `model/`, `service/`, or `types/` inside your package.
-    *   **Correct**: `feature/types.go`, `feature/service.go`.
-    *   **Incorrect**: `feature/models/types.go`, `feature/services/service.go`.
-
-> [!CAUTION]
-> **ANTI-PATTERN 1**: Grouping by layer (Global)
-> *   `controllers/`, `models/`, `services/`
->
-> **ANTI-PATTERN 2**: Internal Layering (Inside Package)
-> *   `feature/user/models/user.go`
-> *   `feature/user/services/register.go`
->
-> **CORRECT**: Grouping by feature/domain & Flat Package Files
-> *   `feature/order/`, `feature/payment/`
-> *   `feature/user/types.go`
-> *   `feature/user/register.go`
-> *   `feature/user/registration/register.go` (if complex)
-
-*   **Splitting Rule (The "Too Big" Test)**:
-    *   If a package grows large enough (around 10-15 files) that you feel the need to create a `models/` directory to organize multiple model files, **the package is too big**.
-    *   **Action**: Break it down into smaller, focused sub-packages (e.g., `feature/subfeature1`, `feature/subfeature2`).
+*   **File Organization**: Do not create generic sub-directories like `model/`, `service/`, or `types/` inside your package.
+    *   **Correct**: `feature/types.go`, `feature/service.go`
+    *   **Incorrect**: `feature/models/types.go`, `feature/services/service.go`
+    *   **Why**: Generic layers group by what code IS, not what it DOES. This scatters related logic across directories.
 
 > [!CAUTION]
-> **ANTI-PATTERN**: The "Flatten and Bloat" Wrong Fix
-> 
-> When removing generic subdirectories like `model/` or `service/`, do NOT blindly flatten all files into the parent package if this creates a bloated package.
+> **ANTI-PATTERN**: Layered Organization
 >
 > ```text
-> # BEFORE: Internal Layering (WRONG)
+> # WRONG: Grouping by layer
+> internal/
+>   ├── controllers/
+>   ├── services/
+>   └── models/
+>
+> # WRONG: Internal layering inside package
+> feature/user/
+>   ├── models/user.go
+>   └── services/register.go
+>
+> # CORRECT: Grouping by domain with flat files
+> internal/
+>   ├── order/
+>   ├── payment/
+>   └── customer/
+> ```
+
+*   **Splitting Rule**: If a package grows to 10-15 files, it is too big. Break it into focused sub-packages.
+    *   **Why**: Large packages become hard to navigate and test. The urge to create `models/` is a symptom of bloat.
+    *   **Action**: Split by domain (e.g., `feature/user/`, `feature/order/`), not by layer.
+
+> [!CAUTION]
+> **ANTI-PATTERN**: Flatten and Bloat
+>
+> When removing generic subdirectories, do NOT blindly flatten all files into the parent package.
+>
+> ```text
+> # BEFORE: Internal layering (WRONG)
 > feature/
 >   ├── models/     (8 files)
 >   ├── services/   (12 files)
 >   └── handlers/   (5 files)
 >
-> # WRONG FIX: Flatten Everything (STILL WRONG - now 25 files!)
+> # WRONG FIX: Flatten everything (now 25 files!)
 > feature/
 >   ├── user.go
 >   ├── order.go
->   ├── ... (25 files total)
+>   └── ... (25 files)
 >
-> # CORRECT FIX: Split by Domain
+> # CORRECT FIX: Split by domain
 > feature/
 >   ├── user/       (types.go, service.go, handler.go)
 >   ├── order/      (types.go, service.go, handler.go)
 >   └── payment/    (types.go, service.go, handler.go)
 > ```
 >
-> *   **Why**: You've traded one anti-pattern (internal layering) for another (bloated package). Both violate "small and focused."
-> *   **Rule**: If flattening would exceed 10-15 files, you MUST split into domain sub-packages instead.
+> *   **Why**: You've traded one anti-pattern for another. Both violate "small and focused."
+> *   **Rule**: If flattening exceeds 10-15 files, split into domain sub-packages.
 
-*   **Hierarchy**: Nested packages are permitted and encouraged for grouping related sub-features, as long as they adhere to the circular dependency rule.
+*   **Hierarchy**: Nested packages are permitted for grouping related sub-features.
+    *   **Why**: Hierarchy provides logical organization without violating single responsibility.
 
-*   **Strict Rule**: **NO Circular Dependencies**. If you hit a circular dependency, your design is wrong. Refactor by extracting common definitions to a third package or decoupling via interfaces.
-
-```text
-# Bad Design (Layered) - ANTI-PATTERN
-internal/
-  ├── controllers/
-  ├── services/
-  └── models/
-
-# Good Design (Domain) - RECOMMENDED
-internal/
-  ├── order/
-  ├── payment/
-  └── customer/
-```
+*   **No Circular Dependencies**: If you hit a circular dependency, your design is wrong.
+    *   **Why**: Circular deps create tight coupling and make testing impossible.
+    *   **Solution**: Extract common definitions to a third package or decouple via interfaces.
 
 > [!CAUTION]
-> **ANTI-PATTERN**: The "Junk Drawer" (Utils/Common)
+> **ANTI-PATTERN**: Junk Drawer
+>
 > *   **Bad**: `feature/utils` or `feature/common` containing mixed logic (strings, encryption, formatting).
-> *   **Why**: Violates cohesion. It becomes a dumping ground where dependencies tangle.
-> *   **Solution**: Group by **what it operates on** or **domain**.
->     *   String helpers -> `feature/text` or `internal/strutil`
->     *   Time helpers -> `feature/timeext`
->     *   Domain logic -> `feature/auth/hashing` (NOT `feature/auth/utils`)
-> *   **Exception**: A single `feature/utils` is permissible **ONLY IF** it relies strictly on the **Standard Library**. Once a function imports a 3rd party dependency, it MUST be moved to a specific package to prevent polluting the dependency tree.
+> *   **Why**: Violates cohesion. Becomes a dumping ground where dependencies tangle.
+> *   **Solution**: Group by what it operates on:
+>     *   String helpers → `feature/text` or `internal/strutil`
+>     *   Time helpers → `feature/timeext`
+>     *   Domain logic → `feature/auth/hashing` (NOT `feature/auth/utils`)
+> *   **Exception**: A `utils` package is permissible ONLY IF it uses strictly the standard library.
+
+---
 
 ## 2. Interfaces: Consumer-Defined
 **Goal**: Decoupling and testability.
 
-*   **Define where used**: Do NOT define interfaces in the implementing package. Define them in the consumer package.
+*   **Define Where Used**: Do NOT define interfaces in the implementing package. Define them in the consumer package.
     *   **Why**: The consumer knows what it needs. The implementer should not dictate the contract.
     *   **Benefit**: You can swap implementations without touching the consumer. You can mock easily in tests.
 
 *   **Small Interfaces**: Keep interfaces minimal (`Reader` vs `ReadWriteCloser`).
-    *   **Why**: Large interfaces force implementers to provide methods they don't use. This creates coupling and bloat.
-    *   **Rule of Thumb**: If an interface has more than 5 methods, it's probably too big. Split it by use case.
+    *   **Why**: Large interfaces force implementers to provide methods they don't use.
+    *   **Rule**: If an interface has more than 5 methods, split it by use case.
 
-*   **No Shared Interfaces**: Interfaces are **local** to the package that uses them. They are NOT shared across packages, even sibling packages.
-    *   **Why**: Sibling packages should not know each other exist. If `file/` and `directory/` both need filesystem access, each defines its own interface with only the methods IT needs.
-    *   **Trade-off**: This creates duplication. You accept a small amount of duplication in exchange for massive decoupling and testability. This is the correct trade-off.
+*   **No Shared Interfaces**: Interfaces are local to the package that uses them. NOT shared across packages, even siblings.
+    *   **Why**: Sibling packages should not know each other exist. Each defines its own interface with only the methods IT needs.
+    *   **Trade-off**: This creates duplication. You accept small duplication in exchange for massive decoupling. This is correct.
 
 > [!CAUTION]
 > **ANTI-PATTERN**: Shared Interface Library
-> *   **Bad**: Creating `internal/interfaces/filesystem.go` with a 10-method `FileSystem` interface that everyone imports.
-> *   **Why**: This is just `model/` in disguise. It creates a central dependency, couples all consumers, and forces implementers to satisfy methods they don't need.
+>
+> *   **Bad**: Creating `internal/interfaces/filesystem.go` with a 10-method interface everyone imports.
+> *   **Why**: This is `model/` in disguise. It couples all consumers and forces implementers to satisfy methods they don't need.
 > *   **Solution**: Each consumer defines its own minimal interface. Duplication is acceptable. Coupling is not.
 
-
 **Example**:
-If `service` uses a database, `service` defines the `Repository` interface. The `database` package implements it.
 
 ```go
-// package service
+// package service - defines only what IT needs
 type UserRepository interface {
-    Find(id string) (*User, error) // Defined here, where it's used
+    Find(id string) (*User, error)
 }
 
 type Service struct {
@@ -155,95 +155,112 @@ type Service struct {
 ```
 
 **Sibling Isolation Example**:
-Both `file/` and `directory/` need filesystem operations, but each defines only what it needs:
 
 ```go
-// package file
+// package file - defines only what IT needs
 type fileSystem interface {
     Stat(path string) (FileInfo, error)
     ReadFileRange(path string, offset, limit int64) ([]byte, error)
 }
 
-// package directory (different package, defines its own interface)
+// package directory - different package, own interface
 type fileSystem interface {
     Stat(path string) (FileInfo, error)
     ListDir(path string) ([]FileInfo, error)
 }
 
-// Both are satisfied by the same concrete OSFileSystem,
-// but neither package knows about the other's interface.
+// Both satisfied by the same OSFileSystem, but neither knows about the other.
 ```
 
 > [!CAUTION]
 > **ANTI-PATTERN**: Leaky Interfaces
-> *   **Bad**: `Save(u *User) (sql.Result, error)`
->     *   *Why*: `sql.Result` ties your interface to a SQL database. You can't implement this for a file system or memory store.
-> *   **Good**: `Save(u *User) (string, error)`
->     *   *Why*: Returns the data you actually need (the new ID) in a generic way, without leaking implementation details.
+>
+> *   **Bad**: `Save(u *User) (sql.Result, error)` — ties interface to SQL.
+> *   **Good**: `Save(u *User) (string, error)` — returns what you need without leaking implementation.
+> *   **Why**: Leaky interfaces prevent alternative implementations (file system, memory store).
+
+---
 
 ## 3. Structs & Encapsulation
 **Goal**: Control state and enforce invariants.
 
-*   **Private Fields**: All Domain Entity fields MUST be private.
+*   **Private Fields**: All domain entity fields MUST be private.
+    *   **Why**: Private fields prevent external code from putting the object into an invalid state.
 
-*   **Public Constructor**: You MUST provide a public `New...` constructor for every Domain Entity.
-    *   **Strict Rule**: Direct initialization with `{}` is **forbidden** for Domain Entities, even if they currently have no validation logic.
-    *   **Reason**: Future-proofing. If you add validation later, you shouldn't have to refactor every usage.
+*   **Public Constructor**: You MUST provide a `New...` constructor for every domain entity.
+    *   **Why**: Constructors are the single point of validation. If you add validation later, you won't need to refactor every usage.
+    *   **Strict Rule**: Direct initialization with `{}` is forbidden, even if there's no validation yet.
 
 > [!CAUTION]
 > **ANTI-PATTERN**: Constructor Bypass
+>
 > *   **Bad**: `user := &User{email: "..."}`
 > *   **Good**: `user := NewUser("...")`
-> *   **Why**: Bypassing the constructor skips validation and makes it impossible to guarantee invariants. It also breaks encapsulation.
+> *   **Why**: Bypassing the constructor skips validation and makes invariants impossible to guarantee.
 
-*   **DTOs**: Use separate **Data Transfer Objects** (DTOs) with public fields for simple data passing (JSON, API) where no behavior/validation is attached.
+*   **DTOs**: Use Data Transfer Objects with public fields for serialization (JSON, API). DTOs have NO methods.
+    *   **Why**: DTOs are pure data carriers. Behavior belongs in domain entities.
+
+> [!CAUTION]
+> **ANTI-PATTERN**: Tag Pollution
+>
+> *   **Rule**: NEVER add `json:`, `yaml:`, or ORM tags to domain entities.
+> *   **Why**: Couples business logic to external interfaces.
+> *   **Solution**: Use dedicated DTOs for serialization and separate DB models for persistence.
+
+**Example**:
 
 ```go
-// Domain Entity
+// Domain Entity - private fields, constructor enforces invariants
 type User struct {
-    id    string // Private: immutable once created
-    email string // Private: validated format
+    id    string
+    email string
 }
 
-// DTO
+func NewUser(id, email string) (*User, error) {
+    if id == "" {
+        return nil, errors.New("id required")
+    }
+    return &User{id: id, email: email}, nil
+}
+
+// DTO - public fields, no methods, serialization tags
 type UserDTO struct {
     ID    string `json:"id"`
     Email string `json:"email"`
 }
 ```
 
-> [!CAUTION]
-> **ANTI-PATTERN**: Tag Pollution on Domain Entities
-> *   **Rule**: NEVER add `json:"..."`, `yaml:"..."`, or ORM tags (`gorm:"..."`) to **Domain Entities** (private structs).
-> *   **Reason**: This couples your pure business logic to specific external interfaces or database implementations.
-> *   **Solution**: Always use dedicated DTOs for serialization and separate DB Models for persistence.
+---
 
 ## 4. Validation Strategy
 **Goal**: Trust your objects.
 
-### Type A: Static Validation (Invariants)
-*   **Where**: Inside the Constructor (`New...`).
-*   **Guarantee**: It is **impossible** to create an instance of the struct if these pass fail.
-*   **Scope**: Internal consistency (e.g., "ID cannot be empty", "Email must have @").
+*   **Static Validation (Invariants)**: Validate inside the constructor.
+    *   **Where**: `New...` function.
+    *   **Guarantee**: It is impossible to create an invalid instance.
+    *   **Scope**: Internal consistency (e.g., "ID cannot be empty", "email must have @").
+
+*   **Dynamic Validation (Business Rules)**: Validate at the start of the method body.
+    *   **Where**: First lines of the method, clearly commented.
+    *   **Scope**: External state (e.g., "file exists", "user is unique in DB").
+    *   **Why**: Separating static and dynamic validation makes code predictable and testable.
+
+**Example**:
 
 ```go
+// Static validation in constructor
 func NewUser(id, email string) (*User, error) {
     if id == "" {
         return nil, errors.New("id is required")
     }
     if !strings.Contains(email, "@") {
-        return nil, errors.New("invalid email") // Static check
+        return nil, errors.New("invalid email")
     }
     return &User{id: id, email: email}, nil
 }
-```
 
-### Type B: Dynamic Validation (Business Rule / External)
-*   **Where**: First thing in the method body.
-*   **Scope**: Depends on external state (e.g., "File exists", "User is unique in DB").
-*   **Requirement**: You MUST strictly separate and comment the validation section from the actual implementation logic to ensure readability.
-
-```go
+// Dynamic validation in method
 func (u *User) Save(repo UserRepository) error {
     // 1. Dynamic Validation
     if exists := repo.Exists(u.id); exists {
@@ -255,32 +272,38 @@ func (u *User) Save(repo UserRepository) error {
 }
 ```
 
-## 5. Dependency Injection (DI) & Testing
+---
+
+## 5. Dependency Injection & Testing
 **Goal**: Deterministic, isolated tests.
 
-*   **Strict DI**: dependencies MUST be passed via constructor.
-*   **No Globals**: Never use global state for dependencies.
-*   **Testing**:
-    *   **Mocks**: Use mocks for all dependencies.
-    *   **No Temp Files**: Do not touch the filesystem in unit tests. Mock the `FileSystem` interface.
-    *   **No Temp Dirs**: Do not use `os.TempDir` or `t.TempDir()` in unit logic tests.
+*   **Strict DI**: Dependencies MUST be passed via constructor.
+    *   **Why**: Explicit dependencies make code testable and prevent hidden coupling.
 
-**Correct Usage**:
+*   **No Globals**: Never use global state for dependencies.
+    *   **Why**: Globals create hidden dependencies, prevent parallel tests, and make code unpredictable.
+
+*   **Mocking**: Use mocks for all dependencies in unit tests.
+    *   **Why**: Real dependencies (databases, filesystems) make tests slow, flaky, and non-deterministic.
+
+*   **No Temp Files/Dirs**: Do not touch the filesystem in unit tests. Mock the interface.
+    *   **Why**: Filesystem operations are slow and create test pollution across runs.
+
+**Example**:
 
 ```go
-// Service definition
+// Service with injected dependency
 type FileProcessor struct {
-    fs FileSystem // Interface
+    fs FileSystem
 }
 
-// Construction
 func NewFileProcessor(fs FileSystem) *FileProcessor {
     return &FileProcessor{fs: fs}
 }
 
-// Testing
+// Test with mock - no disk access
 func TestFileProcessor(t *testing.T) {
-    mockFS := new(MockFileSystem) // Mock implementation
+    mockFS := new(MockFileSystem)
     processor := NewFileProcessor(mockFS)
     // Test logic without touching disk
 }
