@@ -2,21 +2,40 @@ package adapter
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 
 	provider "github.com/Cyclone1070/iav/internal/provider/model"
-	"github.com/Cyclone1070/iav/internal/tools"
-	toolModels "github.com/Cyclone1070/iav/internal/tools/model"
+	"github.com/Cyclone1070/iav/internal/tools/directory"
+	"github.com/Cyclone1070/iav/internal/tools/file"
+	"github.com/Cyclone1070/iav/internal/tools/search"
+	"github.com/Cyclone1070/iav/internal/tools/shell"
+	"github.com/Cyclone1070/iav/internal/tools/todo"
 )
 
-// This file consolidates all tool adapters using the BaseAdapter pattern.
-// Each adapter is now a simple constructor function instead of a full type definition.
+// ReadFileAdapter adapts file.ReadFileTool to the Tool interface
+type ReadFileAdapter struct {
+	tool *file.ReadFileTool
+}
 
-// NewReadFile creates a read_file adapter
-func NewReadFile(wCtx *toolModels.WorkspaceContext) Tool {
-	return NewBaseAdapter(
-		"read_file",
-		"Reads a file from the workspace",
-		&provider.Schema{
+// NewReadFileAdapter creates a new ReadFileAdapter
+func NewReadFileAdapter(tool *file.ReadFileTool) *ReadFileAdapter {
+	return &ReadFileAdapter{tool: tool}
+}
+
+func (a *ReadFileAdapter) Name() string {
+	return "read_file"
+}
+
+func (a *ReadFileAdapter) Description() string {
+	return "Reads a file from the workspace"
+}
+
+func (a *ReadFileAdapter) Definition() provider.ToolDefinition {
+	return provider.ToolDefinition{
+		Name:        a.Name(),
+		Description: a.Description(),
+		Parameters: &provider.Schema{
 			Type: "object",
 			Properties: map[string]provider.Schema{
 				"path": {
@@ -34,17 +53,54 @@ func NewReadFile(wCtx *toolModels.WorkspaceContext) Tool {
 			},
 			Required: []string{"path"},
 		},
-		wCtx,
-		tools.ReadFile,
-	)
+	}
 }
 
-// NewWriteFile creates a write_file adapter
-func NewWriteFile(wCtx *toolModels.WorkspaceContext) Tool {
-	return NewBaseAdapter(
-		"write_file",
-		"Creates a new file in the workspace",
-		&provider.Schema{
+func (a *ReadFileAdapter) Execute(ctx context.Context, args map[string]any) (string, error) {
+	var req file.ReadFileRequest
+	argsJSON, err := json.Marshal(args)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal args: %w", err)
+	}
+	if err := json.Unmarshal(argsJSON, &req); err != nil {
+		return "", fmt.Errorf("failed to unmarshal request: %w", err)
+	}
+
+	resp, err := a.tool.Run(ctx, req)
+	if err != nil {
+		return "", err
+	}
+
+	respJSON, err := json.Marshal(resp)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal response: %w", err)
+	}
+	return string(respJSON), nil
+}
+
+// WriteFileAdapter adapts file.WriteFileTool to the Tool interface
+type WriteFileAdapter struct {
+	tool *file.WriteFileTool
+}
+
+// NewWriteFileAdapter creates a new WriteFileAdapter
+func NewWriteFileAdapter(tool *file.WriteFileTool) *WriteFileAdapter {
+	return &WriteFileAdapter{tool: tool}
+}
+
+func (a *WriteFileAdapter) Name() string {
+	return "write_file"
+}
+
+func (a *WriteFileAdapter) Description() string {
+	return "Creates a new file in the workspace"
+}
+
+func (a *WriteFileAdapter) Definition() provider.ToolDefinition {
+	return provider.ToolDefinition{
+		Name:        a.Name(),
+		Description: a.Description(),
+		Parameters: &provider.Schema{
 			Type: "object",
 			Properties: map[string]provider.Schema{
 				"path": {
@@ -62,17 +118,54 @@ func NewWriteFile(wCtx *toolModels.WorkspaceContext) Tool {
 			},
 			Required: []string{"path", "content"},
 		},
-		wCtx,
-		tools.WriteFile,
-	)
+	}
 }
 
-// NewEditFile creates an edit_file adapter
-func NewEditFile(wCtx *toolModels.WorkspaceContext) Tool {
-	return NewBaseAdapter(
-		"edit_file",
-		"Applies edit operations to an existing file",
-		&provider.Schema{
+func (a *WriteFileAdapter) Execute(ctx context.Context, args map[string]any) (string, error) {
+	var req file.WriteFileRequest
+	argsJSON, err := json.Marshal(args)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal args: %w", err)
+	}
+	if err := json.Unmarshal(argsJSON, &req); err != nil {
+		return "", fmt.Errorf("failed to unmarshal request: %w", err)
+	}
+
+	resp, err := a.tool.Run(ctx, req)
+	if err != nil {
+		return "", err
+	}
+
+	respJSON, err := json.Marshal(resp)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal response: %w", err)
+	}
+	return string(respJSON), nil
+}
+
+// EditFileAdapter adapts file.EditFileTool to the Tool interface
+type EditFileAdapter struct {
+	tool *file.EditFileTool
+}
+
+// NewEditFileAdapter creates a new EditFileAdapter
+func NewEditFileAdapter(tool *file.EditFileTool) *EditFileAdapter {
+	return &EditFileAdapter{tool: tool}
+}
+
+func (a *EditFileAdapter) Name() string {
+	return "edit_file"
+}
+
+func (a *EditFileAdapter) Description() string {
+	return "Applies edit operations to an existing file"
+}
+
+func (a *EditFileAdapter) Definition() provider.ToolDefinition {
+	return provider.ToolDefinition{
+		Name:        a.Name(),
+		Description: a.Description(),
+		Parameters: &provider.Schema{
 			Type: "object",
 			Properties: map[string]provider.Schema{
 				"path": {
@@ -104,58 +197,67 @@ func NewEditFile(wCtx *toolModels.WorkspaceContext) Tool {
 			},
 			Required: []string{"path", "operations"},
 		},
-		wCtx,
-		tools.EditFile,
-	)
+	}
 }
 
-// NewFindFile creates a find_file adapter
-func NewFindFile(wCtx *toolModels.WorkspaceContext) Tool {
-	return NewBaseAdapter(
-		"find_file",
-		"Finds files in the workspace matching a pattern",
-		&provider.Schema{
-			Type: "object",
-			Properties: map[string]provider.Schema{
-				"pattern": {
-					Type:        "string",
-					Description: "Glob pattern to match files",
-				},
-				"max_depth": {
-					Type:        "integer",
-					Description: "Maximum directory depth to search",
-				},
-				"include_ignored": {
-					Type:        "boolean",
-					Description: "Include gitignored files",
-				},
-			},
-			Required: []string{"pattern"},
-		},
-		wCtx,
-		tools.FindFile,
-	)
+func (a *EditFileAdapter) Execute(ctx context.Context, args map[string]any) (string, error) {
+	var req file.EditFileRequest
+	argsJSON, err := json.Marshal(args)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal args: %w", err)
+	}
+	if err := json.Unmarshal(argsJSON, &req); err != nil {
+		return "", fmt.Errorf("failed to unmarshal request: %w", err)
+	}
+
+	resp, err := a.tool.Run(ctx, req)
+	if err != nil {
+		return "", err
+	}
+
+	respJSON, err := json.Marshal(resp)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal response: %w", err)
+	}
+	return string(respJSON), nil
 }
 
-// NewListDirectory creates a list_directory adapter
-func NewListDirectory(wCtx *toolModels.WorkspaceContext) Tool {
-	return NewBaseAdapter(
-		"list_directory",
-		"Lists contents of a directory",
-		&provider.Schema{
+// ListDirectoryAdapter adapts directory.ListDirectoryTool to the Tool interface
+type ListDirectoryAdapter struct {
+	tool *directory.ListDirectoryTool
+}
+
+// NewListDirectoryAdapter creates a new ListDirectoryAdapter
+func NewListDirectoryAdapter(tool *directory.ListDirectoryTool) *ListDirectoryAdapter {
+	return &ListDirectoryAdapter{tool: tool}
+}
+
+func (a *ListDirectoryAdapter) Name() string {
+	return "list_directory"
+}
+
+func (a *ListDirectoryAdapter) Description() string {
+	return "Lists the contents of a directory"
+}
+
+func (a *ListDirectoryAdapter) Definition() provider.ToolDefinition {
+	return provider.ToolDefinition{
+		Name:        a.Name(),
+		Description: a.Description(),
+		Parameters: &provider.Schema{
 			Type: "object",
 			Properties: map[string]provider.Schema{
 				"path": {
 					Type:        "string",
-					Description: "Directory path (relative to workspace root)",
+					Description: "Path to the directory (relative to workspace root, defaults to workspace root)",
 				},
 				"max_depth": {
 					Type:        "integer",
-					Description: "Maximum depth for recursive listing (0 = current dir only, -1 = unlimited)",
+					Description: "Maximum depth to recurse (0 = non-recursive, -1 = unlimited)",
 				},
 				"include_ignored": {
 					Type:        "boolean",
-					Description: "Include gitignored files",
+					Description: "Include files ignored by .gitignore",
 				},
 				"offset": {
 					Type:        "integer",
@@ -163,60 +265,218 @@ func NewListDirectory(wCtx *toolModels.WorkspaceContext) Tool {
 				},
 				"limit": {
 					Type:        "integer",
-					Description: "Maximum number of entries to return",
+					Description: "Pagination limit",
 				},
 			},
-			Required: []string{"path"},
+			Required: []string{},
 		},
-		wCtx,
-		tools.ListDirectory,
-	)
+	}
 }
 
-// NewSearchContent creates a search_content adapter
-func NewSearchContent(wCtx *toolModels.WorkspaceContext) Tool {
-	return NewBaseAdapter(
-		"search_content",
-		"Searches for content within files",
-		&provider.Schema{
+func (a *ListDirectoryAdapter) Execute(ctx context.Context, args map[string]any) (string, error) {
+	var req directory.ListDirectoryRequest
+	argsJSON, err := json.Marshal(args)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal args: %w", err)
+	}
+	if err := json.Unmarshal(argsJSON, &req); err != nil {
+		return "", fmt.Errorf("failed to unmarshal request: %w", err)
+	}
+
+	resp, err := a.tool.Run(ctx, req)
+	if err != nil {
+		return "", err
+	}
+
+	respJSON, err := json.Marshal(resp)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal response: %w", err)
+	}
+	return string(respJSON), nil
+}
+
+// FindFileAdapter adapts directory.FindFileTool to the Tool interface
+type FindFileAdapter struct {
+	tool *directory.FindFileTool
+}
+
+// NewFindFileAdapter creates a new FindFileAdapter
+func NewFindFileAdapter(tool *directory.FindFileTool) *FindFileAdapter {
+	return &FindFileAdapter{tool: tool}
+}
+
+func (a *FindFileAdapter) Name() string {
+	return "find_file"
+}
+
+func (a *FindFileAdapter) Description() string {
+	return "Searches for files matching a glob pattern"
+}
+
+func (a *FindFileAdapter) Definition() provider.ToolDefinition {
+	return provider.ToolDefinition{
+		Name:        a.Name(),
+		Description: a.Description(),
+		Parameters: &provider.Schema{
+			Type: "object",
+			Properties: map[string]provider.Schema{
+				"pattern": {
+					Type:        "string",
+					Description: "Glob pattern to match files",
+				},
+				"search_path": {
+					Type:        "string",
+					Description: "Path to search within (relative to workspace root)",
+				},
+				"max_depth": {
+					Type:        "integer",
+					Description: "Maximum depth to search",
+				},
+				"include_ignored": {
+					Type:        "boolean",
+					Description: "Include files ignored by .gitignore",
+				},
+				"offset": {
+					Type:        "integer",
+					Description: "Pagination offset",
+				},
+				"limit": {
+					Type:        "integer",
+					Description: "Pagination limit",
+				},
+			},
+			Required: []string{"pattern"},
+		},
+	}
+}
+
+func (a *FindFileAdapter) Execute(ctx context.Context, args map[string]any) (string, error) {
+	var req directory.FindFileRequest
+	argsJSON, err := json.Marshal(args)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal args: %w", err)
+	}
+	if err := json.Unmarshal(argsJSON, &req); err != nil {
+		return "", fmt.Errorf("failed to unmarshal request: %w", err)
+	}
+
+	resp, err := a.tool.Run(ctx, req)
+	if err != nil {
+		return "", err
+	}
+
+	respJSON, err := json.Marshal(resp)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal response: %w", err)
+	}
+	return string(respJSON), nil
+}
+
+// SearchContentAdapter adapts search.SearchContentTool to the Tool interface
+type SearchContentAdapter struct {
+	tool *search.SearchContentTool
+}
+
+// NewSearchContentAdapter creates a new SearchContentAdapter
+func NewSearchContentAdapter(tool *search.SearchContentTool) *SearchContentAdapter {
+	return &SearchContentAdapter{tool: tool}
+}
+
+func (a *SearchContentAdapter) Name() string {
+	return "search_content"
+}
+
+func (a *SearchContentAdapter) Description() string {
+	return "Searches for content matching a regex pattern using ripgrep"
+}
+
+func (a *SearchContentAdapter) Definition() provider.ToolDefinition {
+	return provider.ToolDefinition{
+		Name:        a.Name(),
+		Description: a.Description(),
+		Parameters: &provider.Schema{
 			Type: "object",
 			Properties: map[string]provider.Schema{
 				"query": {
 					Type:        "string",
-					Description: "Search query",
+					Description: "Search query (regex pattern)",
 				},
-				"path": {
+				"search_path": {
 					Type:        "string",
-					Description: "Path to search in",
+					Description: "Path to search within (relative to workspace root)",
 				},
 				"case_sensitive": {
 					Type:        "boolean",
-					Description: "Case sensitive search",
+					Description: "Whether the search should be case sensitive",
 				},
 				"include_ignored": {
 					Type:        "boolean",
-					Description: "Include gitignored files",
+					Description: "Include files ignored by .gitignore",
+				},
+				"offset": {
+					Type:        "integer",
+					Description: "Pagination offset",
+				},
+				"limit": {
+					Type:        "integer",
+					Description: "Pagination limit",
 				},
 			},
 			Required: []string{"query"},
 		},
-		wCtx,
-		tools.SearchContent,
-	)
+	}
 }
 
-// NewShell creates a run_shell adapter
-// Note: Shell is special because it needs both ShellTool and WorkspaceContext
-func NewShell(tool *tools.ShellTool, wCtx *toolModels.WorkspaceContext) Tool {
-	return NewBaseAdapter(
-		"run_shell",
-		"Executes shell commands in the workspace",
-		&provider.Schema{
+func (a *SearchContentAdapter) Execute(ctx context.Context, args map[string]any) (string, error) {
+	var req search.SearchContentRequest
+	argsJSON, err := json.Marshal(args)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal args: %w", err)
+	}
+	if err := json.Unmarshal(argsJSON, &req); err != nil {
+		return "", fmt.Errorf("failed to unmarshal request: %w", err)
+	}
+
+	resp, err := a.tool.Run(ctx, req)
+	if err != nil {
+		return "", err
+	}
+
+	respJSON, err := json.Marshal(resp)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal response: %w", err)
+	}
+	return string(respJSON), nil
+}
+
+// ShellAdapter adapts shell.ShellTool to the Tool interface
+type ShellAdapter struct {
+	tool *shell.ShellTool
+}
+
+// NewShellAdapter creates a new ShellAdapter
+func NewShellAdapter(tool *shell.ShellTool) *ShellAdapter {
+	return &ShellAdapter{tool: tool}
+}
+
+func (a *ShellAdapter) Name() string {
+	return "run_shell"
+}
+
+func (a *ShellAdapter) Description() string {
+	return "Executes a shell command on the local machine"
+}
+
+func (a *ShellAdapter) Definition() provider.ToolDefinition {
+	return provider.ToolDefinition{
+		Name:        a.Name(),
+		Description: a.Description(),
+		Parameters: &provider.Schema{
 			Type: "object",
 			Properties: map[string]provider.Schema{
 				"command": {
 					Type:        "array",
-					Description: "The command and arguments to execute",
+					Description: "Command and arguments to execute",
 					Items: &provider.Schema{
 						Type: "string",
 					},
@@ -227,11 +487,11 @@ func NewShell(tool *tools.ShellTool, wCtx *toolModels.WorkspaceContext) Tool {
 				},
 				"timeout_seconds": {
 					Type:        "integer",
-					Description: "Timeout in seconds (default: 3600)",
+					Description: "Timeout in seconds",
 				},
 				"env": {
 					Type:        "object",
-					Description: "Environment variables as key-value pairs",
+					Description: "Environment variables",
 				},
 				"env_files": {
 					Type:        "array",
@@ -243,57 +503,114 @@ func NewShell(tool *tools.ShellTool, wCtx *toolModels.WorkspaceContext) Tool {
 			},
 			Required: []string{"command"},
 		},
-		wCtx,
-		// Use a closure to adapt ShellTool.Run to the expected signature
-		func(ctx context.Context, wCtx *toolModels.WorkspaceContext, req toolModels.ShellRequest) (toolModels.ShellResponse, error) {
-			// ShellTool.Run returns *ShellResponse, so we need to dereference it
-			resp, err := tool.Run(ctx, wCtx, req)
-			if err != nil {
-				// Return zero value on error
-				return toolModels.ShellResponse{}, err
-			}
-			return *resp, nil
-		},
-	)
+	}
 }
 
-// NewReadTodos creates a read_todos adapter
-func NewReadTodos(wCtx *toolModels.WorkspaceContext) Tool {
-	return NewBaseAdapter(
-		"read_todos",
-		"Reads all TODO items",
-		&provider.Schema{
+func (a *ShellAdapter) Execute(ctx context.Context, args map[string]any) (string, error) {
+	var req shell.ShellRequest
+	argsJSON, err := json.Marshal(args)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal args: %w", err)
+	}
+	if err := json.Unmarshal(argsJSON, &req); err != nil {
+		return "", fmt.Errorf("failed to unmarshal request: %w", err)
+	}
+
+	resp, err := a.tool.Run(ctx, req)
+	if err != nil {
+		return "", err
+	}
+
+	respJSON, err := json.Marshal(resp)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal response: %w", err)
+	}
+	return string(respJSON), nil
+}
+
+// ReadTodosAdapter adapts todo.ReadTodosTool to the Tool interface
+type ReadTodosAdapter struct {
+	tool *todo.ReadTodosTool
+}
+
+// NewReadTodosAdapter creates a new ReadTodosAdapter
+func NewReadTodosAdapter(tool *todo.ReadTodosTool) *ReadTodosAdapter {
+	return &ReadTodosAdapter{tool: tool}
+}
+
+func (a *ReadTodosAdapter) Name() string {
+	return "read_todos"
+}
+
+func (a *ReadTodosAdapter) Description() string {
+	return "Reads all todos from the in-memory store"
+}
+
+func (a *ReadTodosAdapter) Definition() provider.ToolDefinition {
+	return provider.ToolDefinition{
+		Name:        a.Name(),
+		Description: a.Description(),
+		Parameters: &provider.Schema{
 			Type:       "object",
 			Properties: map[string]provider.Schema{},
 			Required:   []string{},
 		},
-		wCtx,
-		tools.ReadTodos,
-	)
+	}
 }
 
-// NewWriteTodos creates a write_todos adapter
-func NewWriteTodos(wCtx *toolModels.WorkspaceContext) Tool {
-	return NewBaseAdapter(
-		"write_todos",
-		"Writes TODO items",
-		&provider.Schema{
+func (a *ReadTodosAdapter) Execute(ctx context.Context, args map[string]any) (string, error) {
+	var req todo.ReadTodosRequest
+
+	resp, err := a.tool.Run(ctx, req)
+	if err != nil {
+		return "", err
+	}
+
+	respJSON, err := json.Marshal(resp)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal response: %w", err)
+	}
+	return string(respJSON), nil
+}
+
+// WriteTodosAdapter adapts todo.WriteTodosTool to the Tool interface
+type WriteTodosAdapter struct {
+	tool *todo.WriteTodosTool
+}
+
+// NewWriteTodosAdapter creates a new WriteTodosAdapter
+func NewWriteTodosAdapter(tool *todo.WriteTodosTool) *WriteTodosAdapter {
+	return &WriteTodosAdapter{tool: tool}
+}
+
+func (a *WriteTodosAdapter) Name() string {
+	return "write_todos"
+}
+
+func (a *WriteTodosAdapter) Description() string {
+	return "Replaces all todos in the in-memory store"
+}
+
+func (a *WriteTodosAdapter) Definition() provider.ToolDefinition {
+	return provider.ToolDefinition{
+		Name:        a.Name(),
+		Description: a.Description(),
+		Parameters: &provider.Schema{
 			Type: "object",
 			Properties: map[string]provider.Schema{
 				"todos": {
 					Type:        "array",
-					Description: "List of TODO items",
+					Description: "List of todos",
 					Items: &provider.Schema{
 						Type: "object",
 						Properties: map[string]provider.Schema{
 							"description": {
 								Type:        "string",
-								Description: "Description of the todo item",
+								Description: "Todo description",
 							},
 							"status": {
 								Type:        "string",
-								Description: "Status of the todo",
-								Enum:        []string{"pending", "in_progress", "completed", "cancelled"},
+								Description: "Todo status (pending, in_progress, completed, cancelled)",
 							},
 						},
 						Required: []string{"description", "status"},
@@ -302,7 +619,27 @@ func NewWriteTodos(wCtx *toolModels.WorkspaceContext) Tool {
 			},
 			Required: []string{"todos"},
 		},
-		wCtx,
-		tools.WriteTodos,
-	)
+	}
+}
+
+func (a *WriteTodosAdapter) Execute(ctx context.Context, args map[string]any) (string, error) {
+	var req todo.WriteTodosRequest
+	argsJSON, err := json.Marshal(args)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal args: %w", err)
+	}
+	if err := json.Unmarshal(argsJSON, &req); err != nil {
+		return "", fmt.Errorf("failed to unmarshal request: %w", err)
+	}
+
+	resp, err := a.tool.Run(ctx, req)
+	if err != nil {
+		return "", err
+	}
+
+	respJSON, err := json.Marshal(resp)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal response: %w", err)
+	}
+	return string(respJSON), nil
 }

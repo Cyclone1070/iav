@@ -6,18 +6,46 @@ import (
 	"testing"
 
 	"github.com/Cyclone1070/iav/internal/config"
-	"github.com/Cyclone1070/iav/internal/testing/mock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-// createMockFS helper to reduce boilerplate
-func createMockFS(files map[string][]byte) *mock.MockFileSystem {
-	fs := mock.NewMockFileSystem()
-	if files != nil {
-		fs.Files = files
+// mockFileSystem is a local mock implementing config.FileSystem for testing
+type mockFileSystem struct {
+	Files       map[string][]byte
+	HomeDirErr  error
+	ReadFileErr error
+}
+
+func (m *mockFileSystem) UserHomeDir() (string, error) {
+	if m.HomeDirErr != nil {
+		return "", m.HomeDirErr
 	}
-	return fs
+	return "/home/user", nil
+}
+
+func (m *mockFileSystem) ReadFile(path string) ([]byte, error) {
+	if m.ReadFileErr != nil {
+		return nil, m.ReadFileErr
+	}
+	if data, ok := m.Files[path]; ok {
+		return data, nil
+	}
+	return nil, os.ErrNotExist
+}
+
+// SetOperationError sets an error for a specific operation
+func (m *mockFileSystem) SetOperationError(operation string, err error) {
+	if operation == "ReadFile" {
+		m.ReadFileErr = err
+	}
+}
+
+// createMockFS helper to reduce boilerplate
+func createMockFS(files map[string][]byte) *mockFileSystem {
+	return &mockFileSystem{
+		Files: files,
+	}
 }
 
 // --- HAPPY PATH TESTS ---

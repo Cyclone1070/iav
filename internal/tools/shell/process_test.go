@@ -1,0 +1,215 @@
+package shell
+
+import (
+	"context"
+	"io"
+	"os"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/Cyclone1070/iav/internal/config"
+	toolserrors "github.com/Cyclone1070/iav/internal/tools/errors"
+)
+
+// mockProcessForTimeout is a local mock for testing timeout functions
+type mockProcessForTimeout struct {
+	waitFunc   func() error
+	signalFunc func(sig os.Signal) error
+	killFunc   func() error
+}
+
+func (m *mockProcessForTimeout) Wait() error {
+	if m.waitFunc != nil {
+		return m.waitFunc()
+	}
+	return nil
+}
+
+func (m *mockProcessForTimeout) Signal(sig os.Signal) error {
+	if m.signalFunc != nil {
+		return m.signalFunc(sig)
+	}
+	return nil
+}
+
+func (m *mockProcessForTimeout) Kill() error {
+	if m.killFunc != nil {
+		return m.killFunc()
+	}
+	return nil
+}
+
+func TestExecuteWithTimeout_Success(t *testing.T) {
+	mock := &mockProcessForTimeout{}
+	mock.waitFunc = func() error {
+		time.Sleep(10 * time.Millisecond)
+		return nil
+	}
+
+	err := ExecuteWithTimeout(context.Background(), 100*time.Millisecond, 2000, mock)
+	if err != nil {
+		t.Errorf("ExecuteWithTimeout failed: %v", err)
+	}
+}
+
+func TestExecuteWithTimeout_Fail(t *testing.T) {
+	signalCalled := false
+	mock := &mockProcessForTimeout{}
+	mock.waitFunc = func() error {
+		time.Sleep(200 * time.Millisecond)
+		return nil
+	}
+	mock.signalFunc = func(sig os.Signal) error {
+		signalCalled = true
+		return nil
+	}
+
+	err := ExecuteWithTimeout(context.Background(), 50*time.Millisecond, 2000, mock)
+	if err != toolserrors.ErrShellTimeout {
+		t.Errorf("Error = %v, want ErrShellTimeout", err)
+	}
+	if !signalCalled {
+		t.Error("Signal (SIGTERM) not called")
+	}
+}
+
+func TestCollectProcessOutput(t *testing.T) {
+	tests := []struct {
+		name          string
+		stdout        string
+		stderr        string
+		maxBytes      int
+		wantStdout    string
+		wantStderr    string
+		wantTruncated bool
+	}{
+		{
+			name:          "Normal output",
+			stdout:        "hello\n",
+			stderr:        "world\n",
+			maxBytes:      1024,
+			wantStdout:    "hello\n",
+			wantStderr:    "world\n",
+			wantTruncated: false,
+		},
+		{
+			name:          "Truncated stdout",
+			stdout:        strings.Repeat("a", 2000),
+			stderr:        "error\n",
+			maxBytes:      1024,
+			wantStdout:    strings.Repeat("a", 1024),
+			wantStderr:    "error\n",
+			wantTruncated: true,
+		},
+		{
+			name:          "Truncated stderr",
+			stdout:        "output\n",
+			stderr:        strings.Repeat("e", 2000),
+			maxBytes:      1024,
+			wantStdout:    "output\n",
+			wantStderr:    strings.Repeat("e", 1024),
+			wantTruncated: true,
+		},
+		{
+			name:          "Binary stdout",
+			stdout:        string([]byte{0x00, 0x01, 0x02, 0xFF}),
+			stderr:        "",
+			maxBytes:      1024,
+			wantStdout:    "[Binary Content]",
+			wantStderr:    "",
+			wantTruncated: true,
+		},
+		{
+			name:          "Empty output",
+			stdout:        "",
+			stderr:        "",
+			maxBytes:      1024,
+			wantStdout:    "",
+			wantStderr:    "",
+			wantTruncated: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			stdoutReader := strings.NewReader(tt.stdout)
+			stderrReader := strings.NewReader(tt.stderr)
+
+			gotStdout, gotStderr, gotTruncated, err := CollectProcessOutput(stdoutReader, stderrReader, tt.maxBytes, config.DefaultConfig().Tools.BinaryDetectionSampleSize)
+			if err != nil {
+				t.Fatalf("CollectProcessOutput() error = %v", err)
+			}
+
+			if gotStdout != tt.wantStdout {
+				t.Errorf("stdout = %q, want %q", gotStdout, tt.wantStdout)
+			}
+			if gotStderr != tt.wantStderr {
+				t.Errorf("stderr = %q, want %q", gotStderr, tt.wantStderr)
+			}
+			if gotTruncated != tt.wantTruncated {
+				t.Errorf("truncated = %v, want %v", gotTruncated, tt.wantTruncated)
+			}
+		})
+	}
+}
+
+func TestCollectProcessOutput_Concurrent(t *testing.T) {
+	// Test that concurrent reads work correctly
+	largeStdout := strings.Repeat("stdout line\n", 1000)
+	largeStderr := strings.Repeat("stderr line\n", 1000)
+
+	stdoutReader := strings.NewReader(largeStdout)
+	stderrReader := strings.NewReader(largeStderr)
+
+	sampleSize := config.DefaultConfig().Tools.BinaryDetectionSampleSize
+
+	// Use config default for output size
+	gotStdout, gotStderr, _, err := CollectProcessOutput(stdoutReader, stderrReader, int(config.DefaultConfig().Tools.DefaultMaxCommandOutputSize), sampleSize)
+	if err != nil {
+		t.Fatalf("CollectProcessOutput failed: %v", err)
+	}
+
+	if gotStdout != largeStdout {
+		t.Errorf("stdout length = %d, want %d", len(gotStdout), len(largeStdout))
+	}
+	if gotStderr != largeStderr {
+		t.Errorf("stderr length = %d, want %d", len(gotStderr), len(largeStderr))
+	}
+}
+
+func TestCollectProcessOutput_SlowReader(t *testing.T) {
+	// Test with a slow reader to ensure goroutines complete
+	slowReader := &slowReader{data: []byte("slow data"), delay: 0}
+
+	gotStdout, gotStderr, _, err := CollectProcessOutput(slowReader, strings.NewReader(""), 1024, config.DefaultConfig().Tools.BinaryDetectionSampleSize)
+	if err != nil {
+		t.Fatalf("CollectProcessOutput() error = %v", err)
+	}
+
+	if gotStdout != "slow data" {
+		t.Errorf("stdout = %q, want %q", gotStdout, "slow data")
+	}
+	if gotStderr != "" {
+		t.Errorf("stderr = %q, want empty", gotStderr)
+	}
+}
+
+// slowReader simulates a slow reader for testing
+type slowReader struct {
+	data  []byte
+	delay int
+	pos   int
+}
+
+func (r *slowReader) Read(p []byte) (n int, err error) {
+	if r.pos >= len(r.data) {
+		return 0, io.EOF // Use as EOF substitute
+	}
+	n = copy(p, r.data[r.pos:])
+	r.pos += n
+	if r.pos >= len(r.data) {
+		err = io.EOF
+	}
+	return n, err
+}

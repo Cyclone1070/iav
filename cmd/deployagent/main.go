@@ -13,8 +13,14 @@ import (
 	orchadapter "github.com/Cyclone1070/iav/internal/orchestrator/adapter"
 	"github.com/Cyclone1070/iav/internal/provider/gemini"
 	provider "github.com/Cyclone1070/iav/internal/provider/model"
-	"github.com/Cyclone1070/iav/internal/tools"
-	"github.com/Cyclone1070/iav/internal/tools/model"
+	"github.com/Cyclone1070/iav/internal/tools/directory"
+	"github.com/Cyclone1070/iav/internal/tools/file"
+	"github.com/Cyclone1070/iav/internal/tools/fs"
+	"github.com/Cyclone1070/iav/internal/tools/gitignore"
+	"github.com/Cyclone1070/iav/internal/tools/pathutil"
+	"github.com/Cyclone1070/iav/internal/tools/search"
+	"github.com/Cyclone1070/iav/internal/tools/shell"
+	"github.com/Cyclone1070/iav/internal/tools/todo"
 	"github.com/Cyclone1070/iav/internal/ui"
 	uiservices "github.com/Cyclone1070/iav/internal/ui/service"
 	"github.com/charmbracelet/bubbles/spinner"
@@ -55,18 +61,62 @@ func createRealProviderFactory(cfg *config.Config) func(context.Context) (provid
 	}
 }
 
-func createTools(ctx *model.WorkspaceContext) []orchadapter.Tool {
-	return []orchadapter.Tool{
-		orchadapter.NewReadFile(ctx),
-		orchadapter.NewWriteFile(ctx),
-		orchadapter.NewEditFile(ctx),
-		orchadapter.NewListDirectory(ctx),
-		orchadapter.NewShell(&tools.ShellTool{CommandExecutor: ctx.CommandExecutor}, ctx),
-		orchadapter.NewSearchContent(ctx),
-		orchadapter.NewFindFile(ctx),
-		orchadapter.NewReadTodos(ctx),
-		orchadapter.NewWriteTodos(ctx),
+func createTools(cfg *config.Config, workspaceRoot string) ([]orchadapter.Tool, error) {
+	// Canonicalize workspace root
+	canonicalRoot, err := pathutil.CanonicaliseRoot(workspaceRoot)
+	if err != nil {
+		return nil, fmt.Errorf("failed to canonicalize workspace root: %w", err)
 	}
+
+	// Instantiate concrete dependencies
+	osFS := fs.NewOSFileSystem()
+	binaryDetector := fs.NewSystemBinaryDetector(cfg.Tools.BinaryDetectionSampleSize)
+	checksumManager := fs.NewChecksumManager()
+	commandExecutor := shell.NewOSCommandExecutor()
+	todoStore := todo.NewInMemoryTodoStore()
+
+	// Initialize gitignore service
+	var gitignoreService interface {
+		ShouldIgnore(relativePath string) bool
+	}
+	svc, err := gitignore.NewService(canonicalRoot, osFS)
+	if err != nil {
+		// Log error but continue with NoOpService
+		fmt.Fprintf(os.Stderr, "Warning: failed to initialize gitignore service: %v\n", err)
+		gitignoreService = &gitignore.NoOpService{}
+	} else {
+		gitignoreService = svc
+	}
+
+	// Docker configuration
+	dockerConfig := shell.DockerConfig{
+		CheckCommand: []string{"docker", "info"},
+		StartCommand: []string{"open", "-a", "Docker"},
+	}
+
+	// Instantiate all tools with their dependencies
+	readFileTool := file.NewReadFileTool(osFS, binaryDetector, checksumManager, cfg, canonicalRoot)
+	writeFileTool := file.NewWriteFileTool(osFS, binaryDetector, checksumManager, cfg, canonicalRoot)
+	editFileTool := file.NewEditFileTool(osFS, binaryDetector, checksumManager, cfg, canonicalRoot)
+	listDirectoryTool := directory.NewListDirectoryTool(osFS, gitignoreService, cfg, canonicalRoot)
+	findFileTool := directory.NewFindFileTool(osFS, commandExecutor, cfg, canonicalRoot)
+	searchContentTool := search.NewSearchContentTool(osFS, commandExecutor, cfg, canonicalRoot)
+	shellTool := shell.NewShellTool(osFS, commandExecutor, cfg, dockerConfig, canonicalRoot)
+	readTodosTool := todo.NewReadTodosTool(todoStore)
+	writeTodosTool := todo.NewWriteTodosTool(todoStore)
+
+	// Create adapters
+	return []orchadapter.Tool{
+		orchadapter.NewReadFileAdapter(readFileTool),
+		orchadapter.NewWriteFileAdapter(writeFileTool),
+		orchadapter.NewEditFileAdapter(editFileTool),
+		orchadapter.NewListDirectoryAdapter(listDirectoryTool),
+		orchadapter.NewFindFileAdapter(findFileTool),
+		orchadapter.NewSearchContentAdapter(searchContentTool),
+		orchadapter.NewShellAdapter(shellTool),
+		orchadapter.NewReadTodosAdapter(readTodosTool),
+		orchadapter.NewWriteTodosAdapter(writeTodosTool),
+	}, nil
 }
 
 func main() {
@@ -125,16 +175,14 @@ func runInteractive(ctx context.Context, deps Dependencies) {
 			return // DEGRADED MODE: UI runs but app doesn't start
 		}
 
-		workspaceCtx, err := tools.NewWorkspaceContext(deps.Config, workspaceRoot)
+		// Create tools with dependency injection
+		toolList, err := createTools(deps.Config, workspaceRoot)
 		if err != nil {
 			userInterface.WriteStatus("error", "Initialization failed")
-			userInterface.WriteMessage(fmt.Sprintf("Error: failed to initialize workspace: %v", err))
+			userInterface.WriteMessage(fmt.Sprintf("Error: failed to initialize tools: %v", err))
 			userInterface.WriteMessage("The application cannot start. Press Ctrl+C to exit.")
 			return
 		}
-
-		// Create tools
-		toolList := createTools(workspaceCtx)
 
 		// === PROVIDER INITIALIZATION ===
 		userInterface.WriteStatus("thinking", "Initializing AI...")
