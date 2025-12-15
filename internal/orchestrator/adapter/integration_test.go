@@ -11,14 +11,14 @@ import (
 
 	"github.com/Cyclone1070/iav/internal/config"
 	orchadapter "github.com/Cyclone1070/iav/internal/orchestrator/adapter"
-	"github.com/Cyclone1070/iav/internal/tools/directory"
-	"github.com/Cyclone1070/iav/internal/tools/file"
-	"github.com/Cyclone1070/iav/internal/tools/fs"
-	"github.com/Cyclone1070/iav/internal/tools/gitignore"
-	"github.com/Cyclone1070/iav/internal/tools/pathutil"
-	"github.com/Cyclone1070/iav/internal/tools/search"
-	"github.com/Cyclone1070/iav/internal/tools/shell"
-	"github.com/Cyclone1070/iav/internal/tools/todo"
+	"github.com/Cyclone1070/iav/internal/tool/directory"
+	"github.com/Cyclone1070/iav/internal/tool/file"
+	"github.com/Cyclone1070/iav/internal/tool/fsutil"
+	"github.com/Cyclone1070/iav/internal/tool/gitutil"
+	"github.com/Cyclone1070/iav/internal/tool/pathutil"
+	"github.com/Cyclone1070/iav/internal/tool/search"
+	"github.com/Cyclone1070/iav/internal/tool/shell"
+	"github.com/Cyclone1070/iav/internal/tool/todo"
 	"github.com/stretchr/testify/assert"
 )
 

@@ -6,11 +6,11 @@ import (
 	"fmt"
 
 	provider "github.com/Cyclone1070/iav/internal/provider/model"
-	"github.com/Cyclone1070/iav/internal/tools/directory"
-	"github.com/Cyclone1070/iav/internal/tools/file"
-	"github.com/Cyclone1070/iav/internal/tools/search"
-	"github.com/Cyclone1070/iav/internal/tools/shell"
-	"github.com/Cyclone1070/iav/internal/tools/todo"
+	"github.com/Cyclone1070/iav/internal/tool/directory"
+	"github.com/Cyclone1070/iav/internal/tool/file"
+	"github.com/Cyclone1070/iav/internal/tool/search"
+	"github.com/Cyclone1070/iav/internal/tool/shell"
+	"github.com/Cyclone1070/iav/internal/tool/todo"
 )
 
 // ReadFileAdapter adapts file.ReadFileTool to the Tool interface
