@@ -18,6 +18,7 @@ Before submitting code, verify **every** item. A single unchecked box = rejectio
 ### Interfaces
 - [ ] All interfaces defined in the **consumer** package, not the implementer
 - [ ] All interfaces are minimal (≤5 methods)
+- [ ] No unused methods in interfaces (grep to verify each method is called)
 
 ### Structs & Encapsulation
 - [ ] All domain entity fields are **private**
@@ -159,6 +160,14 @@ Before submitting code, verify **every** item. A single unchecked box = rejectio
 > *   **Bad**: Creating `internal/interfaces/filesystem.go` with a 10-method interface everyone imports.
 > *   **Why**: This is `model/` in disguise. It couples all consumers and forces implementers to satisfy methods they don't need.
 > *   **Solution**: Each consumer defines its own minimal interface. Duplication is acceptable. Coupling is not.
+
+> [!CAUTION]
+> **ANTI-PATTERN**: Leaky Interface
+>
+> *   **Bad**: Consumer interface declares methods it never calls (e.g., `Rename()` exists but is never invoked).
+> *   **Why**: The interface exposes internal implementation details or dependencies of dependencies.
+> *   **How It Happens**: Copying methods from the implementer instead of auditing actual usage.
+> *   **Solution**: Grep your package for each interface method. If unused, remove it.
 
 **Example**:
 
