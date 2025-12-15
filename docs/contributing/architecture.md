@@ -7,7 +7,7 @@
 
 ## Pre-Commit Checklist
 
-Before submitting code, verify **every** item. A single unchecked box = rejection.
+Before submitting code, verify **every** item.
 
 ### Package Design
 - [ ] No generic subdirectories (`model/`, `service/`, `utils/`, `types/`)
