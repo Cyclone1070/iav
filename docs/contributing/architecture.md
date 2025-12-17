@@ -316,7 +316,7 @@ type UserDTO struct {
     *   **Why**: Callers cannot forget to validate. Invalid objects cannot exist.
 
 *   **Runtime Validation**: Validate what you DON'T KNOW until the method runs.
-    *   **Where**: First lines of the method, clearly commented as `// 1. Runtime Validation`.
+    *   **Where**: First lines of the method, clearly commented as `// Runtime Validation`.
     *   **What**: External state requiring I/O or side effects (e.g., "file exists", "user is unique in DB").
     *   **Why**: These checks require runtime operations. You cannot know the answer without performing the operations.
 
@@ -342,7 +342,7 @@ func NewReadFileRequest(path string, offset, limit int64) (*ReadFileRequest, err
 
 // Runtime validation - what we CAN'T know until we check
 func (t *ReadFileTool) Run(ctx context.Context, req *ReadFileRequest) (*ReadFileResponse, error) {
-    // 1. Runtime Validation
+    // Runtime Validation
     abs, err := t.pathResolver.Resolve(req.path)
     if err != nil {
         return nil, err // path outside workspace
@@ -444,7 +444,7 @@ func (t *ReadFileTool) Run(ctx context.Context, req *ReadFileRequest) (*ReadFile
 **Example**:
 
 ```go
-// 1. Provider (package fs)
+// Provider (package fs)
 type NotFoundError struct { name string }
 func (e *NotFoundError) Error() string { return "not found: " + e.name }
 func (e *NotFoundError) NotFound() bool { return true } // <--- THE BEHAVIOR
