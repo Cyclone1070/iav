@@ -1,7 +1,7 @@
 package directory
 
 import (
-	"fmt"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -48,13 +48,13 @@ func NewListDirectoryRequest(
 ) (*ListDirectoryRequest, error) {
 	// Constructor validation
 	if dto.Offset < 0 {
-		return nil, fmt.Errorf("offset cannot be negative")
+		return nil, &NegativeOffsetError{Value: int64(dto.Offset)}
 	}
 	if dto.Limit < 0 {
-		return nil, fmt.Errorf("limit cannot be negative")
+		return nil, &NegativeLimitError{Value: int64(dto.Limit)}
 	}
 	if dto.Limit > cfg.Tools.MaxListDirectoryLimit {
-		return nil, fmt.Errorf("limit %d exceeds maximum %d", dto.Limit, cfg.Tools.MaxListDirectoryLimit)
+		return nil, &LimitExceededError{Value: int64(dto.Limit), Max: int64(cfg.Tools.MaxListDirectoryLimit)}
 	}
 
 	// Path defaults to "." if empty
@@ -66,7 +66,11 @@ func NewListDirectoryRequest(
 	// Path resolution
 	abs, rel, err := resolvePathWithFS(workspaceRoot, fs, path)
 	if err != nil {
-		return nil, fmt.Errorf("invalid path: %w", err)
+		var ow interface{ OutsideWorkspace() bool }
+		if errors.As(err, &ow) && ow.OutsideWorkspace() {
+			return nil, &PathTraversalError{Path: path}
+		}
+		return nil, &ListDirError{Path: path, Cause: err}
 	}
 
 	return &ListDirectoryRequest{
@@ -154,27 +158,27 @@ func NewFindFileRequest(
 ) (*FindFileRequest, error) {
 	// Constructor validation
 	if dto.Pattern == "" {
-		return nil, fmt.Errorf("pattern is required")
+		return nil, &PatternRequiredError{}
 	}
 
 	// Check for path traversal or absolute path in pattern
 	if strings.Contains(dto.Pattern, "..") || filepath.IsAbs(dto.Pattern) {
-		return nil, fmt.Errorf("invalid pattern: traversal or absolute path not allowed")
+		return nil, &PathTraversalError{Path: dto.Pattern}
 	}
 
 	// Simple check for path traversal in search path if provided
 	if dto.SearchPath != "" && (dto.SearchPath == ".." || dto.SearchPath == "/" || dto.SearchPath == "\\") {
-		return nil, fmt.Errorf("invalid search path: traversal not allowed")
+		return nil, &PathTraversalError{Path: dto.SearchPath}
 	}
 
 	if dto.Offset < 0 {
-		return nil, fmt.Errorf("offset cannot be negative")
+		return nil, &NegativeOffsetError{Value: int64(dto.Offset)}
 	}
 	if dto.Limit < 0 {
-		return nil, fmt.Errorf("limit cannot be negative")
+		return nil, &NegativeLimitError{Value: int64(dto.Limit)}
 	}
 	if dto.Limit > cfg.Tools.MaxFindFileLimit {
-		return nil, fmt.Errorf("limit %d exceeds maximum %d", dto.Limit, cfg.Tools.MaxFindFileLimit)
+		return nil, &LimitExceededError{Value: int64(dto.Limit), Max: int64(cfg.Tools.MaxFindFileLimit)}
 	}
 
 	// SearchPath defaults to "." if empty
@@ -186,7 +190,11 @@ func NewFindFileRequest(
 	// Path resolution for search path
 	searchAbs, searchRel, err := resolvePathWithFS(workspaceRoot, fs, searchPath)
 	if err != nil {
-		return nil, fmt.Errorf("invalid search path: %w", err)
+		var ow interface{ OutsideWorkspace() bool }
+		if errors.As(err, &ow) && ow.OutsideWorkspace() {
+			return nil, &PathTraversalError{Path: searchPath}
+		}
+		return nil, &FindFileError{Path: searchPath, Cause: err}
 	}
 
 	return &FindFileRequest{

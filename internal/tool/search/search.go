@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
-	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
@@ -51,7 +50,7 @@ func (t *SearchContentTool) Run(ctx context.Context, req *SearchContentRequest) 
 		if os.IsNotExist(err) {
 			return nil, &FileMissingError{Path: absSearchPath}
 		}
-		return nil, fmt.Errorf("failed to stat search path: %w", err)
+		return nil, &StatError{Path: absSearchPath, Cause: err}
 	}
 
 	if !info.IsDir() {
@@ -89,7 +88,7 @@ func (t *SearchContentTool) Run(ctx context.Context, req *SearchContentRequest) 
 	// Execute command with streaming
 	proc, stdout, _, err := t.commandExecutor.Start(ctx, cmd, shell.ProcessOptions{Dir: absSearchPath})
 	if err != nil {
-		return nil, fmt.Errorf("failed to start rg command: %w", err)
+		return nil, &CommandStartError{Cmd: "rg", Cause: err}
 	}
 	// process will be waited on explicitly later
 
@@ -154,7 +153,7 @@ func (t *SearchContentTool) Run(ctx context.Context, req *SearchContentRequest) 
 	}
 
 	if err := scanner.Err(); err != nil {
-		return nil, fmt.Errorf("error reading rg output: %w", err)
+		return nil, &CommandOutputError{Cmd: "rg", Cause: err}
 	}
 
 	// Wait for command to complete
@@ -165,7 +164,7 @@ func (t *SearchContentTool) Run(ctx context.Context, req *SearchContentRequest) 
 			// We just continue with empty matches
 		} else {
 			// Exit code 2+ = real error
-			return nil, fmt.Errorf("rg command failed: %w", err)
+			return nil, &CommandFailedError{Cmd: "rg", Cause: err}
 		}
 	}
 

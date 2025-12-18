@@ -5,6 +5,7 @@ package file
 
 import (
 	"context"
+	"errors"
 	"os"
 	"strings"
 	"testing"
@@ -25,11 +26,12 @@ func TestEditFile(t *testing.T) {
 		cfg := config.DefaultConfig()
 		cfg.Tools.MaxFileSize = maxFileSize
 
-		readTool := NewReadFileTool(fs, fs, newMockBinaryDetectorForWrite(), checksumManager, cfg, workspaceRoot)
-		editTool := NewEditFileTool(fs, fs, newMockBinaryDetectorForWrite(), checksumManager, cfg, workspaceRoot)
+		readTool := NewReadFileTool(fs, newMockBinaryDetectorForWrite(), checksumManager, cfg, workspaceRoot)
+		editTool := NewEditFileTool(fs, newMockBinaryDetectorForWrite(), checksumManager, cfg, workspaceRoot)
 
 		// Read file to populate cache
-		_, err := readTool.Run(context.Background(), ReadFileRequest{Path: "test.txt"})
+		readReq, _ := NewReadFileRequest(ReadFileDTO{Path: "test.txt"}, cfg, workspaceRoot, fs)
+		_, err := readTool.Run(context.Background(), readReq)
 		if err != nil {
 			t.Fatalf("failed to read file: %v", err)
 		}
@@ -47,9 +49,15 @@ func TestEditFile(t *testing.T) {
 			},
 		}
 
-		_, err = editTool.Run(context.Background(), EditFileRequest{Path: "test.txt", Operations: ops})
-		if err != ErrEditConflict {
-			t.Errorf("expected ErrEditConflict, got %v", err)
+		editReq, err := NewEditFileRequest(EditFileDTO{Path: "test.txt", Operations: ops}, cfg, workspaceRoot, fs)
+		if err != nil {
+			t.Fatalf("failed to create edit request: %v", err)
+		}
+
+		_, err = editTool.Run(context.Background(), editReq)
+		var editConflictErr *EditConflictError
+		if err == nil || !errors.As(err, &editConflictErr) {
+			t.Errorf("expected EditConflictError, got %v", err)
 		}
 	})
 
@@ -59,11 +67,15 @@ func TestEditFile(t *testing.T) {
 		content := []byte("line1\nline2\nline3")
 		fs.createFile("/workspace/test.txt", content, 0644)
 
-		readTool := NewReadFileTool(fs, fs, newMockBinaryDetectorForWrite(), checksumManager, config.DefaultConfig(), workspaceRoot)
-		editTool := NewEditFileTool(fs, fs, newMockBinaryDetectorForWrite(), checksumManager, config.DefaultConfig(), workspaceRoot)
+		cfg := config.DefaultConfig()
+		cfg.Tools.MaxFileSize = maxFileSize
+
+		readTool := NewReadFileTool(fs, newMockBinaryDetectorForWrite(), checksumManager, cfg, workspaceRoot)
+		editTool := NewEditFileTool(fs, newMockBinaryDetectorForWrite(), checksumManager, cfg, workspaceRoot)
 
 		// Read first to populate cache
-		_, err := readTool.Run(context.Background(), ReadFileRequest{Path: "test.txt"})
+		readReq, _ := NewReadFileRequest(ReadFileDTO{Path: "test.txt"}, cfg, workspaceRoot, fs)
+		_, err := readTool.Run(context.Background(), readReq)
 		if err != nil {
 			t.Fatalf("failed to read file: %v", err)
 		}
@@ -81,7 +93,12 @@ func TestEditFile(t *testing.T) {
 			},
 		}
 
-		resp, err := editTool.Run(context.Background(), EditFileRequest{Path: "test.txt", Operations: ops})
+		editReq, err := NewEditFileRequest(EditFileDTO{Path: "test.txt", Operations: ops}, cfg, workspaceRoot, fs)
+		if err != nil {
+			t.Fatalf("failed to create edit request: %v", err)
+		}
+
+		resp, err := editTool.Run(context.Background(), editReq)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -108,10 +125,13 @@ func TestEditFile(t *testing.T) {
 		content := []byte("test content")
 		fs.createFile("/workspace/test.txt", content, 0644)
 
-		readTool := NewReadFileTool(fs, fs, newMockBinaryDetectorForWrite(), checksumManager, config.DefaultConfig(), workspaceRoot)
-		editTool := NewEditFileTool(fs, fs, newMockBinaryDetectorForWrite(), checksumManager, config.DefaultConfig(), workspaceRoot)
+		cfg := config.DefaultConfig()
 
-		_, err := readTool.Run(context.Background(), ReadFileRequest{Path: "test.txt"})
+		readTool := NewReadFileTool(fs, newMockBinaryDetectorForWrite(), checksumManager, cfg, workspaceRoot)
+		editTool := NewEditFileTool(fs, newMockBinaryDetectorForWrite(), checksumManager, cfg, workspaceRoot)
+
+		readReq, _ := NewReadFileRequest(ReadFileDTO{Path: "test.txt"}, cfg, workspaceRoot, fs)
+		_, err := readTool.Run(context.Background(), readReq)
 		if err != nil {
 			t.Fatalf("failed to read file: %v", err)
 		}
@@ -124,9 +144,15 @@ func TestEditFile(t *testing.T) {
 			},
 		}
 
-		_, err = editTool.Run(context.Background(), EditFileRequest{Path: "test.txt", Operations: ops})
-		if err != ErrSnippetNotFound {
-			t.Errorf("expected ErrSnippetNotFound, got %v", err)
+		editReq, err := NewEditFileRequest(EditFileDTO{Path: "test.txt", Operations: ops}, cfg, workspaceRoot, fs)
+		if err != nil {
+			t.Fatalf("failed to create edit request: %v", err)
+		}
+
+		_, err = editTool.Run(context.Background(), editReq)
+		var snippetNotFoundErr *SnippetNotFoundError
+		if err == nil || !errors.As(err, &snippetNotFoundErr) {
+			t.Errorf("expected SnippetNotFoundError, got %v", err)
 		}
 	})
 
@@ -136,10 +162,12 @@ func TestEditFile(t *testing.T) {
 		content := []byte("test test test")
 		fs.createFile("/workspace/test.txt", content, 0644)
 
-		readTool := NewReadFileTool(fs, fs, newMockBinaryDetectorForWrite(), checksumManager, config.DefaultConfig(), workspaceRoot)
-		editTool := NewEditFileTool(fs, fs, newMockBinaryDetectorForWrite(), checksumManager, config.DefaultConfig(), workspaceRoot)
+		cfg := config.DefaultConfig()
+		readTool := NewReadFileTool(fs, newMockBinaryDetectorForWrite(), checksumManager, cfg, workspaceRoot)
+		editTool := NewEditFileTool(fs, newMockBinaryDetectorForWrite(), checksumManager, cfg, workspaceRoot)
 
-		_, err := readTool.Run(context.Background(), ReadFileRequest{Path: "test.txt"})
+		readReq, _ := NewReadFileRequest(ReadFileDTO{Path: "test.txt"}, cfg, workspaceRoot, fs)
+		_, err := readTool.Run(context.Background(), readReq)
 		if err != nil {
 			t.Fatalf("failed to read file: %v", err)
 		}
@@ -152,9 +180,15 @@ func TestEditFile(t *testing.T) {
 			},
 		}
 
-		_, err = editTool.Run(context.Background(), EditFileRequest{Path: "test.txt", Operations: ops})
-		if err != ErrExpectedReplacementsMismatch {
-			t.Errorf("expected ErrExpectedReplacementsMismatch, got %v", err)
+		editReq, err := NewEditFileRequest(EditFileDTO{Path: "test.txt", Operations: ops}, cfg, workspaceRoot, fs)
+		if err != nil {
+			t.Fatalf("failed to create edit request: %v", err)
+		}
+
+		_, err = editTool.Run(context.Background(), editReq)
+		var mismatchErr *ReplacementMismatchError
+		if err == nil || !errors.As(err, &mismatchErr) {
+			t.Errorf("expected ReplacementMismatchError, got %v", err)
 		}
 	})
 
@@ -170,7 +204,8 @@ func TestEditFile(t *testing.T) {
 		content := []byte{0x00, 0x01, 0x02, 't', 'e', 's', 't'}
 		fs.createFile("/workspace/binary.bin", content, 0644)
 
-		editTool := NewEditFileTool(fs, fs, detector, checksumManager, config.DefaultConfig(), workspaceRoot)
+		cfg := config.DefaultConfig()
+		editTool := NewEditFileTool(fs, detector, checksumManager, cfg, workspaceRoot)
 
 		ops := []Operation{
 			{
@@ -180,9 +215,15 @@ func TestEditFile(t *testing.T) {
 			},
 		}
 
-		_, err := editTool.Run(context.Background(), EditFileRequest{Path: "binary.bin", Operations: ops})
-		if err != ErrBinaryFile {
-			t.Errorf("expected ErrBinaryFile, got %v", err)
+		editReq, err := NewEditFileRequest(EditFileDTO{Path: "binary.bin", Operations: ops}, cfg, workspaceRoot, fs)
+		if err != nil {
+			t.Fatalf("failed to create edit request: %v", err)
+		}
+
+		_, err = editTool.Run(context.Background(), editReq)
+		var binaryErr *BinaryFileError
+		if err == nil || !errors.As(err, &binaryErr) {
+			t.Errorf("expected BinaryFileError, got %v", err)
 		}
 	})
 
@@ -193,10 +234,12 @@ func TestEditFile(t *testing.T) {
 		content := []byte("test content")
 		fs.createFile("/workspace/test.txt", content, originalPerm)
 
-		readTool := NewReadFileTool(fs, fs, newMockBinaryDetectorForWrite(), checksumManager, config.DefaultConfig(), workspaceRoot)
-		editTool := NewEditFileTool(fs, fs, newMockBinaryDetectorForWrite(), checksumManager, config.DefaultConfig(), workspaceRoot)
+		cfg := config.DefaultConfig()
+		readTool := NewReadFileTool(fs, newMockBinaryDetectorForWrite(), checksumManager, cfg, workspaceRoot)
+		editTool := NewEditFileTool(fs, newMockBinaryDetectorForWrite(), checksumManager, cfg, workspaceRoot)
 
-		_, err := readTool.Run(context.Background(), ReadFileRequest{Path: "test.txt"})
+		readReq, _ := NewReadFileRequest(ReadFileDTO{Path: "test.txt"}, cfg, workspaceRoot, fs)
+		_, err := readTool.Run(context.Background(), readReq)
 		if err != nil {
 			t.Fatalf("failed to read file: %v", err)
 		}
@@ -209,7 +252,12 @@ func TestEditFile(t *testing.T) {
 			},
 		}
 
-		_, err = editTool.Run(context.Background(), EditFileRequest{Path: "test.txt", Operations: ops})
+		editReq, err := NewEditFileRequest(EditFileDTO{Path: "test.txt", Operations: ops}, cfg, workspaceRoot, fs)
+		if err != nil {
+			t.Fatalf("failed to create edit request: %v", err)
+		}
+
+		_, err = editTool.Run(context.Background(), editReq)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -229,7 +277,8 @@ func TestEditFile(t *testing.T) {
 		fs := newMockFileSystemForWrite()
 		checksumManager := newMockChecksumManagerForWrite()
 
-		editTool := NewEditFileTool(fs, fs, newMockBinaryDetectorForWrite(), checksumManager, config.DefaultConfig(), workspaceRoot)
+		cfg := config.DefaultConfig()
+		editTool := NewEditFileTool(fs, newMockBinaryDetectorForWrite(), checksumManager, cfg, workspaceRoot)
 
 		ops := []Operation{
 			{
@@ -239,9 +288,15 @@ func TestEditFile(t *testing.T) {
 			},
 		}
 
-		_, err := editTool.Run(context.Background(), EditFileRequest{Path: "nonexistent.txt", Operations: ops})
-		if err != ErrFileMissing {
-			t.Errorf("expected ErrFileMissing, got %v", err)
+		editReq, err := NewEditFileRequest(EditFileDTO{Path: "nonexistent.txt", Operations: ops}, cfg, workspaceRoot, fs)
+		if err != nil {
+			t.Fatalf("failed to create edit request: %v", err)
+		}
+
+		_, err = editTool.Run(context.Background(), editReq)
+		var fileMissingErr *FileMissingError
+		if err == nil || !errors.As(err, &fileMissingErr) {
+			t.Errorf("expected FileMissingError, got %v", err)
 		}
 	})
 
@@ -251,10 +306,12 @@ func TestEditFile(t *testing.T) {
 		content := []byte("replace me")
 		fs.createFile("/workspace/test.txt", content, 0644)
 
-		readTool := NewReadFileTool(fs, fs, newMockBinaryDetectorForWrite(), checksumManager, config.DefaultConfig(), workspaceRoot)
-		editTool := NewEditFileTool(fs, fs, newMockBinaryDetectorForWrite(), checksumManager, config.DefaultConfig(), workspaceRoot)
+		cfg := config.DefaultConfig()
+		readTool := NewReadFileTool(fs, newMockBinaryDetectorForWrite(), checksumManager, cfg, workspaceRoot)
+		editTool := NewEditFileTool(fs, newMockBinaryDetectorForWrite(), checksumManager, cfg, workspaceRoot)
 
-		_, err := readTool.Run(context.Background(), ReadFileRequest{Path: "test.txt"})
+		readReq, _ := NewReadFileRequest(ReadFileDTO{Path: "test.txt"}, cfg, workspaceRoot, fs)
+		_, err := readTool.Run(context.Background(), readReq)
 		if err != nil {
 			t.Fatalf("failed to read file: %v", err)
 		}
@@ -267,7 +324,12 @@ func TestEditFile(t *testing.T) {
 			},
 		}
 
-		resp, err := editTool.Run(context.Background(), EditFileRequest{Path: "test.txt", Operations: ops})
+		editReq, err := NewEditFileRequest(EditFileDTO{Path: "test.txt", Operations: ops}, cfg, workspaceRoot, fs)
+		if err != nil {
+			t.Fatalf("failed to create edit request: %v", err)
+		}
+
+		resp, err := editTool.Run(context.Background(), editReq)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -294,10 +356,12 @@ func TestEditFile(t *testing.T) {
 		content := []byte("test test")
 		fs.createFile("/workspace/test.txt", content, 0644)
 
-		readTool := NewReadFileTool(fs, fs, newMockBinaryDetectorForWrite(), checksumManager, config.DefaultConfig(), workspaceRoot)
-		editTool := NewEditFileTool(fs, fs, newMockBinaryDetectorForWrite(), checksumManager, config.DefaultConfig(), workspaceRoot)
+		cfg := config.DefaultConfig()
+		readTool := NewReadFileTool(fs, newMockBinaryDetectorForWrite(), checksumManager, cfg, workspaceRoot)
+		editTool := NewEditFileTool(fs, newMockBinaryDetectorForWrite(), checksumManager, cfg, workspaceRoot)
 
-		_, err := readTool.Run(context.Background(), ReadFileRequest{Path: "test.txt"})
+		readReq, _ := NewReadFileRequest(ReadFileDTO{Path: "test.txt"}, cfg, workspaceRoot, fs)
+		_, err := readTool.Run(context.Background(), readReq)
 		if err != nil {
 			t.Fatalf("failed to read file: %v", err)
 		}
@@ -310,9 +374,15 @@ func TestEditFile(t *testing.T) {
 			},
 		}
 
-		_, err = editTool.Run(context.Background(), EditFileRequest{Path: "test.txt", Operations: ops})
-		if err != ErrExpectedReplacementsMismatch {
-			t.Errorf("expected ErrExpectedReplacementsMismatch, got %v", err)
+		editReq, err := NewEditFileRequest(EditFileDTO{Path: "test.txt", Operations: ops}, cfg, workspaceRoot, fs)
+		if err != nil {
+			t.Fatalf("failed to create edit request: %v", err)
+		}
+
+		_, err = editTool.Run(context.Background(), editReq)
+		var mismatchErr *ReplacementMismatchError
+		if err == nil || !errors.As(err, &mismatchErr) {
+			t.Errorf("expected ReplacementMismatchError, got %v", err)
 		}
 	})
 
@@ -331,10 +401,11 @@ func TestEditFile(t *testing.T) {
 		cfg := config.DefaultConfig()
 		cfg.Tools.MaxFileSize = maxFileSize
 
-		readTool := NewReadFileTool(fs, fs, newMockBinaryDetectorForWrite(), checksumManager, cfg, workspaceRoot)
-		editTool := NewEditFileTool(fs, fs, newMockBinaryDetectorForWrite(), checksumManager, cfg, workspaceRoot)
+		readTool := NewReadFileTool(fs, newMockBinaryDetectorForWrite(), checksumManager, cfg, workspaceRoot)
+		editTool := NewEditFileTool(fs, newMockBinaryDetectorForWrite(), checksumManager, cfg, workspaceRoot)
 
-		_, err := readTool.Run(context.Background(), ReadFileRequest{Path: "test.txt"})
+		readReq, _ := NewReadFileRequest(ReadFileDTO{Path: "test.txt"}, cfg, workspaceRoot, fs)
+		_, err := readTool.Run(context.Background(), readReq)
 		if err != nil {
 			t.Fatalf("failed to read file: %v", err)
 		}
@@ -353,9 +424,15 @@ func TestEditFile(t *testing.T) {
 			},
 		}
 
-		_, err = editTool.Run(context.Background(), EditFileRequest{Path: "test.txt", Operations: ops})
-		if err != ErrTooLarge {
-			t.Errorf("expected ErrTooLarge, got %v", err)
+		editReq, err := NewEditFileRequest(EditFileDTO{Path: "test.txt", Operations: ops}, cfg, workspaceRoot, fs)
+		if err != nil {
+			t.Fatalf("failed to create edit request: %v", err)
+		}
+
+		_, err = editTool.Run(context.Background(), editReq)
+		var tooLargeErr *TooLargeError
+		if err == nil || !errors.As(err, &tooLargeErr) {
+			t.Errorf("expected TooLargeError, got %v", err)
 		}
 	})
 
@@ -365,11 +442,13 @@ func TestEditFile(t *testing.T) {
 		originalContent := []byte("original content")
 		fs.createFile("/workspace/test.txt", originalContent, 0644)
 
-		readTool := NewReadFileTool(fs, fs, newMockBinaryDetectorForWrite(), checksumManager, config.DefaultConfig(), workspaceRoot)
-		editTool := NewEditFileTool(fs, fs, newMockBinaryDetectorForWrite(), checksumManager, config.DefaultConfig(), workspaceRoot)
+		cfg := config.DefaultConfig()
+		readTool := NewReadFileTool(fs, newMockBinaryDetectorForWrite(), checksumManager, cfg, workspaceRoot)
+		editTool := NewEditFileTool(fs, newMockBinaryDetectorForWrite(), checksumManager, cfg, workspaceRoot)
 
 		// Read file to populate cache
-		_, err := readTool.Run(context.Background(), ReadFileRequest{Path: "test.txt"})
+		readReq, _ := NewReadFileRequest(ReadFileDTO{Path: "test.txt"}, cfg, workspaceRoot, fs)
+		_, err := readTool.Run(context.Background(), readReq)
 		if err != nil {
 			t.Fatalf("failed to read file: %v", err)
 		}
@@ -387,9 +466,15 @@ func TestEditFile(t *testing.T) {
 			},
 		}
 
-		_, err = editTool.Run(context.Background(), EditFileRequest{Path: "test.txt", Operations: ops})
-		if err != ErrEditConflict {
-			t.Errorf("expected ErrEditConflict due to race condition, got %v", err)
+		editReq, err := NewEditFileRequest(EditFileDTO{Path: "test.txt", Operations: ops}, cfg, workspaceRoot, fs)
+		if err != nil {
+			t.Fatalf("failed to create edit request: %v", err)
+		}
+
+		_, err = editTool.Run(context.Background(), editReq)
+		var editConflictErr *EditConflictError
+		if err == nil || !errors.As(err, &editConflictErr) {
+			t.Errorf("expected EditConflictError due to race condition, got %v", err)
 		}
 	})
 
@@ -402,11 +487,13 @@ func TestEditFile(t *testing.T) {
 		content := []byte("original content")
 		fs.createFile("/workspace/target.txt", content, 0644)
 
-		readTool := NewReadFileTool(fs, fs, newMockBinaryDetectorForWrite(), checksumManager, config.DefaultConfig(), workspaceRoot)
-		editTool := NewEditFileTool(fs, fs, newMockBinaryDetectorForWrite(), checksumManager, config.DefaultConfig(), workspaceRoot)
+		cfg := config.DefaultConfig()
+		readTool := NewReadFileTool(fs, newMockBinaryDetectorForWrite(), checksumManager, cfg, workspaceRoot)
+		editTool := NewEditFileTool(fs, newMockBinaryDetectorForWrite(), checksumManager, cfg, workspaceRoot)
 
 		// Read first to populate cache
-		_, err := readTool.Run(context.Background(), ReadFileRequest{Path: "link1"})
+		readReq, _ := NewReadFileRequest(ReadFileDTO{Path: "link1"}, cfg, workspaceRoot, fs)
+		_, err := readTool.Run(context.Background(), readReq)
 		if err != nil {
 			t.Fatalf("failed to read file through symlink chain: %v", err)
 		}
@@ -419,7 +506,12 @@ func TestEditFile(t *testing.T) {
 			},
 		}
 
-		resp, err := editTool.Run(context.Background(), EditFileRequest{Path: "link1", Operations: ops})
+		editReq, err := NewEditFileRequest(EditFileDTO{Path: "link1", Operations: ops}, cfg, workspaceRoot, fs)
+		if err != nil {
+			t.Fatalf("failed to create edit request: %v", err)
+		}
+
+		resp, err := editTool.Run(context.Background(), editReq)
 		if err != nil {
 			t.Fatalf("unexpected error editing through symlink chain: %v", err)
 		}
@@ -448,7 +540,8 @@ func TestEditFile(t *testing.T) {
 		fs.createDir("/tmp/outside")
 		fs.createFile("/tmp/outside/file.txt", []byte("content"), 0644)
 
-		editTool := NewEditFileTool(fs, fs, newMockBinaryDetectorForWrite(), checksumManager, config.DefaultConfig(), workspaceRoot)
+		cfg := config.DefaultConfig()
+		editTool := NewEditFileTool(fs, newMockBinaryDetectorForWrite(), checksumManager, cfg, workspaceRoot)
 
 		ops := []Operation{
 			{
@@ -459,10 +552,15 @@ func TestEditFile(t *testing.T) {
 		}
 
 		// Try to edit through escaping chain - should fail
-		_, err := editTool.Run(context.Background(), EditFileRequest{Path: "link1", Operations: ops})
+		editReq, err := NewEditFileRequest(EditFileDTO{Path: "link1", Operations: ops}, cfg, workspaceRoot, fs)
+
+		if err == nil {
+			_, err = editTool.Run(context.Background(), editReq)
+		}
 
 		type outsideWorkspace interface{ OutsideWorkspace() bool }
-		if e, ok := err.(outsideWorkspace); !ok || !e.OutsideWorkspace() {
+		var targetErr outsideWorkspace
+		if err == nil || !errors.As(err, &targetErr) || !targetErr.OutsideWorkspace() {
 			t.Errorf("expected OutsideWorkspace error for escaping symlink chain, got %v", err)
 		}
 	})

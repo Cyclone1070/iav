@@ -1,7 +1,6 @@
 package gitutil
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -36,7 +35,7 @@ func NewService(workspaceRoot string, fs FileSystem) (*Service, error) {
 	// Read .gitignore file
 	content, err := fs.ReadFileRange(gitignorePath, 0, 0)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read .gitignore: %w", err)
+		return nil, &GitignoreReadError{Path: gitignorePath, Cause: err}
 	}
 
 	// Parse gitignore patterns line by line

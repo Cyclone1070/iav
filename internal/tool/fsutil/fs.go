@@ -1,11 +1,9 @@
 package fsutil
 
 import (
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
-
 )
 
 // writeSyncCloser defines the minimal interface for a writable file handle.
@@ -76,7 +74,7 @@ func (r *OSFileSystem) ReadFileRange(path string, offset, limit int64) ([]byte, 
 
 	// Validate offset
 	if offset < 0 {
-		return nil, ErrInvalidOffset
+		return nil, &InvalidOffsetError{Value: offset}
 	}
 
 	if offset >= fileSize {
@@ -116,7 +114,7 @@ func (r *OSFileSystem) WriteFileAtomic(path string, content []byte, perm os.File
 
 	tmpFile, err := r.createTemp(dir, ".tmp-*")
 	if err != nil {
-		return fmt.Errorf("failed to create temp file: %w", err)
+		return &TempFileError{Dir: dir, Cause: err}
 	}
 
 	tmpPath := tmpFile.Name()
@@ -132,28 +130,28 @@ func (r *OSFileSystem) WriteFileAtomic(path string, content []byte, perm os.File
 	}()
 
 	if _, err := tmpFile.Write(content); err != nil {
-		return fmt.Errorf("failed to write to temp file: %w", err)
+		return &TempWriteError{Path: tmpPath, Cause: err}
 	}
 
 	if err := tmpFile.Sync(); err != nil {
-		return fmt.Errorf("failed to sync temp file: %w", err)
+		return &TempSyncError{Path: tmpPath, Cause: err}
 	}
 
 	// Close file before rename (required on some systems)
 	if err := tmpFile.Close(); err != nil {
 		tmpFile = nil
-		return fmt.Errorf("failed to close temp file: %w", err)
+		return &TempCloseError{Path: tmpPath, Cause: err}
 	}
 	tmpFile = nil
 
 	// Atomic rename is the critical operation that ensures consistency
 	if err := r.rename(tmpPath, path); err != nil {
-		return fmt.Errorf("failed to rename temp file: %w", err)
+		return &RenameError{Old: tmpPath, New: path, Cause: err}
 	}
 	needsCleanup = false
 
 	if err := r.chmod(path, perm); err != nil {
-		return fmt.Errorf("failed to set file permissions: %w", err)
+		return &ChmodError{Path: path, Mode: perm, Cause: err}
 	}
 
 	return nil

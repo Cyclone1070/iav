@@ -3,7 +3,6 @@ package fsutil
 import (
 	"bytes"
 	"errors"
-	"io"
 	"os"
 	"testing"
 )
@@ -68,7 +67,7 @@ func TestWriteFileAtomic(t *testing.T) {
 		if err == nil {
 			t.Fatal("expected error from createTemp failure")
 		}
-		if !errors.Is(err, io.EOF) && err.Error() != "failed to create temp file: disk full" {
+		if err.Error() != "failed to create temp file in /test: disk full" {
 			t.Errorf("unexpected error: %v", err)
 		}
 	})

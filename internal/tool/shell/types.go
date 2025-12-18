@@ -1,7 +1,6 @@
 package shell
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/Cyclone1070/iav/internal/config"
@@ -40,10 +39,10 @@ func NewShellRequest(
 ) (*ShellRequest, error) {
 	// Constructor validation
 	if len(dto.Command) == 0 {
-		return nil, fmt.Errorf("command cannot be empty")
+		return nil, &CommandRequiredError{}
 	}
 	if dto.TimeoutSeconds < 0 {
-		return nil, fmt.Errorf("timeout_seconds cannot be negative")
+		return nil, &NegativeTimeoutError{Value: dto.TimeoutSeconds}
 	}
 
 	// WorkingDir defaults to "." if empty
@@ -55,7 +54,7 @@ func NewShellRequest(
 	// Path resolution for working directory
 	wdAbs, wdRel, err := resolvePathWithFS(workspaceRoot, fs, workingDir)
 	if err != nil {
-		return nil, fmt.Errorf("invalid working directory: %w", err)
+		return nil, err
 	}
 
 	// Path resolution for env files
@@ -63,7 +62,7 @@ func NewShellRequest(
 	for _, envFile := range dto.EnvFiles {
 		envFileAbs, _, err := resolvePathWithFS(workspaceRoot, fs, envFile)
 		if err != nil {
-			return nil, fmt.Errorf("invalid env file %s: %w", envFile, err)
+			return nil, err
 		}
 		envFilesAbs = append(envFilesAbs, envFileAbs)
 	}

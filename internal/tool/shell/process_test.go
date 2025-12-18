@@ -2,6 +2,7 @@ package shell
 
 import (
 	"context"
+	"errors"
 	"io"
 	"os"
 	"strings"
@@ -46,7 +47,7 @@ func TestExecuteWithTimeout_Success(t *testing.T) {
 		return nil
 	}
 
-	err := ExecuteWithTimeout(context.Background(), 100*time.Millisecond, 2000, mock)
+	err := ExecuteWithTimeout(context.Background(), []string{"echo"}, 100*time.Millisecond, 2000, mock)
 	if err != nil {
 		t.Errorf("ExecuteWithTimeout failed: %v", err)
 	}
@@ -64,9 +65,10 @@ func TestExecuteWithTimeout_Fail(t *testing.T) {
 		return nil
 	}
 
-	err := ExecuteWithTimeout(context.Background(), 50*time.Millisecond, 2000, mock)
-	if err != ErrShellTimeout {
-		t.Errorf("Error = %v, want ErrShellTimeout", err)
+	err := ExecuteWithTimeout(context.Background(), []string{"echo"}, 50*time.Millisecond, 2000, mock)
+	var tErr interface{ Timeout() bool }
+	if !errors.As(err, &tErr) || !tErr.Timeout() {
+		t.Errorf("Error = %v, want a Timeout error", err)
 	}
 	if !signalCalled {
 		t.Error("Signal (SIGTERM) not called")

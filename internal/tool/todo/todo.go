@@ -2,7 +2,6 @@ package todo
 
 import (
 	"context"
-	"fmt"
 )
 
 // todoStore defines the interface for todo storage.
@@ -29,12 +28,12 @@ func NewReadTodosTool(store todoStore) *ReadTodosTool {
 func (t *ReadTodosTool) Run(ctx context.Context, req *ReadTodosRequest) (*ReadTodosResponse, error) {
 	// Runtime Validation
 	if t.store == nil {
-		return nil, fmt.Errorf("todo store not configured")
+		return nil, &StoreNotConfiguredError{}
 	}
 
 	todos, err := t.store.Read()
 	if err != nil {
-		return nil, fmt.Errorf("failed to read todos: %w", err)
+		return nil, &StoreReadError{Cause: err}
 	}
 
 	return &ReadTodosResponse{
@@ -59,12 +58,12 @@ func NewWriteTodosTool(store todoStore) *WriteTodosTool {
 func (t *WriteTodosTool) Run(ctx context.Context, req *WriteTodosRequest) (*WriteTodosResponse, error) {
 	// Runtime Validation
 	if t.store == nil {
-		return nil, fmt.Errorf("todo store not configured")
+		return nil, &StoreNotConfiguredError{}
 	}
 
 	todos := req.Todos()
 	if err := t.store.Write(todos); err != nil {
-		return nil, fmt.Errorf("failed to write todos: %w", err)
+		return nil, &StoreWriteError{Cause: err}
 	}
 
 	return &WriteTodosResponse{

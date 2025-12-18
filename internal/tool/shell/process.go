@@ -6,13 +6,12 @@ import (
 	"os"
 	"sync"
 	"time"
-
 )
 
 // ExecuteWithTimeout runs a process with a timeout, handling graceful shutdown.
 // It waits for the process to complete, or kills it if the timeout is reached or context is cancelled.
-// Returns ErrShellTimeout if the timeout is reached.
-func ExecuteWithTimeout(ctx context.Context, timeout time.Duration, gracefulShutdownMs int, proc Process) error {
+// Returns TimeoutError if the timeout is reached.
+func ExecuteWithTimeout(ctx context.Context, command []string, timeout time.Duration, gracefulShutdownMs int, proc Process) error {
 	done := make(chan error, 1)
 	go func() {
 		done <- proc.Wait()
@@ -33,10 +32,10 @@ func ExecuteWithTimeout(ctx context.Context, timeout time.Duration, gracefulShut
 		// Wait a bit for graceful shutdown
 		select {
 		case <-done:
-			return ErrShellTimeout
+			return &TimeoutError{Command: command, Duration: timeout}
 		case <-time.After(time.Duration(gracefulShutdownMs) * time.Millisecond):
 			_ = proc.Kill()
-			return ErrShellTimeout
+			return &TimeoutError{Command: command, Duration: timeout}
 		}
 	}
 }

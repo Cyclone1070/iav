@@ -59,7 +59,7 @@ func (t *ShellTool) Run(ctx context.Context, req *ShellRequest) (*ShellResponse,
 	for _, envFilePath := range req.EnvFilesAbsPaths() {
 		envVars, err := ParseEnvFile(t.fs, envFilePath)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse env file %s: %w", envFilePath, err)
+			return nil, err
 		}
 
 		// EnvFiles override system env
@@ -98,7 +98,7 @@ func (t *ShellTool) Run(ctx context.Context, req *ShellRequest) (*ShellResponse,
 	// Use configured graceful shutdown
 	gracefulShutdownMs := t.config.Tools.DockerGracefulShutdownMs
 
-	execErr := ExecuteWithTimeout(ctx, timeout, gracefulShutdownMs, proc)
+	execErr := ExecuteWithTimeout(ctx, req.Command(), timeout, gracefulShutdownMs, proc)
 
 	resp := &ShellResponse{
 		Stdout:     stdoutStr,
@@ -108,9 +108,10 @@ func (t *ShellTool) Run(ctx context.Context, req *ShellRequest) (*ShellResponse,
 	}
 
 	if execErr != nil {
-		if execErr == ErrShellTimeout {
+		var t interface{ Timeout() bool }
+		if errors.As(execErr, &t) && t.Timeout() {
 			resp.ExitCode = -1
-			return resp, ErrShellTimeout
+			return resp, execErr
 		}
 		// Check for context cancellation
 		if errors.Is(execErr, context.Canceled) || errors.Is(execErr, context.DeadlineExceeded) {

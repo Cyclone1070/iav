@@ -1,8 +1,6 @@
 package todo
 
 import (
-	"fmt"
-
 	"github.com/Cyclone1070/iav/internal/config"
 )
 
@@ -55,12 +53,12 @@ func NewWriteTodosRequest(dto WriteTodosDTO, cfg *config.Config) (*WriteTodosReq
 		case TodoStatusPending, TodoStatusInProgress, TodoStatusCompleted, TodoStatusCancelled:
 			// Valid
 		default:
-			return nil, fmt.Errorf("todo[%d]: invalid status %q", i, todo.Status)
+			return nil, &InvalidStatusError{Index: i, Status: todo.Status}
 		}
 
 		// Validate description is not empty
 		if todo.Description == "" {
-			return nil, fmt.Errorf("todo[%d]: description cannot be empty", i)
+			return nil, &EmptyDescriptionError{Index: i}
 		}
 	}
 

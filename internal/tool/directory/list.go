@@ -74,13 +74,11 @@ func (t *ListDirectoryTool) Run(ctx context.Context, req *ListDirectoryRequest) 
 	// Check if path exists and is a directory
 	info, err := t.fs.Stat(abs)
 	if err != nil {
-		if os.IsNotExist(err) {
-		}
-		return nil, fmt.Errorf("failed to stat path: %w", err)
+		return nil, &ListDirError{Path: abs, Cause: &StatError{Path: abs, Cause: err}}
 	}
 
 	if !info.IsDir() {
-		return nil, &NotDirectoryError{Path: abs}
+		return nil, &ListDirError{Path: abs, Cause: &NotDirectoryError{Path: abs}}
 	}
 
 	// Set maxDepth: 0 = non-recursive (only immediate children), -1 or negative = unlimited
@@ -174,7 +172,7 @@ func (t *ListDirectoryTool) listRecursive(ctx context.Context, abs string, curre
 			return nil, false, err
 		}
 		// Wrap other errors for context
-		return nil, false, fmt.Errorf("failed to list directory: %w", err)
+		return nil, false, &ListDirError{Path: abs, Cause: err}
 	}
 
 	var directoryEntries []DirectoryEntry
@@ -188,7 +186,7 @@ func (t *ListDirectoryTool) listRecursive(ctx context.Context, abs string, curre
 		entryRel, err := filepath.Rel(t.workspaceRoot, entryAbs)
 		if err != nil {
 			// This indicates a bug in path resolution - don't mask it
-			return nil, false, fmt.Errorf("failed to calculate relative path for entry %s: %w", entry.Name(), err)
+			return nil, false, &RelPathError{Path: entryAbs, Cause: err}
 		}
 
 		// Normalize to forward slashes

@@ -1,7 +1,6 @@
 package search
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/Cyclone1070/iav/internal/config"
@@ -49,16 +48,16 @@ func NewSearchContentRequest(
 ) (*SearchContentRequest, error) {
 	// Constructor validation
 	if dto.Query == "" {
-		return nil, fmt.Errorf("query is required")
+		return nil, &QueryRequiredError{}
 	}
 	if dto.Offset < 0 {
-		return nil, fmt.Errorf("offset cannot be negative")
+		return nil, &NegativeOffsetError{Value: int64(dto.Offset)}
 	}
 	if dto.Limit < 0 {
-		return nil, fmt.Errorf("limit cannot be negative")
+		return nil, &NegativeLimitError{Value: int64(dto.Limit)}
 	}
 	if dto.Limit > cfg.Tools.MaxSearchContentLimit {
-		return nil, fmt.Errorf("limit %d exceeds maximum %d", dto.Limit, cfg.Tools.MaxSearchContentLimit)
+		return nil, &LimitExceededError{Value: int64(dto.Limit), Max: int64(cfg.Tools.MaxSearchContentLimit)}
 	}
 
 	// SearchPath defaults to "." if empty
@@ -70,7 +69,7 @@ func NewSearchContentRequest(
 	// Path resolution for search path
 	searchAbs, searchRel, err := resolvePathWithFS(workspaceRoot, fs, searchPath)
 	if err != nil {
-		return nil, fmt.Errorf("invalid search path: %w", err)
+		return nil, err
 	}
 
 	return &SearchContentRequest{

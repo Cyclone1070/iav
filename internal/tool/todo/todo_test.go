@@ -4,9 +4,13 @@ import (
 	"context"
 	"sync"
 	"testing"
+
+	"github.com/Cyclone1070/iav/internal/config"
 )
 
 func TestTodoTools(t *testing.T) {
+	cfg := config.DefaultConfig()
+
 	// Helper to create tools with a fresh store
 	createTools := func() (*ReadTodosTool, *WriteTodosTool, *InMemoryTodoStore) {
 		store := NewInMemoryTodoStore()
@@ -19,7 +23,11 @@ func TestTodoTools(t *testing.T) {
 		readTool, writeTool, _ := createTools()
 
 		// 1. Initial Read should be empty
-		readResp, err := readTool.Run(context.Background(), ReadTodosRequest{})
+		req, err := NewReadTodosRequest(ReadTodosDTO{}, cfg)
+		if err != nil {
+			t.Fatalf("failed to create read request: %v", err)
+		}
+		readResp, err := readTool.Run(context.Background(), req)
 		if err != nil {
 			t.Fatalf("ReadTodos failed: %v", err)
 		}
@@ -32,7 +40,11 @@ func TestTodoTools(t *testing.T) {
 			{Description: "Task 1", Status: TodoStatusPending},
 			{Description: "Task 2", Status: TodoStatusInProgress},
 		}
-		writeResp, err := writeTool.Run(context.Background(), WriteTodosRequest{Todos: todos})
+		writeReq, err := NewWriteTodosRequest(WriteTodosDTO{Todos: todos}, cfg)
+		if err != nil {
+			t.Fatalf("failed to create write request: %v", err)
+		}
+		writeResp, err := writeTool.Run(context.Background(), writeReq)
 		if err != nil {
 			t.Fatalf("WriteTodos failed: %v", err)
 		}
@@ -41,7 +53,11 @@ func TestTodoTools(t *testing.T) {
 		}
 
 		// 3. Read back and verify
-		readResp, err = readTool.Run(context.Background(), ReadTodosRequest{})
+		req, err = NewReadTodosRequest(ReadTodosDTO{}, cfg)
+		if err != nil {
+			t.Fatalf("failed to create read request: %v", err)
+		}
+		readResp, err = readTool.Run(context.Background(), req)
 		if err != nil {
 			t.Fatalf("ReadTodos failed: %v", err)
 		}
@@ -61,20 +77,32 @@ func TestTodoTools(t *testing.T) {
 
 		// Write List A
 		listA := []Todo{{Description: "A", Status: TodoStatusPending}}
-		_, err := writeTool.Run(context.Background(), WriteTodosRequest{Todos: listA})
+		writeReq, err := NewWriteTodosRequest(WriteTodosDTO{Todos: listA}, cfg)
+		if err != nil {
+			t.Fatalf("failed to create write request: %v", err)
+		}
+		_, err = writeTool.Run(context.Background(), writeReq)
 		if err != nil {
 			t.Fatalf("WriteTodos A failed: %v", err)
 		}
 
 		// Write List B
 		listB := []Todo{{Description: "B", Status: TodoStatusCompleted}}
-		_, err = writeTool.Run(context.Background(), WriteTodosRequest{Todos: listB})
+		writeReq, err = NewWriteTodosRequest(WriteTodosDTO{Todos: listB}, cfg)
+		if err != nil {
+			t.Fatalf("failed to create write request: %v", err)
+		}
+		_, err = writeTool.Run(context.Background(), writeReq)
 		if err != nil {
 			t.Fatalf("WriteTodos B failed: %v", err)
 		}
 
 		// Read should return List B
-		readResp, err := readTool.Run(context.Background(), ReadTodosRequest{})
+		req, err := NewReadTodosRequest(ReadTodosDTO{}, cfg)
+		if err != nil {
+			t.Fatalf("failed to create read request: %v", err)
+		}
+		readResp, err := readTool.Run(context.Background(), req)
 		if err != nil {
 			t.Fatalf("ReadTodos failed: %v", err)
 		}
@@ -90,16 +118,25 @@ func TestTodoTools(t *testing.T) {
 		readTool, writeTool, _ := createTools()
 
 		// Write something
-		_, _ = writeTool.Run(context.Background(), WriteTodosRequest{Todos: []Todo{{Description: "Task", Status: TodoStatusPending}}})
+		writeReq, _ := NewWriteTodosRequest(WriteTodosDTO{Todos: []Todo{{Description: "Task", Status: TodoStatusPending}}}, cfg)
+		_, _ = writeTool.Run(context.Background(), writeReq)
 
 		// Write empty
-		_, err := writeTool.Run(context.Background(), WriteTodosRequest{Todos: []Todo{}})
+		writeReq, err := NewWriteTodosRequest(WriteTodosDTO{Todos: []Todo{}}, cfg)
+		if err != nil {
+			t.Fatalf("failed to create write request: %v", err)
+		}
+		_, err = writeTool.Run(context.Background(), writeReq)
 		if err != nil {
 			t.Fatalf("WriteTodos empty failed: %v", err)
 		}
 
 		// Read should be empty
-		readResp, err := readTool.Run(context.Background(), ReadTodosRequest{})
+		readReq, err := NewReadTodosRequest(ReadTodosDTO{}, cfg)
+		if err != nil {
+			t.Fatalf("failed to create read request: %v", err)
+		}
+		readResp, err := readTool.Run(context.Background(), readReq)
 		if err != nil {
 			t.Fatalf("ReadTodos failed: %v", err)
 		}
@@ -113,16 +150,19 @@ func TestTodoTools(t *testing.T) {
 
 		// Write initial data
 		initial := []Todo{{Description: "Original", Status: TodoStatusPending}}
-		_, _ = writeTool.Run(context.Background(), WriteTodosRequest{Todos: initial})
+		writeReq, _ := NewWriteTodosRequest(WriteTodosDTO{Todos: initial}, cfg)
+		_, _ = writeTool.Run(context.Background(), writeReq)
 
 		// Read data
-		readResp, _ := readTool.Run(context.Background(), ReadTodosRequest{})
+		readReq, _ := NewReadTodosRequest(ReadTodosDTO{}, cfg)
+		readResp, _ := readTool.Run(context.Background(), readReq)
 
 		// Modify returned slice
 		readResp.Todos[0].Description = "Modified"
 
 		// Read again - should be original
-		readResp2, _ := readTool.Run(context.Background(), ReadTodosRequest{})
+		readReq2, _ := NewReadTodosRequest(ReadTodosDTO{}, cfg)
+		readResp2, _ := readTool.Run(context.Background(), readReq2)
 		if readResp2.Todos[0].Description != "Original" {
 			t.Error("ReadTodos returned a reference to internal state, not a copy")
 		}
@@ -134,15 +174,23 @@ func TestTodoTools(t *testing.T) {
 		readTool2, _, _ := createTools()
 
 		// Write to store 1
-		_, err := writeTool1.Run(context.Background(), WriteTodosRequest{Todos: []Todo{
+		writeReq, err := NewWriteTodosRequest(WriteTodosDTO{Todos: []Todo{
 			{Description: "Ctx1", Status: TodoStatusPending},
-		}})
+		}}, cfg)
+		if err != nil {
+			t.Fatalf("failed to create write request: %v", err)
+		}
+		_, err = writeTool1.Run(context.Background(), writeReq)
 		if err != nil {
 			t.Fatalf("WriteTodos ctx1 failed: %v", err)
 		}
 
 		// Read from store 2 - should be empty
-		readResp, err := readTool2.Run(context.Background(), ReadTodosRequest{})
+		readReq, err := NewReadTodosRequest(ReadTodosDTO{}, cfg)
+		if err != nil {
+			t.Fatalf("failed to create read request: %v", err)
+		}
+		readResp, err := readTool2.Run(context.Background(), readReq)
 		if err != nil {
 			t.Fatalf("ReadTodos ctx2 failed: %v", err)
 		}
@@ -161,9 +209,11 @@ func TestTodoTools(t *testing.T) {
 			go func(id int) {
 				defer wg.Done()
 				if id%2 == 0 {
-					_, _ = writeTool.Run(context.Background(), WriteTodosRequest{Todos: []Todo{{Description: "Concurrent", Status: TodoStatusPending}}})
+					writeReq, _ := NewWriteTodosRequest(WriteTodosDTO{Todos: []Todo{{Description: "Concurrent", Status: TodoStatusPending}}}, cfg)
+					_, _ = writeTool.Run(context.Background(), writeReq)
 				} else {
-					_, _ = readTool.Run(context.Background(), ReadTodosRequest{})
+					readReq, _ := NewReadTodosRequest(ReadTodosDTO{}, cfg)
+					_, _ = readTool.Run(context.Background(), readReq)
 				}
 			}(i)
 		}
@@ -175,12 +225,14 @@ func TestTodoTools(t *testing.T) {
 		readTool := NewReadTodosTool(nil)
 		writeTool := NewWriteTodosTool(nil)
 
-		_, err := readTool.Run(context.Background(), ReadTodosRequest{})
+		readReq, _ := NewReadTodosRequest(ReadTodosDTO{}, cfg)
+		_, err := readTool.Run(context.Background(), readReq)
 		if err == nil {
 			t.Error("expected error when reading with missing store, got nil")
 		}
 
-		_, err = writeTool.Run(context.Background(), WriteTodosRequest{Todos: []Todo{}})
+		writeReq, _ := NewWriteTodosRequest(WriteTodosDTO{Todos: []Todo{}}, cfg)
+		_, err = writeTool.Run(context.Background(), writeReq)
 		if err == nil {
 			t.Error("expected error when writing with missing store, got nil")
 		}

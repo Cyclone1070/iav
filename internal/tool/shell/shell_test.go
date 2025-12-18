@@ -147,6 +147,8 @@ func newMockExitError(code int) error {
 func TestShellTool_Run_SimpleCommand(t *testing.T) {
 	mockFS := newMockFileSystemForShell()
 	mockFS.createDir("/workspace")
+	workspaceRoot := "/workspace"
+	cfg := config.DefaultConfig()
 
 	factory := &mockCommandExecutorForShell{}
 	factory.startFunc = func(ctx context.Context, command []string, opts ProcessOptions) (Process, io.Reader, io.Reader, error) {
@@ -160,9 +162,12 @@ func TestShellTool_Run_SimpleCommand(t *testing.T) {
 		return proc, stdout, stderr, nil
 	}
 
-	tool := NewShellTool(mockFS, factory, config.DefaultConfig(), DockerConfig{}, "/workspace")
-	req := ShellRequest{
-		Command: []string{"echo", "hello"},
+	tool := NewShellTool(mockFS, factory, cfg, DockerConfig{}, workspaceRoot)
+
+	dto := ShellDTO{Command: []string{"echo", "hello"}}
+	req, err := NewShellRequest(dto, cfg, workspaceRoot, mockFS)
+	if err != nil {
+		t.Fatalf("failed to create request: %v", err)
 	}
 
 	resp, err := tool.Run(context.Background(), req)
@@ -181,6 +186,8 @@ func TestShellTool_Run_WorkingDir(t *testing.T) {
 	mockFS := newMockFileSystemForShell()
 	mockFS.createDir("/workspace")
 	mockFS.createDir("/workspace/subdir")
+	workspaceRoot := "/workspace"
+	cfg := config.DefaultConfig()
 
 	var capturedDir string
 	factory := &mockCommandExecutorForShell{}
@@ -191,13 +198,15 @@ func TestShellTool_Run_WorkingDir(t *testing.T) {
 		return proc, strings.NewReader(""), strings.NewReader(""), nil
 	}
 
-	tool := NewShellTool(mockFS, factory, config.DefaultConfig(), DockerConfig{}, "/workspace")
-	req := ShellRequest{
-		Command:    []string{"pwd"},
-		WorkingDir: "subdir",
+	tool := NewShellTool(mockFS, factory, cfg, DockerConfig{}, workspaceRoot)
+
+	dto := ShellDTO{Command: []string{"pwd"}, WorkingDir: "subdir"}
+	req, err := NewShellRequest(dto, cfg, workspaceRoot, mockFS)
+	if err != nil {
+		t.Fatalf("failed to create request: %v", err)
 	}
 
-	_, err := tool.Run(context.Background(), req)
+	_, err = tool.Run(context.Background(), req)
 	if err != nil {
 		t.Fatalf("Run failed: %v", err)
 	}
@@ -211,6 +220,8 @@ func TestShellTool_Run_WorkingDir(t *testing.T) {
 func TestShellTool_Run_Env(t *testing.T) {
 	mockFS := newMockFileSystemForShell()
 	mockFS.createDir("/workspace")
+	workspaceRoot := "/workspace"
+	cfg := config.DefaultConfig()
 
 	var capturedEnv []string
 	factory := &mockCommandExecutorForShell{}
@@ -221,16 +232,21 @@ func TestShellTool_Run_Env(t *testing.T) {
 		return proc, strings.NewReader(""), strings.NewReader(""), nil
 	}
 
-	tool := NewShellTool(mockFS, factory, config.DefaultConfig(), DockerConfig{}, "/workspace")
-	req := ShellRequest{
+	tool := NewShellTool(mockFS, factory, cfg, DockerConfig{}, workspaceRoot)
+
+	dto := ShellDTO{
 		Command: []string{"env"},
 		Env: map[string]string{
 			"CUSTOM_VAR": "custom_value",
 			"TEST_MODE":  "true",
 		},
 	}
+	req, err := NewShellRequest(dto, cfg, workspaceRoot, mockFS)
+	if err != nil {
+		t.Fatalf("failed to create request: %v", err)
+	}
 
-	_, err := tool.Run(context.Background(), req)
+	_, err = tool.Run(context.Background(), req)
 	if err != nil {
 		t.Fatalf("Run failed: %v", err)
 	}
@@ -257,6 +273,8 @@ func TestShellTool_Run_Env(t *testing.T) {
 func TestShellTool_Run_EnvFiles(t *testing.T) {
 	mockFS := newMockFileSystemForShell()
 	mockFS.createDir("/workspace")
+	workspaceRoot := "/workspace"
+	cfg := config.DefaultConfig()
 
 	// Create env files
 	envFile1Content := `DB_HOST=localhost
@@ -277,15 +295,16 @@ CACHE_URL=redis://localhost`
 		return proc, strings.NewReader(""), strings.NewReader(""), nil
 	}
 
-	tool := NewShellTool(mockFS, factory, config.DefaultConfig(), DockerConfig{}, "/workspace")
+	tool := NewShellTool(mockFS, factory, cfg, DockerConfig{}, workspaceRoot)
 
 	t.Run("Single env file", func(t *testing.T) {
-		req := ShellRequest{
-			Command:  []string{"env"},
-			EnvFiles: []string{".env"},
+		dto := ShellDTO{Command: []string{"env"}, EnvFiles: []string{".env"}}
+		req, err := NewShellRequest(dto, cfg, workspaceRoot, mockFS)
+		if err != nil {
+			t.Fatalf("failed to create request: %v", err)
 		}
 
-		_, err := tool.Run(context.Background(), req)
+		_, err = tool.Run(context.Background(), req)
 		if err != nil {
 			t.Fatalf("Run failed: %v", err)
 		}
@@ -318,12 +337,13 @@ CACHE_URL=redis://localhost`
 	})
 
 	t.Run("Multiple env files with override - explicit ordering", func(t *testing.T) {
-		req := ShellRequest{
-			Command:  []string{"env"},
-			EnvFiles: []string{".env", ".env.local"},
+		dto := ShellDTO{Command: []string{"env"}, EnvFiles: []string{".env", ".env.local"}}
+		req, err := NewShellRequest(dto, cfg, workspaceRoot, mockFS)
+		if err != nil {
+			t.Fatalf("failed to create request: %v", err)
 		}
 
-		_, err := tool.Run(context.Background(), req)
+		_, err = tool.Run(context.Background(), req)
 		if err != nil {
 			t.Fatalf("Run failed: %v", err)
 		}
@@ -350,15 +370,17 @@ CACHE_URL=redis://localhost`
 	})
 
 	t.Run("Request.Env overrides EnvFiles", func(t *testing.T) {
-		req := ShellRequest{
+		dto := ShellDTO{
 			Command:  []string{"env"},
 			EnvFiles: []string{".env"},
-			Env: map[string]string{
-				"DB_HOST": "production.example.com",
-			},
+			Env:      map[string]string{"DB_HOST": "production.example.com"},
+		}
+		req, err := NewShellRequest(dto, cfg, workspaceRoot, mockFS)
+		if err != nil {
+			t.Fatalf("failed to create request: %v", err)
 		}
 
-		_, err := tool.Run(context.Background(), req)
+		_, err = tool.Run(context.Background(), req)
 		if err != nil {
 			t.Fatalf("Run failed: %v", err)
 		}
@@ -377,14 +399,16 @@ CACHE_URL=redis://localhost`
 	})
 
 	t.Run("Nonexistent env file", func(t *testing.T) {
-		req := ShellRequest{
-			Command:  []string{"env"},
-			EnvFiles: []string{".env.missing"},
+		dto := ShellDTO{Command: []string{"env"}, EnvFiles: []string{".env.missing"}}
+		req, err := NewShellRequest(dto, cfg, workspaceRoot, mockFS)
+		if err != nil {
+			t.Fatalf("failed to create request: %v", err)
 		}
 
-		_, err := tool.Run(context.Background(), req)
+		tool := NewShellTool(mockFS, &mockCommandExecutorForShell{}, cfg, DockerConfig{}, workspaceRoot)
+		_, err = tool.Run(context.Background(), req)
 		if err == nil {
-			t.Error("Expected error for nonexistent env file, got nil")
+			t.Fatal("Expected error for nonexistent env file, got nil")
 		}
 		if !strings.Contains(err.Error(), ".env.missing") {
 			t.Errorf("Expected error to mention .env.missing, got: %v", err)
@@ -392,14 +416,14 @@ CACHE_URL=redis://localhost`
 	})
 
 	t.Run("Env file outside workspace", func(t *testing.T) {
-		req := ShellRequest{
-			Command:  []string{"env"},
-			EnvFiles: []string{"../../etc/passwd"},
-		}
-
-		_, err := tool.Run(context.Background(), req)
+		dto := ShellDTO{Command: []string{"env"}, EnvFiles: []string{"../../etc/passwd"}}
+		_, err := NewShellRequest(dto, cfg, workspaceRoot, mockFS)
 		if err == nil {
 			t.Error("Expected error for env file outside workspace, got nil")
+		}
+		var ow interface{ OutsideWorkspace() bool }
+		if !errors.As(err, &ow) || !ow.OutsideWorkspace() {
+			t.Errorf("Expected OutsideWorkspace error from NewShellRequest, got %v", err)
 		}
 	})
 }
@@ -407,22 +431,25 @@ CACHE_URL=redis://localhost`
 func TestShellTool_Run_OutsideWorkspace(t *testing.T) {
 	mockFS := newMockFileSystemForShell()
 	mockFS.createDir("/workspace")
+	workspaceRoot := "/workspace"
+	cfg := config.DefaultConfig()
 
-	tool := NewShellTool(mockFS, &mockCommandExecutorForShell{}, config.DefaultConfig(), DockerConfig{}, "/workspace")
-	req := ShellRequest{
-		Command:    []string{"ls"},
-		WorkingDir: "../outside",
+	dto := ShellDTO{Command: []string{"ls"}, WorkingDir: "../outside"}
+	_, err := NewShellRequest(dto, cfg, workspaceRoot, mockFS)
+	if err == nil {
+		t.Fatal("Expected error from NewShellRequest")
 	}
-
-	_, err := tool.Run(context.Background(), req)
-	if err != ErrShellWorkingDirOutsideWorkspace {
-		t.Errorf("Expected ErrShellWorkingDirOutsideWorkspace, got %v", err)
+	var ow interface{ OutsideWorkspace() bool }
+	if !errors.As(err, &ow) || !ow.OutsideWorkspace() {
+		t.Errorf("Expected OutsideWorkspace error from NewShellRequest, got %v", err)
 	}
 }
 
 func TestShellTool_Run_NonZeroExit(t *testing.T) {
 	mockFS := newMockFileSystemForShell()
 	mockFS.createDir("/workspace")
+	workspaceRoot := "/workspace"
+	cfg := config.DefaultConfig()
 
 	factory := &mockCommandExecutorForShell{}
 	factory.startFunc = func(ctx context.Context, command []string, opts ProcessOptions) (Process, io.Reader, io.Reader, error) {
@@ -433,8 +460,13 @@ func TestShellTool_Run_NonZeroExit(t *testing.T) {
 		return proc, strings.NewReader(""), strings.NewReader("error output"), nil
 	}
 
-	tool := NewShellTool(mockFS, factory, config.DefaultConfig(), DockerConfig{}, "/workspace")
-	req := ShellRequest{Command: []string{"false"}}
+	tool := NewShellTool(mockFS, factory, cfg, DockerConfig{}, workspaceRoot)
+
+	dto := ShellDTO{Command: []string{"false"}}
+	req, err := NewShellRequest(dto, cfg, workspaceRoot, mockFS)
+	if err != nil {
+		t.Fatalf("failed to create request: %v", err)
+	}
 
 	resp, err := tool.Run(context.Background(), req)
 	if err != nil {
@@ -448,6 +480,8 @@ func TestShellTool_Run_NonZeroExit(t *testing.T) {
 func TestShellTool_Run_BinaryOutput(t *testing.T) {
 	mockFS := newMockFileSystemForShell()
 	mockFS.createDir("/workspace")
+	workspaceRoot := "/workspace"
+	cfg := config.DefaultConfig()
 
 	binaryData := []byte{0x00, 0x01, 0x02, 0xFF, 0xFE}
 	factory := &mockCommandExecutorForShell{}
@@ -457,8 +491,13 @@ func TestShellTool_Run_BinaryOutput(t *testing.T) {
 		return proc, bytes.NewReader(binaryData), strings.NewReader(""), nil
 	}
 
-	tool := NewShellTool(mockFS, factory, config.DefaultConfig(), DockerConfig{}, "/workspace")
-	req := ShellRequest{Command: []string{"cat", "binary.bin"}}
+	tool := NewShellTool(mockFS, factory, cfg, DockerConfig{}, workspaceRoot)
+
+	dto := ShellDTO{Command: []string{"cat", "binary.bin"}}
+	req, err := NewShellRequest(dto, cfg, workspaceRoot, mockFS)
+	if err != nil {
+		t.Fatalf("failed to create request: %v", err)
+	}
 
 	resp, err := tool.Run(context.Background(), req)
 	if err != nil {
@@ -472,6 +511,8 @@ func TestShellTool_Run_BinaryOutput(t *testing.T) {
 func TestShellTool_Run_CommandInjection(t *testing.T) {
 	mockFS := newMockFileSystemForShell()
 	mockFS.createDir("/workspace")
+	workspaceRoot := "/workspace"
+	cfg := config.DefaultConfig()
 
 	var capturedCommand []string
 	factory := &mockCommandExecutorForShell{}
@@ -482,10 +523,15 @@ func TestShellTool_Run_CommandInjection(t *testing.T) {
 		return proc, strings.NewReader(""), strings.NewReader(""), nil
 	}
 
-	tool := NewShellTool(mockFS, factory, config.DefaultConfig(), DockerConfig{}, "/workspace")
-	req := ShellRequest{Command: []string{"echo", "hello; rm -rf /"}}
+	tool := NewShellTool(mockFS, factory, cfg, DockerConfig{}, workspaceRoot)
 
-	_, err := tool.Run(context.Background(), req)
+	dto := ShellDTO{Command: []string{"echo", "hello; rm -rf /"}}
+	req, err := NewShellRequest(dto, cfg, workspaceRoot, mockFS)
+	if err != nil {
+		t.Fatalf("failed to create request: %v", err)
+	}
+
+	_, err = tool.Run(context.Background(), req)
 	if err != nil {
 		t.Fatalf("Run failed: %v", err)
 	}
@@ -501,6 +547,8 @@ func TestShellTool_Run_CommandInjection(t *testing.T) {
 func TestShellTool_Run_HugeOutput(t *testing.T) {
 	mockFS := newMockFileSystemForShell()
 	mockFS.createDir("/workspace")
+	workspaceRoot := "/workspace"
+	cfg := config.DefaultConfig()
 
 	hugeData := make([]byte, 50*1024*1024)
 	for i := range hugeData {
@@ -514,8 +562,13 @@ func TestShellTool_Run_HugeOutput(t *testing.T) {
 		return proc, bytes.NewReader(hugeData), strings.NewReader(""), nil
 	}
 
-	tool := NewShellTool(mockFS, factory, config.DefaultConfig(), DockerConfig{}, "/workspace")
-	req := ShellRequest{Command: []string{"cat", "huge.txt"}}
+	tool := NewShellTool(mockFS, factory, cfg, DockerConfig{}, workspaceRoot)
+
+	dto := ShellDTO{Command: []string{"cat", "huge.txt"}}
+	req, err := NewShellRequest(dto, cfg, workspaceRoot, mockFS)
+	if err != nil {
+		t.Fatalf("failed to create request: %v", err)
+	}
 
 	resp, err := tool.Run(context.Background(), req)
 	if err != nil {
@@ -532,6 +585,8 @@ func TestShellTool_Run_HugeOutput(t *testing.T) {
 func TestShellTool_Run_Timeout(t *testing.T) {
 	mockFS := newMockFileSystemForShell()
 	mockFS.createDir("/workspace")
+	workspaceRoot := "/workspace"
+	cfg := config.DefaultConfig()
 
 	factory := &mockCommandExecutorForShell{}
 	factory.startFunc = func(ctx context.Context, command []string, opts ProcessOptions) (Process, io.Reader, io.Reader, error) {
@@ -549,13 +604,15 @@ func TestShellTool_Run_Timeout(t *testing.T) {
 		return proc, strings.NewReader(""), strings.NewReader(""), nil
 	}
 
-	tool := NewShellTool(mockFS, factory, config.DefaultConfig(), DockerConfig{}, "/workspace")
-	req := ShellRequest{
-		Command:        []string{"sleep", "10"},
-		TimeoutSeconds: 1,
+	tool := NewShellTool(mockFS, factory, cfg, DockerConfig{}, workspaceRoot)
+
+	dto := ShellDTO{Command: []string{"sleep", "10"}, TimeoutSeconds: 1}
+	req, err := NewShellRequest(dto, cfg, workspaceRoot, mockFS)
+	if err != nil {
+		t.Fatalf("failed to create request: %v", err)
 	}
 
-	_, err := tool.Run(context.Background(), req)
+	_, err = tool.Run(context.Background(), req)
 	if err != nil {
 		t.Errorf("Run failed: %v", err)
 	}
@@ -587,7 +644,12 @@ func TestShellTool_Run_DockerCheck(t *testing.T) {
 	}
 
 	tool := NewShellTool(mockFS, factory, config.DefaultConfig(), dockerConfig, "/workspace")
-	req := ShellRequest{Command: []string{"docker", "run", "hello"}}
+
+	dto := ShellDTO{Command: []string{"docker", "run", "hello"}}
+	req, err := NewShellRequest(dto, config.DefaultConfig(), "/workspace", mockFS)
+	if err != nil {
+		t.Fatalf("failed to create request: %v", err)
+	}
 
 	resp, err := tool.Run(context.Background(), req)
 	if err != nil {
@@ -601,6 +663,8 @@ func TestShellTool_Run_DockerCheck(t *testing.T) {
 func TestShellTool_Run_EnvInjection(t *testing.T) {
 	mockFS := newMockFileSystemForShell()
 	mockFS.createDir("/workspace")
+	workspaceRoot := "/workspace"
+	cfg := config.DefaultConfig()
 
 	var capturedEnv []string
 	factory := &mockCommandExecutorForShell{}
@@ -611,13 +675,15 @@ func TestShellTool_Run_EnvInjection(t *testing.T) {
 		return proc, strings.NewReader(""), strings.NewReader(""), nil
 	}
 
-	tool := NewShellTool(mockFS, factory, config.DefaultConfig(), DockerConfig{}, "/workspace")
-	req := ShellRequest{
-		Command: []string{"env"},
-		Env:     map[string]string{"PATH": ""},
+	tool := NewShellTool(mockFS, factory, cfg, DockerConfig{}, workspaceRoot)
+
+	dto := ShellDTO{Command: []string{"env"}, Env: map[string]string{"PATH": ""}}
+	req, err := NewShellRequest(dto, cfg, workspaceRoot, mockFS)
+	if err != nil {
+		t.Fatalf("failed to create request: %v", err)
 	}
 
-	_, err := tool.Run(context.Background(), req)
+	_, err = tool.Run(context.Background(), req)
 	if err != nil {
 		t.Fatalf("Run failed: %v", err)
 	}
@@ -631,6 +697,8 @@ func TestShellTool_Run_EnvInjection(t *testing.T) {
 func TestShellTool_Run_ContextCancellation(t *testing.T) {
 	mockFS := newMockFileSystemForShell()
 	mockFS.createDir("/workspace")
+	workspaceRoot := "/workspace"
+	cfg := config.DefaultConfig()
 
 	factory := &mockCommandExecutorForShell{}
 	factory.startFunc = func(ctx context.Context, command []string, opts ProcessOptions) (Process, io.Reader, io.Reader, error) {
@@ -642,10 +710,12 @@ func TestShellTool_Run_ContextCancellation(t *testing.T) {
 		return proc, strings.NewReader(""), strings.NewReader(""), nil
 	}
 
-	tool := NewShellTool(mockFS, factory, config.DefaultConfig(), DockerConfig{}, "/workspace")
-	req := ShellRequest{
-		Command:        []string{"sleep", "100"},
-		TimeoutSeconds: 10,
+	tool := NewShellTool(mockFS, factory, cfg, DockerConfig{}, workspaceRoot)
+
+	dto := ShellDTO{Command: []string{"sleep", "100"}, TimeoutSeconds: 10}
+	req, err := NewShellRequest(dto, cfg, workspaceRoot, mockFS)
+	if err != nil {
+		t.Fatalf("failed to create request: %v", err)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
@@ -670,6 +740,8 @@ func TestShellTool_Run_ContextCancellation(t *testing.T) {
 func TestShellTool_Run_SpecificExitCode(t *testing.T) {
 	mockFS := newMockFileSystemForShell()
 	mockFS.createDir("/workspace")
+	workspaceRoot := "/workspace"
+	cfg := config.DefaultConfig()
 
 	factory := &mockCommandExecutorForShell{}
 	factory.startFunc = func(ctx context.Context, command []string, opts ProcessOptions) (Process, io.Reader, io.Reader, error) {
@@ -681,8 +753,13 @@ func TestShellTool_Run_SpecificExitCode(t *testing.T) {
 		return proc, strings.NewReader(""), strings.NewReader(""), nil
 	}
 
-	tool := NewShellTool(mockFS, factory, config.DefaultConfig(), DockerConfig{}, "/workspace")
-	req := ShellRequest{Command: []string{"exit42"}}
+	tool := NewShellTool(mockFS, factory, cfg, DockerConfig{}, workspaceRoot)
+
+	dto := ShellDTO{Command: []string{"exit42"}}
+	req, err := NewShellRequest(dto, cfg, workspaceRoot, mockFS)
+	if err != nil {
+		t.Fatalf("failed to create request: %v", err)
+	}
 
 	resp, err := tool.Run(context.Background(), req)
 	if err != nil {

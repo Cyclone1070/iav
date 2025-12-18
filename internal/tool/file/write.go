@@ -2,7 +2,6 @@ package file
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"path/filepath"
 
@@ -62,34 +61,34 @@ func (t *WriteFileTool) Run(ctx context.Context, req *WriteFileRequest) (*WriteF
 	// Check if file already exists
 	_, err := t.fileOps.Stat(abs)
 	if err == nil {
-		return nil, ErrFileExists
+		return nil, &FileExistsError{Path: abs}
 	}
 	if !os.IsNotExist(err) {
-		return nil, fmt.Errorf("failed to check if file exists: %w", err)
+		return nil, &StatError{Path: abs, Cause: err}
 	}
 
 	parentDir := filepath.Dir(abs)
 	if err := t.fileOps.EnsureDirs(parentDir); err != nil {
-		return nil, fmt.Errorf("failed to create parent directories: %w", err)
+		return nil, &EnsureDirsError{Path: parentDir, Cause: err}
 	}
 
 	contentBytes := []byte(req.Content())
 
 	if t.binaryDetector.IsBinaryContent(contentBytes) {
-		return nil, ErrBinaryFile
+		return nil, &BinaryFileError{Path: abs}
 	}
 
 	maxFileSize := t.config.Tools.MaxFileSize
 
 	if int64(len(contentBytes)) > maxFileSize {
-		return nil, ErrTooLarge
+		return nil, &TooLargeError{Path: abs, Size: int64(len(contentBytes)), Limit: maxFileSize}
 	}
 
 	filePerm := req.Perm()
 
 	// Write the file atomically
 	if err := t.fileOps.WriteFileAtomic(abs, contentBytes, filePerm); err != nil {
-		return nil, fmt.Errorf("failed to write file: %w", err)
+		return nil, &WriteError{Path: abs, Cause: err}
 	}
 
 	// Compute checksum and update cache

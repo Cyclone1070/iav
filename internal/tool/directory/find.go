@@ -60,7 +60,7 @@ func (t *FindFileTool) Run(ctx context.Context, req *FindFileRequest) (*FindFile
 
 	// Validate pattern syntax
 	if _, err := filepath.Match(req.Pattern(), ""); err != nil {
-		return nil, fmt.Errorf("invalid glob pattern: %w", err)
+		return nil, &InvalidPatternError{Pattern: req.Pattern(), Cause: err}
 	}
 
 	// Verify search path exists and is a directory
@@ -69,7 +69,7 @@ func (t *FindFileTool) Run(ctx context.Context, req *FindFileRequest) (*FindFile
 		if os.IsNotExist(err) {
 			return nil, &FileMissingError{Path: absSearchPath}
 		}
-		return nil, fmt.Errorf("failed to stat search path: %w", err)
+		return nil, &StatError{Path: absSearchPath, Cause: err}
 	}
 
 	if !info.IsDir() {
@@ -98,7 +98,7 @@ func (t *FindFileTool) Run(ctx context.Context, req *FindFileRequest) (*FindFile
 	// Execute command with streaming
 	proc, stdout, _, err := t.commandExecutor.Start(ctx, cmd, shell.ProcessOptions{Dir: absSearchPath})
 	if err != nil {
-		return nil, fmt.Errorf("failed to start fd command: %w", err)
+		return nil, &CommandStartError{Cmd: "fd", Cause: err}
 	}
 	// We will wait explicitly to check for errors
 
@@ -132,12 +132,12 @@ func (t *FindFileTool) Run(ctx context.Context, req *FindFileRequest) (*FindFile
 	if err := scanner.Err(); err != nil {
 		// Try to wait to clean up process even on scan error
 		_ = proc.Wait()
-		return nil, fmt.Errorf("error reading fd output: %w", err)
+		return nil, &CommandOutputError{Cmd: "fd", Cause: err}
 	}
 
 	// Check command exit status
 	if err := proc.Wait(); err != nil {
-		return nil, fmt.Errorf("fd command failed: %w", err)
+		return nil, &CommandFailedError{Cmd: "fd", Cause: err}
 	}
 
 	// Sort ensures consistent pagination

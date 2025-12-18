@@ -11,10 +11,12 @@ import (
 
 	"github.com/Cyclone1070/iav/internal/config"
 	orchadapter "github.com/Cyclone1070/iav/internal/orchestrator/adapter"
+	"github.com/Cyclone1070/iav/internal/tool/contentutil"
 	"github.com/Cyclone1070/iav/internal/tool/directory"
 	"github.com/Cyclone1070/iav/internal/tool/file"
 	"github.com/Cyclone1070/iav/internal/tool/fsutil"
 	"github.com/Cyclone1070/iav/internal/tool/gitutil"
+	"github.com/Cyclone1070/iav/internal/tool/hashutil"
 	"github.com/Cyclone1070/iav/internal/tool/pathutil"
 	"github.com/Cyclone1070/iav/internal/tool/search"
 	"github.com/Cyclone1070/iav/internal/tool/shell"
@@ -37,15 +39,15 @@ func TestToolAdapter_ReadFile(t *testing.T) {
 
 	// Create dependencies
 	cfg := config.DefaultConfig()
-	osFS := fs.NewOSFileSystem()
-	binaryDetector := fs.NewSystemBinaryDetector(cfg.Tools.BinaryDetectionSampleSize)
-	checksumManager := fs.NewChecksumManager()
+	osFS := fsutil.NewOSFileSystem()
+	binaryDetector := contentutil.NewSystemBinaryDetector(cfg.Tools.BinaryDetectionSampleSize)
+	checksumManager := hashutil.NewChecksumManager()
 
 	// Create tool
 	readFileTool := file.NewReadFileTool(osFS, binaryDetector, checksumManager, cfg, canonicalRoot)
 
 	// Create adapter
-	adapter := orchadapter.NewReadFileAdapter(readFileTool)
+	adapter := orchadapter.NewReadFileAdapter(readFileTool, cfg, canonicalRoot, osFS)
 
 	// Execute with args
 	args := map[string]any{
@@ -66,7 +68,7 @@ func TestToolAdapter_ReadFile(t *testing.T) {
 	// Tool definition matches signature
 	def := adapter.Definition()
 	assert.Equal(t, "read_file", def.Name)
-	assert.Contains(t, def.InputSchema.Properties, "path")
+	assert.Contains(t, def.Parameters.Properties, "path")
 }
 
 func TestToolAdapter_AllTools(t *testing.T) {
@@ -81,16 +83,21 @@ func TestToolAdapter_AllTools(t *testing.T) {
 
 	// Create dependencies
 	cfg := config.DefaultConfig()
-	osFS := fs.NewOSFileSystem()
-	binaryDetector := fs.NewSystemBinaryDetector(cfg.Tools.BinaryDetectionSampleSize)
-	checksumManager := fs.NewChecksumManager()
+	osFS := fsutil.NewOSFileSystem()
+	binaryDetector := contentutil.NewSystemBinaryDetector(cfg.Tools.BinaryDetectionSampleSize)
+	checksumManager := hashutil.NewChecksumManager()
 	commandExecutor := shell.NewOSCommandExecutor()
 	todoStore := todo.NewInMemoryTodoStore()
 
 	// Initialize gitignore service
-	gitignoreService, err := gitignore.NewService(canonicalRoot, osFS)
+	var gitignoreService interface {
+		ShouldIgnore(relativePath string) bool
+	}
+	svc, err := gitutil.NewService(canonicalRoot, osFS)
 	if err != nil {
-		gitignoreService = &gitignore.NoOpService{}
+		gitignoreService = &gitutil.NoOpService{}
+	} else {
+		gitignoreService = svc
 	}
 
 	// Docker configuration
@@ -112,15 +119,15 @@ func TestToolAdapter_AllTools(t *testing.T) {
 
 	// Create all adapters
 	adapters := map[string]orchadapter.Tool{
-		"read_file":      orchadapter.NewReadFileAdapter(readFileTool),
-		"write_file":     orchadapter.NewWriteFileAdapter(writeFileTool),
-		"edit_file":      orchadapter.NewEditFileAdapter(editFileTool),
-		"list_directory": orchadapter.NewListDirectoryAdapter(listDirectoryTool),
-		"find_file":      orchadapter.NewFindFileAdapter(findFileTool),
-		"search_content": orchadapter.NewSearchContentAdapter(searchContentTool),
-		"run_shell":      orchadapter.NewShellAdapter(shellTool),
-		"read_todos":     orchadapter.NewReadTodosAdapter(readTodosTool),
-		"write_todos":    orchadapter.NewWriteTodosAdapter(writeTodosTool),
+		"read_file":      orchadapter.NewReadFileAdapter(readFileTool, cfg, canonicalRoot, osFS),
+		"write_file":     orchadapter.NewWriteFileAdapter(writeFileTool, cfg, canonicalRoot, osFS),
+		"edit_file":      orchadapter.NewEditFileAdapter(editFileTool, cfg, canonicalRoot, osFS),
+		"list_directory": orchadapter.NewListDirectoryAdapter(listDirectoryTool, cfg, canonicalRoot, osFS),
+		"find_file":      orchadapter.NewFindFileAdapter(findFileTool, cfg, canonicalRoot, osFS),
+		"search_content": orchadapter.NewSearchContentAdapter(searchContentTool, cfg, canonicalRoot, osFS),
+		"run_shell":      orchadapter.NewShellAdapter(shellTool, cfg, canonicalRoot, osFS),
+		"read_todos":     orchadapter.NewReadTodosAdapter(readTodosTool, cfg),
+		"write_todos":    orchadapter.NewWriteTodosAdapter(writeTodosTool, cfg),
 	}
 
 	// All expected tools present
@@ -138,11 +145,11 @@ func TestToolAdapter_AllTools(t *testing.T) {
 		def := adapter.Definition()
 		assert.Equal(t, expected, def.Name)
 		assert.NotEmpty(t, def.Description)
-		assert.NotNil(t, def.InputSchema)
+		assert.NotNil(t, def.Parameters)
 
 		// Schema is non-empty (except for read_todos which has no args)
 		if expected != "read_todos" {
-			assert.NotEmpty(t, def.InputSchema.Properties, "Tool %s schema properties should not be empty", expected)
+			assert.NotEmpty(t, def.Parameters.Properties, "Tool %s schema properties should not be empty", expected)
 		}
 	}
 }
@@ -159,15 +166,15 @@ func TestToolAdapter_ErrorHandling(t *testing.T) {
 
 	// Create dependencies
 	cfg := config.DefaultConfig()
-	osFS := fs.NewOSFileSystem()
-	binaryDetector := fs.NewSystemBinaryDetector(cfg.Tools.BinaryDetectionSampleSize)
-	checksumManager := fs.NewChecksumManager()
+	osFS := fsutil.NewOSFileSystem()
+	binaryDetector := contentutil.NewSystemBinaryDetector(cfg.Tools.BinaryDetectionSampleSize)
+	checksumManager := hashutil.NewChecksumManager()
 
 	// Create tool
 	readFileTool := file.NewReadFileTool(osFS, binaryDetector, checksumManager, cfg, canonicalRoot)
 
 	// Create adapter
-	adapter := orchadapter.NewReadFileAdapter(readFileTool)
+	adapter := orchadapter.NewReadFileAdapter(readFileTool, cfg, canonicalRoot, osFS)
 
 	// Invalid arguments (wrong type)
 	invalidArgs := map[string]any{

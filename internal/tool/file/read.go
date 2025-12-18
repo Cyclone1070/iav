@@ -2,7 +2,6 @@ package file
 
 import (
 	"context"
-	"fmt"
 	"os"
 
 	"github.com/Cyclone1070/iav/internal/config"
@@ -60,18 +59,18 @@ func (t *ReadFileTool) Run(ctx context.Context, req *ReadFileRequest) (*ReadFile
 	// Get file info (single stat syscall)
 	info, err := t.fileOps.Stat(abs)
 	if err != nil {
-		return nil, fmt.Errorf("failed to stat file: %w", err)
+		return nil, &StatError{Path: abs, Cause: err}
 	}
 
 	// Check if it's a directory using info we already have
 	if info.IsDir() {
-		return nil, fmt.Errorf("path is a directory, not a file")
+		return nil, &IsDirectoryError{Path: abs}
 	}
 
 	// Enforce size limit
 	maxFileSize := t.config.Tools.MaxFileSize
 	if info.Size() > maxFileSize {
-		return nil, ErrTooLarge
+		return nil, &TooLargeError{Path: abs, Size: info.Size(), Limit: maxFileSize}
 	}
 
 	// Get offset and limit from validated request
@@ -81,12 +80,12 @@ func (t *ReadFileTool) Run(ctx context.Context, req *ReadFileRequest) (*ReadFile
 	// Read the file range (single open+read syscall)
 	contentBytes, err := t.fileOps.ReadFileRange(abs, actualOffset, actualLimit)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read file: %w", err)
+		return nil, &ReadError{Path: abs, Cause: err}
 	}
 
 	// Check for binary using content we already read
 	if t.binaryDetector.IsBinaryContent(contentBytes) {
-		return nil, ErrBinaryFile
+		return nil, &BinaryFileError{Path: abs}
 	}
 
 	// Convert to string

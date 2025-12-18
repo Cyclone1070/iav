@@ -1,7 +1,6 @@
 package pathutil
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -20,21 +19,21 @@ type FileSystem interface {
 func CanonicaliseRoot(root string) (string, error) {
 	absRoot, err := filepath.Abs(root)
 	if err != nil {
-		return "", fmt.Errorf("failed to resolve workspace root: %w", err)
+		return "", &WorkspaceRootError{Root: absRoot, Cause: err}
 	}
 
 	// Resolve symlinks in the workspace root to get canonical path
 	resolved, err := filepath.EvalSymlinks(absRoot)
 	if err != nil {
-		return "", fmt.Errorf("failed to resolve workspace root symlinks: %w", err)
+		return "", &WorkspaceRootError{Root: resolved, Cause: err}
 	}
 
 	info, err := os.Stat(resolved)
 	if err != nil {
-		return "", fmt.Errorf("workspace root does not exist: %w", err)
+		return "", &WorkspaceRootError{Root: resolved, Cause: err}
 	}
 	if !info.IsDir() {
-		return "", fmt.Errorf("workspace root is not a directory: %s", resolved)
+		return "", &WorkspaceRootError{Root: resolved, Cause: &NotADirectoryError{Path: resolved}}
 	}
 	return resolved, nil
 }
@@ -45,14 +44,14 @@ func CanonicaliseRoot(root string) (string, error) {
 // Returns the absolute path, relative path, and any error.
 func Resolve(workspaceRoot string, fs FileSystem, path string) (abs string, rel string, err error) {
 	if workspaceRoot == "" {
-		return "", "", fmt.Errorf("workspace root not set")
+		return "", "", &WorkspaceRootNotSetError{}
 	}
 
 	// Handle tilde expansion
 	if strings.HasPrefix(path, "~/") {
 		home, err := fs.UserHomeDir()
 		if err != nil {
-			return "", "", fmt.Errorf("failed to expand tilde: %w", err)
+			return "", "", &TildeExpansionError{Cause: err}
 		}
 		path = filepath.Join(home, path[2:])
 	}
@@ -193,7 +192,7 @@ func followSymlinkChain(fs FileSystem, path string, workspaceRoot string, maxHop
 	for hopCount := 0; hopCount <= maxHops; hopCount++ {
 		// Check for loops
 		if _, seen := visited[current]; seen {
-			return "", false, fmt.Errorf("symlink loop detected: %s", current)
+			return "", false, &SymlinkLoopError{Path: current}
 		}
 		visited[current] = struct{}{}
 
@@ -203,7 +202,7 @@ func followSymlinkChain(fs FileSystem, path string, workspaceRoot string, maxHop
 			if os.IsNotExist(err) {
 				return current, false, nil
 			}
-			return "", false, fmt.Errorf("failed to lstat path: %w", err)
+			return "", false, &LstatError{Path: current, Cause: err}
 		}
 
 		// If not a symlink, we're done
@@ -218,7 +217,7 @@ func followSymlinkChain(fs FileSystem, path string, workspaceRoot string, maxHop
 		// Read the symlink target
 		linkTarget, err := fs.Readlink(current)
 		if err != nil {
-			return "", false, fmt.Errorf("failed to read symlink: %w", err)
+			return "", false, &ReadlinkError{Path: current, Cause: err}
 		}
 
 		// Resolve symlink target to absolute path
@@ -239,7 +238,7 @@ func followSymlinkChain(fs FileSystem, path string, workspaceRoot string, maxHop
 		current = targetAbs
 	}
 
-	return "", false, fmt.Errorf("symlink chain too long (max %d hops)", maxHops)
+	return "", false, &SymlinkChainTooLongError{MaxHops: maxHops}
 }
 
 // buildNextPathComponent joins a path component to the current path, handling edge cases.

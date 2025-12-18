@@ -2,7 +2,6 @@ package shell
 
 import (
 	"bufio"
-	"fmt"
 	"strings"
 )
 
@@ -20,7 +19,7 @@ import (
 func ParseEnvFile(fs fileSystem, path string) (map[string]string, error) {
 	content, err := fs.ReadFileRange(path, 0, 0)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read env file: %w", err)
+		return nil, &EnvFileReadError{Path: path, Cause: err}
 	}
 
 	env := make(map[string]string)
@@ -39,7 +38,7 @@ func ParseEnvFile(fs fileSystem, path string) (map[string]string, error) {
 		// Split on first =
 		parts := strings.SplitN(line, "=", 2)
 		if len(parts) != 2 {
-			return nil, fmt.Errorf("invalid line %d: %s", lineNum, line)
+			return nil, &EnvFileParseError{Path: path, Line: lineNum, Content: line}
 		}
 
 		key := strings.TrimSpace(parts[0])
@@ -57,7 +56,7 @@ func ParseEnvFile(fs fileSystem, path string) (map[string]string, error) {
 	}
 
 	if err := scanner.Err(); err != nil {
-		return nil, fmt.Errorf("error reading env file: %w", err)
+		return nil, &EnvFileScanError{Path: path, Cause: err}
 	}
 
 	return env, nil

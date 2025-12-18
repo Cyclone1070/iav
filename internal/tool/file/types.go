@@ -1,7 +1,6 @@
 package file
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/Cyclone1070/iav/internal/config"
@@ -46,13 +45,13 @@ func NewReadFileRequest(
 ) (*ReadFileRequest, error) {
 	// Constructor validation - everything we can know from inputs
 	if dto.Path == "" {
-		return nil, fmt.Errorf("path is required")
+		return nil, &PathRequiredError{}
 	}
 
 	var offset int64
 	if dto.Offset != nil {
 		if *dto.Offset < 0 {
-			return nil, fmt.Errorf("offset cannot be negative")
+			return nil, &NegativeOffsetError{Value: *dto.Offset}
 		}
 		offset = *dto.Offset
 	}
@@ -60,7 +59,7 @@ func NewReadFileRequest(
 	var limit int64
 	if dto.Limit != nil {
 		if *dto.Limit < 0 {
-			return nil, fmt.Errorf("limit cannot be negative")
+			return nil, &NegativeLimitError{Value: *dto.Limit}
 		}
 		limit = *dto.Limit
 	}
@@ -68,7 +67,7 @@ func NewReadFileRequest(
 	// Path resolution (I/O-based validation)
 	abs, rel, err := resolvePathWithFS(workspaceRoot, fs, dto.Path)
 	if err != nil {
-		return nil, fmt.Errorf("invalid path: %w", err)
+		return nil, err
 	}
 
 	return &ReadFileRequest{
@@ -138,17 +137,17 @@ func NewWriteFileRequest(
 ) (*WriteFileRequest, error) {
 	// Constructor validation
 	if dto.Path == "" {
-		return nil, fmt.Errorf("path is required")
+		return nil, &PathRequiredError{}
 	}
 
 	if dto.Content == "" {
-		return nil, fmt.Errorf("content is required")
+		return nil, &ContentRequiredError{}
 	}
 
 	perm := os.FileMode(0644) // default
 	if dto.Perm != nil {
 		if *dto.Perm&^os.FileMode(0777) != 0 {
-			return nil, fmt.Errorf("invalid permissions: only standard bits (0-0777) allowed")
+			return nil, &InvalidPermissionError{Perm: uint32(*dto.Perm)}
 		}
 		perm = *dto.Perm & 0777
 	}
@@ -156,7 +155,7 @@ func NewWriteFileRequest(
 	// Path resolution
 	abs, rel, err := resolvePathWithFS(workspaceRoot, fs, dto.Path)
 	if err != nil {
-		return nil, fmt.Errorf("invalid path: %w", err)
+		return nil, err
 	}
 
 	return &WriteFileRequest{
@@ -213,26 +212,26 @@ func NewEditFileRequest(
 ) (*EditFileRequest, error) {
 	// Constructor validation
 	if dto.Path == "" {
-		return nil, fmt.Errorf("path is required")
+		return nil, &PathRequiredError{}
 	}
 
 	if len(dto.Operations) == 0 {
-		return nil, fmt.Errorf("operations cannot be empty")
+		return nil, &OperationsRequiredError{}
 	}
 
 	for i, op := range dto.Operations {
 		if op.Before == "" {
-			return nil, fmt.Errorf("operation %d: Before must be non-empty", i+1)
+			return nil, &BeforeRequiredError{Index: i + 1}
 		}
 		if op.ExpectedReplacements < 0 {
-			return nil, fmt.Errorf("operation %d: ExpectedReplacements cannot be negative", i+1)
+			return nil, &NegativeExpectedReplacementsError{Index: i + 1, Value: op.ExpectedReplacements}
 		}
 	}
 
 	// Path resolution
 	abs, rel, err := resolvePathWithFS(workspaceRoot, fs, dto.Path)
 	if err != nil {
-		return nil, fmt.Errorf("invalid path: %w", err)
+		return nil, err
 	}
 
 	return &EditFileRequest{

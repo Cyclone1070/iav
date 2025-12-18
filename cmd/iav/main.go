@@ -97,9 +97,9 @@ func createTools(cfg *config.Config, workspaceRoot string) ([]orchadapter.Tool, 
 	}
 
 	// Instantiate all tools with their dependencies
-	readFileTool := file.NewReadFileTool(osFS, osFS, binaryDetector, checksumManager, cfg, canonicalRoot)
-	writeFileTool := file.NewWriteFileTool(osFS, osFS, binaryDetector, checksumManager, cfg, canonicalRoot)
-	editFileTool := file.NewEditFileTool(osFS, osFS, binaryDetector, checksumManager, cfg, canonicalRoot)
+	readFileTool := file.NewReadFileTool(osFS, binaryDetector, checksumManager, cfg, canonicalRoot)
+	writeFileTool := file.NewWriteFileTool(osFS, binaryDetector, checksumManager, cfg, canonicalRoot)
+	editFileTool := file.NewEditFileTool(osFS, binaryDetector, checksumManager, cfg, canonicalRoot)
 	listDirectoryTool := directory.NewListDirectoryTool(osFS, gitignoreService, cfg, canonicalRoot)
 	findFileTool := directory.NewFindFileTool(osFS, commandExecutor, cfg, canonicalRoot)
 	searchContentTool := search.NewSearchContentTool(osFS, commandExecutor, cfg, canonicalRoot)
@@ -109,15 +109,15 @@ func createTools(cfg *config.Config, workspaceRoot string) ([]orchadapter.Tool, 
 
 	// Create adapters
 	return []orchadapter.Tool{
-		orchadapter.NewReadFileAdapter(readFileTool),
-		orchadapter.NewWriteFileAdapter(writeFileTool),
-		orchadapter.NewEditFileAdapter(editFileTool),
-		orchadapter.NewListDirectoryAdapter(listDirectoryTool),
-		orchadapter.NewFindFileAdapter(findFileTool),
-		orchadapter.NewSearchContentAdapter(searchContentTool),
-		orchadapter.NewShellAdapter(shellTool),
-		orchadapter.NewReadTodosAdapter(readTodosTool),
-		orchadapter.NewWriteTodosAdapter(writeTodosTool),
+		orchadapter.NewReadFileAdapter(readFileTool, cfg, canonicalRoot, osFS),
+		orchadapter.NewWriteFileAdapter(writeFileTool, cfg, canonicalRoot, osFS),
+		orchadapter.NewEditFileAdapter(editFileTool, cfg, canonicalRoot, osFS),
+		orchadapter.NewListDirectoryAdapter(listDirectoryTool, cfg, canonicalRoot, osFS),
+		orchadapter.NewFindFileAdapter(findFileTool, cfg, canonicalRoot, osFS),
+		orchadapter.NewSearchContentAdapter(searchContentTool, cfg, canonicalRoot, osFS),
+		orchadapter.NewShellAdapter(shellTool, cfg, canonicalRoot, osFS),
+		orchadapter.NewReadTodosAdapter(readTodosTool, cfg),
+		orchadapter.NewWriteTodosAdapter(writeTodosTool, cfg),
 	}, nil
 }
 

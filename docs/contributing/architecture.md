@@ -42,7 +42,7 @@ Before submitting code, verify **every** item.
 ### Error Handling
 - [ ] No shared error packages (e.g., `errutil`)
 - [ ] Errors defined in the package that raises them
-- [ ] Cross-package error checks use **Behavioral Interfaces** (no imports)
+- [ ] Cross-package error checks use **Sentinel Errors** (via `errors.Is`)
 
 ---
 
@@ -395,88 +395,46 @@ func (t *ReadFileTool) Run(ctx context.Context, req *ReadFileRequest) (*ReadFile
 ---
 
 ## 7. Error Handling
-**Goal**: Decoupling and robustness.
+**Goal**: Simplicity, standard Go patterns, and pragmatism.
 
-*   **Behavioral Interfaces**: Check *what* the error does, not *who* it is.
-    *   **Mechanism**: Errors are opaque to the caller. The caller asserts behavior by checking if the error implements a locally defined interface.
-    *   **Provider**: Define a concrete error struct with a method indicating behavior (e.g., `NotFound() bool { return true }`).
-    *   **Consumer**: Define a local interface with the method you care about (e.g., `type notFound interface { NotFound() bool }`).
-    *   **Why**: Logic depends on capabilities, not types. Zero import coupling.
+*   **Sentinel Errors**: Use package-level sentinel errors for standard domain conditions.
+    *   **Mechanism**: `var ErrNotFound = errors.New("not found")`
+    *   **Why**: Idiomatic, simple, and immediately understandable to any Go developer.
+    *   **Usage**: Check using `errors.Is(err, pkg.ErrSentinel)`.
+
+*   **Error Structs**: Use exported structs **ONLY** when extending context is strictly necessary.
+    *   **Usage**: When you need to pass extra data programmatically (e.g., `TimeoutError{Duration: 5s}`).
+    *   **Mixed Use**: It is acceptable to have both Sentinels (for validation) and Structs (for complex IO) in the same package.
 
 > [!CAUTION]
 > **FORBIDDEN ERROR PATTERNS**
 >
-> The following error patterns are **strictly prohibited**:
->
-> | Pattern | Example | Why Bad |
-> |---------|---------|---------|
-> | **Sentinel Errors** | `var ErrNotFound = errors.New("not found")` | Cannot carry context, forces `==` checks that couple packages |
-> | **fmt.Errorf** | `return fmt.Errorf("file not found: %s", path)` | Anonymous errors, no behavioral method, untestable |
-> | **errors.New inline** | `return errors.New("something failed")` | Same as sentinel - no context, no behavior |
-> | **pkg/errors** | `errors.Wrap(err, "context")` | Deprecated pattern, use behavioral errors |
->
-> **REQUIRED**: All errors MUST be behavioral error types:
-> ```go
-> // ✅ CORRECT: Behavioral error type
-> type NotFoundError struct {
->     Path string
-> }
-> func (e *NotFoundError) Error() string { return "not found: " + e.Path }
-> func (e *NotFoundError) NotFound() bool { return true }
->
-> // ❌ WRONG: Sentinel error
-> var ErrNotFound = errors.New("not found")
->
-> // ❌ WRONG: fmt.Errorf (creating an error)
-> return fmt.Errorf("file not found: %s", path)
->
-> // ❌ WRONG: fmt.Errorf (wrapping a generic error)
-> return fmt.Errorf("failed: %w", errors.New("generic"))
-> ```
+> | Pattern | Why Bad |
+> |---------|---------|
+> | **Behavioral Interfaces** | Over-engineering for a CLI. Creates "magic" interfaces that hide simple dependencies and confuse contributors. |
+> | **Shared Error Package** | `internal/errors` becomes a "God Package" that couples everything to everything. Keep errors with the code that raises them. |
+> | **Raw errors.New output** | `return errors.New("fail")`. **Untestable**. Callers cannot check for this specific error programmatically (must rely on fragile string matching). Use a Sentinel instead. |
 
-*   **Error Wrapping**: You MAY wrap errors to add context, provided you preserve behavior.
-    *   **How**: Use `fmt.Errorf("context: %w", err)`.
-    *   **Unwrapping**: Use `errors.As(err, &interfaceTarget)` to check for behavior. This automatically unwraps the chain to find the matching behavior.
-    *   **Error checking**: ALWAYS use `errors.As`. NEVER use type assertions (`err.(*Type)`) on errors, as you must assume all errors are wrapped.
-
-> [!NOTE]
-> **Use of fmt.Errorf**
->
-> `fmt.Errorf` is **strictly forbidden** for *creating* errors.
-> It is **specifically allowed** for *wrapping* behavioral errors to add context.
-
-*   **Local Error Definitions**: Define errors in the package that raises them.
-    *   **Why**: Keeps packages self-contained.
-
-> [!CAUTION]
-> **ANTI-PATTERN**: Shared Error Package
->
-> *   **Bad**: `internal/errutil` containing all system errors.
-> *   **Why**: This is a "junk drawer" that couples every package to every other package.
-> *   **Solution**: Delete it. Define errors locally and use behavioral interfaces.
-
+*   **Error Wrapping**: Always wrap errors to add context.
+    *   **How**: `fmt.Errorf("operation failed: %w", err)`
+    *   **Checking**: Use `errors.Is(err, pkg.ErrSentinel)` to check nature. Use `errors.As(err, &targetStruct)` to check data.
 
 **Example**:
 
 ```go
 // Provider (package fs)
-type NotFoundError struct { name string }
-func (e *NotFoundError) Error() string { return "not found: " + e.name }
-func (e *NotFoundError) NotFound() bool { return true } // <--- THE BEHAVIOR
+var ErrNotFound = errors.New("file not found")
 
-// 2. Consumer (package usecase) - NO import of "fs" needed!
-type notFound interface {
-    NotFound() bool
-}
+// Consumer (package usecase)
+import "iav/internal/fs"
 
-func (u *UseCase) Do() {
-    if err := u.opener.Open("file.txt"); err != nil {
-        // Check behavior via errors.As (safe for wrapped errors)
-        var nf notFound
-        if errors.As(err, &nf) && nf.NotFound() {
-            // Handle missing file
+func Do() {
+    if err := fs.Open(); err != nil {
+        if errors.Is(err, fs.ErrNotFound) {
+            // Handle specific error
             return
         }
+        // Handle generic error
     }
 }
 ```
