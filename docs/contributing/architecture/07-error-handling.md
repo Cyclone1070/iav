@@ -1,52 +1,52 @@
 # 7. Error Handling
 
-**Goal**: Decoupling, Type Safety, and Scalability.
+**Goal**: Decoupling. Consumers can check errors without importing the producer package.
 
-*   **Shared Error Domain**: All cross-boundary Sentinel Errors and Public Struct Errors MUST be defined in the `shared/` package (e.g., `internal/tool/shared`).
-    *   **Structure**: `internal/pkggroup/shared/errors.go` contains sentinels and error structs.
-    *   **Topology**: The `shared/` package MUST be a **Leaf Node** and a **Sibling** to the packages that use it.
-    *   **Why**: Fully decouples Consumers from Provider implementations. Prevents circular dependencies.
-    *   **Usage**: Producers return `shared.ErrX`. Consumers check `errors.Is(e, shared.ErrX)`.
+*   **Errors in Parent Package**: Sentinel errors and error structs belong in the parent package (`errors.go`), not in sub-packages.
+    *   **Structure**: `internal/tool/errors.go` contains all sentinels and error structs for the `tool` feature group.
+    *   **Why**: Without shared errors, checking an error means importing the producer. Shared errors let consumers check errors without coupling to who produced them.
+    *   **Usage**: Producers return `tool.ErrX`. Consumers check `errors.Is(err, tool.ErrX)`.
 
-*   **Sentinel Errors**: Use Sentinels for all standard domain conditions ("Not Found", "Invalid Input").
-    *   **Mechanism**: `var ErrNotFound = errors.New("not found")` defined in the `shared/` package.
+*   **Sentinel Errors**: Use sentinels for standard domain conditions ("Not Found", "Invalid Input").
+    *   **Mechanism**: `var ErrNotFound = errors.New("not found")` in the parent package.
 
-*   **Error Structs**: Use Structs only when context (paths, values) is required for error handling logic.
-    *   **Mechanism**: `type PathError struct { ... }` defined in the `shared/` package.
+*   **Error Structs**: Use structs only when context (paths, values) is required for error handling logic.
+    *   **Mechanism**: `type PathError struct { Path string }` in the parent package.
 
 > [!CAUTION]
 > **FORBIDDEN ERROR PATTERNS**
 >
 > | Pattern | Why Bad |
 > |---------|---------|
-> | **Local Sentinel Errors** | Defining `ErrX` in `service` forces `handler` to import `service` just to check an error. This couples Logic packages. |
-> | **Behavioral Interfaces** | Using `interface { NotFound() bool }` leads to boilerplate explosion and obscures simple error checks. |
-> | **Raw errors.New output** | `return errors.New("fail")`. **Untestable**. Use a Sentinel instead. |
+> | **Local Sentinel Errors** | Defining `ErrX` in `file/` forces consumers to import `file` just to check an error. |
+> | **Behavioral Interfaces** | Using `interface { NotFound() bool }` leads to boilerplate explosion. |
+> | **Raw errors.New output** | `return errors.New("fail")`. Untestable. Use a sentinel instead. |
 
 *   **Error Wrapping**: Always wrap errors to add context.
-    *   **How**: `fmt.Errorf("operation failed: %w", e)`
-    *   **Checking**: Use `errors.Is(e, shared.ErrSentinel)` to check nature. Use `errors.As(e, &targetStruct)` to check data.
+    *   **How**: `fmt.Errorf("operation failed: %w", err)`
+    *   **Checking**: Use `errors.Is(err, tool.ErrX)` for sentinels. Use `errors.As(err, &target)` for structs.
 
 **Example**:
 
 ```go
-// Shared Definitions (package shared, e.g., internal/tool/shared)
+// Parent package (internal/tool/errors.go)
+package tool
+
 var ErrNotFound = errors.New("file not found")
 
-// Provider (package fs)
-import "iav/internal/tool/shared"
-func Open() error {
-    return fmt.Errorf("fs: %w", shared.ErrNotFound)
+// Producer (internal/tool/file/read.go)
+import "iav/internal/tool"
+
+func (t *ReadTool) Run() error {
+    return fmt.Errorf("read: %w", tool.ErrNotFound)
 }
 
-// Consumer (package usecase)
-import "iav/internal/tool/shared"
-func Do() {
-    if e := fs.Open(); e != nil {
-        if errors.Is(e, shared.ErrNotFound) {
-            // Handle specific error without importing 'fs'
-            return
-        }
+// Consumer (internal/orchestrator)
+import "iav/internal/tool"
+
+func handle(err error) {
+    if errors.Is(err, tool.ErrNotFound) {
+        // Handle without importing 'file'
     }
 }
 ```

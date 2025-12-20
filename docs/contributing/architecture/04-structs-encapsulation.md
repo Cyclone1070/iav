@@ -7,7 +7,11 @@
 
 *   **Public Constructor**: You MUST provide a `New...` constructor for every domain entity.
     *   **Why**: Constructors are the single point of validation. If you add validation later, you won't need to refactor every usage.
-    *   **Strict Rule**: Direct initialization with `{}` is forbidden, even if there's no validation yet.
+
+> [!NOTE]
+> **STRICT RULE**: Direct initialization with `{}` is strictly forbidden with **no exception**.
+> 
+> Even if there's no validation yet and it appears to be boilerplate. Even if it's a private struct used in a single place with a single primitive field. The struct will grow soon and refactoring is unavoidable. Future proofing is more important than initial, short-lived convenience. 
 
 > [!CAUTION]
 > **ANTI-PATTERN**: Constructor Bypass

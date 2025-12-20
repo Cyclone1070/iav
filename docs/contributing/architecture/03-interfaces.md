@@ -38,6 +38,7 @@
 >
 > If you already import a helper package (e.g., `pathutil`) and call its functions, you are coupled to it.
 > In this case, **import its interface directly** rather than redefining an identical interface locally.
+> See [Pure Helpers](02-dependency-injection.md) for more on this distinction.
 >
 > *   **Bad**: Redefining `type pathResolver interface { Lstat()... }` when you already import `pathutil.Resolve`.
 > *   **Good**: Use `pathutil.FileSystem` directly since coupling already exists.
@@ -46,7 +47,7 @@
 *   **Accept Interfaces, Return Concrete Types**: Function parameters should accept interfaces (for decoupling and testability). Return values should be concrete types (structs/pointers).
     *   **Why (Accept Interfaces)**: Accepting interfaces allows the function to work with any type that satisfies the interface, enabling mocking in tests and swapping implementations without code changes.
     *   **Why (Return Concrete)**: Returning concrete types gives callers full access to all fields and methods. It avoids premature abstraction and allows the returned type to evolve (add new methods) without breaking existing code.
-    *   **Exception**: The `error` interface is the standard exception — functions return `error`, not concrete error types.
+    *   **Exception**: Should not be taken to the extreme. For example, the `error` interface is the standard exception — functions return `error`, not concrete error types.
 
 **Example**:
 
@@ -77,11 +78,3 @@ type fileSystem interface {
 }
 
 // Both satisfied by the same OSFileSystem, but neither knows about the other.
-```
-
-> [!CAUTION]
-> **ANTI-PATTERN**: Leaky Interfaces
->
-> *   **Bad**: `Save(u *User) (sql.Result, error)` — ties interface to SQL.
-> *   **Good**: `Save(u *User) (string, error)` — returns what you need without leaking implementation.
-> *   **Why**: Leaky interfaces prevent alternative implementations (file system, memory store).

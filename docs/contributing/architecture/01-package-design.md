@@ -1,6 +1,6 @@
 # 1. Package Design
 
-**Goal**: Small, focused, reusable components.
+**Goal**: Decoupled packages. Someone working on or modifying a package shouldn't need to know about other packages.
 
 *   **Feature-Based Packages**: A package must represent a **feature** or **domain concept**, not a layer (controller, service, model).
     *   **Why**: Feature packages contain all related code (types, logic, handlers) in one place. Layer packages scatter related code across the codebase.
@@ -74,10 +74,14 @@
     *   **Import Rule**: Parent must **NEVER** import its sub-packages.
     *   **Why**: Without shared types, touching the data means importing the producer package. Shared types let you work with the data without coupling to who produced it.
 
-*   **Shared Types (Parent vs. Local)**: Decide based on **who touches the type**:
-    *   **Other consumer touches it? → Share it (put in parent package)**: Types used in public method signatures (Requests, Responses, Errors) are the **Contract**. They are meant for other packages to use it. They belong in the parent.
-    *   **Only Wiring touches it? → Keep it (put in local sub-package)**: Types used only for construction/configuration (Config structs, Options) are **Implementation Details**. They are meant for internal use or for wiring in main.go. They belong locally in the sub-package.
-    *   **Why**: Consumers need the Contract to interact with you. Wiring (main.go) can import specific sub-packages without breaking decoupling.
+> [!NOTE]
+> **Shared Types (Parent vs. Local)**: How do you know where to place what struct if the interfaces are consumer defined?
+>
+> Decide based on **who the type is meant for**:
+> - **Meant for consumers → Parent**: Types in public method signatures (Requests, Responses, Errors) are the Contract.
+> - **Meant for wiring → Local**: Types for construction/configuration (Config, Options) and private types, stay in the sub-package.
+>
+> Consumers need the Contract. Wiring (`main.go`) can import sub-packages directly without breaking decoupling.
 
 > [!CAUTION]
 > **ANTI-PATTERN**: Junk Drawer
@@ -88,4 +92,8 @@
 >     *   String helpers → `feature/text` or `internal/strutil`
 >     *   Time helpers → `feature/timeext`
 >     *   Domain logic → `feature/auth/hashing` (NOT `feature/auth/utils`)
-> *   **Exception**: A `utils` package is permissible ONLY IF it uses strictly the standard library.
+
+*   **Naming Convention**: Use suffixes to signal package type at a glance.
+    *   `*serv` — Dependency with I/O (inject via interface): `fsserv`, `pathserv`, `gitserv`
+    *   `*util` — Pure stateless helper (import directly): `hashutil`, `contentutil`
+    *   No suffix — core feature: `file`, `shell`, `directory`
