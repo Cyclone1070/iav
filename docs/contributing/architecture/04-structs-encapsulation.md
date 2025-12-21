@@ -18,7 +18,7 @@
 >
 > It might sound obvious, but go encourages public fields with direct initialization for simple structs, trading future proofing for initial convenience. This is not a trade off we want to make.
 
-*   **DTOs**: Use Data Transfer Objects with public fields for serialization (JSON, API). DTOs have NO methods.
+*   **DTOs**: Data Transfer Objects are an exception. They are allowed to have public fields but NO methods.
     *   **Why**: DTOs are pure data carriers. Behavior belongs in domain entities.
 
 > [!CAUTION]
