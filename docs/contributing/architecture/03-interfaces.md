@@ -44,11 +44,6 @@
 > *   **Good**: Use `pathutil.FileSystem` directly since coupling already exists.
 > *   **Why**: Redefining the interface is noise. It disguises where the requirement comes from.
 
-*   **Accept Interfaces, Return Concrete Types**: Function parameters should accept interfaces (for decoupling and testability). Return values should be concrete types (structs/pointers).
-    *   **Why (Accept Interfaces)**: Accepting interfaces allows the function to work with any type that satisfies the interface, enabling mocking in tests and swapping implementations without code changes.
-    *   **Why (Return Concrete)**: Returning concrete types gives callers full access to all fields and methods. It avoids premature abstraction and allows the returned type to evolve (add new methods) without breaking existing code.
-    *   **Exception**: Should not be taken to the extreme. For example, the `error` interface is the standard exception — functions return `error`, not concrete error types.
-
 **Example**:
 
 ```go
