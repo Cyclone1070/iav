@@ -70,7 +70,7 @@
 > When extracting shared code to prevent circular dependencies, a directory with one file is fine. Correct structure matters more than file count.
 
 *   **Parent Package Role**: The parent package holds **shared types and errors** for its children.
-    *   **Contains**: Shared types (`types.go`) and errors (`errors.go`).
+    *   **Contains**: Shared types (`types.go`) and errors (`errors.go`). These can be split into smaller files if too big.
     *   **Import Rule**: Parent must **NEVER** import its sub-packages.
     *   **Why**: Without shared types, touching the data means importing the producer package. Shared types let you work with the data without coupling to who produced it.
 
