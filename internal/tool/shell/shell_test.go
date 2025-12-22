@@ -167,12 +167,7 @@ func TestShellTool_Run_SimpleCommand(t *testing.T) {
 
 	shellTool := NewShellTool(mockFS, factory, cfg, DockerConfig{}, workspaceRoot)
 
-	dto := ShellDTO{Command: []string{"echo", "hello"}}
-	req, err := NewShellRequest(dto, cfg, workspaceRoot, mockFS)
-	if err != nil {
-		t.Fatalf("failed to create request: %v", err)
-	}
-
+	req := &ShellRequest{Command: []string{"echo", "hello"}}
 	resp, err := shellTool.Run(context.Background(), req)
 	if err != nil {
 		t.Fatalf("Run failed: %v", err)
@@ -203,13 +198,8 @@ func TestShellTool_Run_WorkingDir(t *testing.T) {
 
 	shellTool := NewShellTool(mockFS, factory, cfg, DockerConfig{}, workspaceRoot)
 
-	dto := ShellDTO{Command: []string{"pwd"}, WorkingDir: "subdir"}
-	req, err := NewShellRequest(dto, cfg, workspaceRoot, mockFS)
-	if err != nil {
-		t.Fatalf("failed to create request: %v", err)
-	}
-
-	_, err = shellTool.Run(context.Background(), req)
+	req := &ShellRequest{Command: []string{"pwd"}, WorkingDir: "subdir"}
+	_, err := shellTool.Run(context.Background(), req)
 	if err != nil {
 		t.Fatalf("Run failed: %v", err)
 	}
@@ -237,19 +227,14 @@ func TestShellTool_Run_Env(t *testing.T) {
 
 	shellTool := NewShellTool(mockFS, factory, cfg, DockerConfig{}, workspaceRoot)
 
-	dto := ShellDTO{
+	req := &ShellRequest{
 		Command: []string{"env"},
 		Env: map[string]string{
 			"CUSTOM_VAR": "custom_value",
 			"TEST_MODE":  "true",
 		},
 	}
-	req, err := NewShellRequest(dto, cfg, workspaceRoot, mockFS)
-	if err != nil {
-		t.Fatalf("failed to create request: %v", err)
-	}
-
-	_, err = shellTool.Run(context.Background(), req)
+	_, err := shellTool.Run(context.Background(), req)
 	if err != nil {
 		t.Fatalf("Run failed: %v", err)
 	}
@@ -301,13 +286,8 @@ CACHE_URL=redis://localhost`
 	shellTool := NewShellTool(mockFS, factory, cfg, DockerConfig{}, workspaceRoot)
 
 	t.Run("Single env file", func(t *testing.T) {
-		dto := ShellDTO{Command: []string{"env"}, EnvFiles: []string{".env"}}
-		req, err := NewShellRequest(dto, cfg, workspaceRoot, mockFS)
-		if err != nil {
-			t.Fatalf("failed to create request: %v", err)
-		}
-
-		_, err = shellTool.Run(context.Background(), req)
+		req := &ShellRequest{Command: []string{"env"}, EnvFiles: []string{".env"}}
+		_, err := shellTool.Run(context.Background(), req)
 		if err != nil {
 			t.Fatalf("Run failed: %v", err)
 		}
@@ -340,13 +320,8 @@ CACHE_URL=redis://localhost`
 	})
 
 	t.Run("Multiple env files with override - explicit ordering", func(t *testing.T) {
-		dto := ShellDTO{Command: []string{"env"}, EnvFiles: []string{".env", ".env.local"}}
-		req, err := NewShellRequest(dto, cfg, workspaceRoot, mockFS)
-		if err != nil {
-			t.Fatalf("failed to create request: %v", err)
-		}
-
-		_, err = shellTool.Run(context.Background(), req)
+		req := &ShellRequest{Command: []string{"env"}, EnvFiles: []string{".env", ".env.local"}}
+		_, err := shellTool.Run(context.Background(), req)
 		if err != nil {
 			t.Fatalf("Run failed: %v", err)
 		}
@@ -373,17 +348,12 @@ CACHE_URL=redis://localhost`
 	})
 
 	t.Run("Request.Env overrides EnvFiles", func(t *testing.T) {
-		dto := ShellDTO{
+		req := &ShellRequest{
 			Command:  []string{"env"},
 			EnvFiles: []string{".env"},
 			Env:      map[string]string{"DB_HOST": "production.example.com"},
 		}
-		req, err := NewShellRequest(dto, cfg, workspaceRoot, mockFS)
-		if err != nil {
-			t.Fatalf("failed to create request: %v", err)
-		}
-
-		_, err = shellTool.Run(context.Background(), req)
+		_, err := shellTool.Run(context.Background(), req)
 		if err != nil {
 			t.Fatalf("Run failed: %v", err)
 		}
@@ -402,14 +372,9 @@ CACHE_URL=redis://localhost`
 	})
 
 	t.Run("Nonexistent env file", func(t *testing.T) {
-		dto := ShellDTO{Command: []string{"env"}, EnvFiles: []string{".env.missing"}}
-		req, err := NewShellRequest(dto, cfg, workspaceRoot, mockFS)
-		if err != nil {
-			t.Fatalf("failed to create request: %v", err)
-		}
-
+		req := &ShellRequest{Command: []string{"env"}, EnvFiles: []string{".env.missing"}}
 		shellTool := NewShellTool(mockFS, &mockCommandExecutorForShell{}, cfg, DockerConfig{}, workspaceRoot)
-		_, err = shellTool.Run(context.Background(), req)
+		_, err := shellTool.Run(context.Background(), req)
 		if err == nil {
 			t.Fatal("Expected error for nonexistent env file, got nil")
 		}
@@ -418,10 +383,10 @@ CACHE_URL=redis://localhost`
 		}
 	})
 
-	dto := ShellDTO{Command: []string{"env"}, EnvFiles: []string{"../../etc/passwd"}}
-	_, err := NewShellRequest(dto, cfg, workspaceRoot, mockFS)
+	req := &ShellRequest{Command: []string{"env"}, EnvFiles: []string{"../../etc/passwd"}}
+	_, err := shellTool.Run(context.Background(), req)
 	if !errors.Is(err, pathutil.ErrOutsideWorkspace) {
-		t.Errorf("Expected ErrOutsideWorkspace error from NewShellRequest, got %v", err)
+		t.Errorf("Expected ErrOutsideWorkspace error, got %v", err)
 	}
 }
 
@@ -431,10 +396,11 @@ func TestShellTool_Run_OutsideWorkspace(t *testing.T) {
 	workspaceRoot := "/workspace"
 	cfg := config.DefaultConfig()
 
-	dto := ShellDTO{Command: []string{"ls"}, WorkingDir: "../outside"}
-	_, err := NewShellRequest(dto, cfg, workspaceRoot, mockFS)
+	shellTool := NewShellTool(mockFS, &mockCommandExecutorForShell{}, cfg, DockerConfig{}, workspaceRoot)
+	req := &ShellRequest{Command: []string{"ls"}, WorkingDir: "../outside"}
+	_, err := shellTool.Run(context.Background(), req)
 	if !errors.Is(err, pathutil.ErrOutsideWorkspace) {
-		t.Errorf("Expected ErrOutsideWorkspace error from NewShellRequest, got %v", err)
+		t.Errorf("Expected ErrOutsideWorkspace error, got %v", err)
 	}
 }
 
@@ -455,12 +421,7 @@ func TestShellTool_Run_NonZeroExit(t *testing.T) {
 
 	shellTool := NewShellTool(mockFS, factory, cfg, DockerConfig{}, workspaceRoot)
 
-	dto := ShellDTO{Command: []string{"false"}}
-	req, err := NewShellRequest(dto, cfg, workspaceRoot, mockFS)
-	if err != nil {
-		t.Fatalf("failed to create request: %v", err)
-	}
-
+	req := &ShellRequest{Command: []string{"false"}}
 	resp, err := shellTool.Run(context.Background(), req)
 	if err != nil {
 		t.Fatalf("Run failed: %v", err)
@@ -486,12 +447,7 @@ func TestShellTool_Run_BinaryOutput(t *testing.T) {
 
 	shellTool := NewShellTool(mockFS, factory, cfg, DockerConfig{}, workspaceRoot)
 
-	dto := ShellDTO{Command: []string{"cat", "binary.bin"}}
-	req, err := NewShellRequest(dto, cfg, workspaceRoot, mockFS)
-	if err != nil {
-		t.Fatalf("failed to create request: %v", err)
-	}
-
+	req := &ShellRequest{Command: []string{"cat", "binary.bin"}}
 	resp, err := shellTool.Run(context.Background(), req)
 	if err != nil {
 		t.Fatalf("Run failed: %v", err)
@@ -518,13 +474,8 @@ func TestShellTool_Run_CommandInjection(t *testing.T) {
 
 	shellTool := NewShellTool(mockFS, factory, cfg, DockerConfig{}, workspaceRoot)
 
-	dto := ShellDTO{Command: []string{"echo", "hello; rm -rf /"}}
-	req, err := NewShellRequest(dto, cfg, workspaceRoot, mockFS)
-	if err != nil {
-		t.Fatalf("failed to create request: %v", err)
-	}
-
-	_, err = shellTool.Run(context.Background(), req)
+	req := &ShellRequest{Command: []string{"echo", "hello; rm -rf /"}}
+	_, err := shellTool.Run(context.Background(), req)
 	if err != nil {
 		t.Fatalf("Run failed: %v", err)
 	}
@@ -557,12 +508,7 @@ func TestShellTool_Run_HugeOutput(t *testing.T) {
 
 	shellTool := NewShellTool(mockFS, factory, cfg, DockerConfig{}, workspaceRoot)
 
-	dto := ShellDTO{Command: []string{"cat", "huge.txt"}}
-	req, err := NewShellRequest(dto, cfg, workspaceRoot, mockFS)
-	if err != nil {
-		t.Fatalf("failed to create request: %v", err)
-	}
-
+	req := &ShellRequest{Command: []string{"cat", "huge.txt"}}
 	resp, err := shellTool.Run(context.Background(), req)
 	if err != nil {
 		t.Fatalf("Run failed: %v", err)
@@ -599,13 +545,8 @@ func TestShellTool_Run_Timeout(t *testing.T) {
 
 	shellTool := NewShellTool(mockFS, factory, cfg, DockerConfig{}, workspaceRoot)
 
-	dto := ShellDTO{Command: []string{"sleep", "10"}, TimeoutSeconds: 1}
-	req, err := NewShellRequest(dto, cfg, workspaceRoot, mockFS)
-	if err != nil {
-		t.Fatalf("failed to create request: %v", err)
-	}
-
-	_, err = shellTool.Run(context.Background(), req)
+	req := &ShellRequest{Command: []string{"sleep", "10"}, TimeoutSeconds: 1}
+	_, err := shellTool.Run(context.Background(), req)
 	if err != nil {
 		t.Errorf("Run failed: %v", err)
 	}
@@ -638,12 +579,7 @@ func TestShellTool_Run_DockerCheck(t *testing.T) {
 
 	shellTool := NewShellTool(mockFS, factory, config.DefaultConfig(), dockerConfig, "/workspace")
 
-	dto := ShellDTO{Command: []string{"docker", "run", "hello"}}
-	req, err := NewShellRequest(dto, config.DefaultConfig(), "/workspace", mockFS)
-	if err != nil {
-		t.Fatalf("failed to create request: %v", err)
-	}
-
+	req := &ShellRequest{Command: []string{"docker", "run", "hello"}}
 	resp, err := shellTool.Run(context.Background(), req)
 	if err != nil {
 		t.Fatalf("Run failed: %v", err)
@@ -670,13 +606,8 @@ func TestShellTool_Run_EnvInjection(t *testing.T) {
 
 	shellTool := NewShellTool(mockFS, factory, cfg, DockerConfig{}, workspaceRoot)
 
-	dto := ShellDTO{Command: []string{"env"}, Env: map[string]string{"PATH": ""}}
-	req, err := NewShellRequest(dto, cfg, workspaceRoot, mockFS)
-	if err != nil {
-		t.Fatalf("failed to create request: %v", err)
-	}
-
-	_, err = shellTool.Run(context.Background(), req)
+	req := &ShellRequest{Command: []string{"env"}, Env: map[string]string{"PATH": ""}}
+	_, err := shellTool.Run(context.Background(), req)
 	if err != nil {
 		t.Fatalf("Run failed: %v", err)
 	}
@@ -705,12 +636,7 @@ func TestShellTool_Run_ContextCancellation(t *testing.T) {
 
 	shellTool := NewShellTool(mockFS, factory, cfg, DockerConfig{}, workspaceRoot)
 
-	dto := ShellDTO{Command: []string{"sleep", "100"}, TimeoutSeconds: 10}
-	req, err := NewShellRequest(dto, cfg, workspaceRoot, mockFS)
-	if err != nil {
-		t.Fatalf("failed to create request: %v", err)
-	}
-
+	req := &ShellRequest{Command: []string{"sleep", "100"}, TimeoutSeconds: 10}
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
 	defer cancel()
 
@@ -748,12 +674,7 @@ func TestShellTool_Run_SpecificExitCode(t *testing.T) {
 
 	shellTool := NewShellTool(mockFS, factory, cfg, DockerConfig{}, workspaceRoot)
 
-	dto := ShellDTO{Command: []string{"exit42"}}
-	req, err := NewShellRequest(dto, cfg, workspaceRoot, mockFS)
-	if err != nil {
-		t.Fatalf("failed to create request: %v", err)
-	}
-
+	req := &ShellRequest{Command: []string{"exit42"}}
 	resp, err := shellTool.Run(context.Background(), req)
 	if err != nil {
 		t.Fatalf("Run failed: %v", err)

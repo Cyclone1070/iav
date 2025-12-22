@@ -279,12 +279,7 @@ func TestWriteFile(t *testing.T) {
 		writeTool := NewWriteFileTool(fs, newMockBinaryDetectorForWrite(), checksumManager, cfg, workspaceRoot)
 		content := "test content"
 
-		reqDTO := WriteFileDTO{Path: "new.txt", Content: content}
-		req, err := NewWriteFileRequest(reqDTO, cfg, workspaceRoot, fs)
-		if err != nil {
-			t.Fatalf("failed to create request: %v", err)
-		}
-
+		req := &WriteFileRequest{Path: "new.txt", Content: content}
 		resp, err := writeTool.Run(context.Background(), req)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -320,13 +315,8 @@ func TestWriteFile(t *testing.T) {
 
 		writeTool := NewWriteFileTool(fs, newMockBinaryDetectorForWrite(), checksumManager, config.DefaultConfig(), workspaceRoot)
 
-		reqDTO := WriteFileDTO{Path: "existing.txt", Content: "new content"}
-		req, err := NewWriteFileRequest(reqDTO, config.DefaultConfig(), workspaceRoot, fs)
-		if err != nil {
-			t.Fatalf("failed to create request: %v", err)
-		}
-
-		_, err = writeTool.Run(context.Background(), req)
+		req := &WriteFileRequest{Path: "existing.txt", Content: "new content"}
+		_, err := writeTool.Run(context.Background(), req)
 		if err == nil || !errors.Is(err, ErrFileExists) {
 			t.Errorf("expected ErrFileExists, got %v", err)
 		}
@@ -337,11 +327,12 @@ func TestWriteFile(t *testing.T) {
 		// Create symlink pointing outside workspace
 		fs.createSymlink("/workspace/escape", "/outside/target.txt")
 
-		reqDTO := WriteFileDTO{Path: "escape", Content: "content"}
-		_, err := NewWriteFileRequest(reqDTO, config.DefaultConfig(), workspaceRoot, fs)
+		writeTool := NewWriteFileTool(fs, newMockBinaryDetectorForWrite(), newMockChecksumManagerForWrite(), config.DefaultConfig(), workspaceRoot)
+		req := &WriteFileRequest{Path: "escape", Content: "content"}
+		_, err := writeTool.Run(context.Background(), req)
 
 		if err == nil {
-			t.Error("expected error for symlink escape during request creation, got nil")
+			t.Error("expected error for symlink escape, got nil")
 		}
 		if !errors.Is(err, pathutil.ErrOutsideWorkspace) {
 			t.Errorf("expected ErrOutsideWorkspace, got %v", err)
@@ -362,13 +353,8 @@ func TestWriteFile(t *testing.T) {
 
 		writeTool := NewWriteFileTool(fs, newMockBinaryDetectorForWrite(), checksumManager, cfg, workspaceRoot)
 
-		reqDTO := WriteFileDTO{Path: "large.txt", Content: string(largeContent)}
-		req, err := NewWriteFileRequest(reqDTO, cfg, workspaceRoot, fs)
-		if err != nil {
-			t.Fatalf("failed to create request: %v", err)
-		}
-
-		_, err = writeTool.Run(context.Background(), req)
+		req := &WriteFileRequest{Path: "large.txt", Content: string(largeContent)}
+		_, err := writeTool.Run(context.Background(), req)
 		if err == nil || !errors.Is(err, ErrFileTooLarge) {
 			t.Errorf("expected ErrFileTooLarge, got %v", err)
 		}
@@ -386,13 +372,8 @@ func TestWriteFile(t *testing.T) {
 		// Content with NUL byte
 		binaryContent := []byte{0x48, 0x65, 0x6C, 0x00, 0x6C, 0x6F}
 
-		reqDTO := WriteFileDTO{Path: "binary.bin", Content: string(binaryContent)}
-		req, err := NewWriteFileRequest(reqDTO, config.DefaultConfig(), workspaceRoot, fs)
-		if err != nil {
-			t.Fatalf("failed to create request: %v", err)
-		}
-
-		_, err = writeTool.Run(context.Background(), req)
+		req := &WriteFileRequest{Path: "binary.bin", Content: string(binaryContent)}
+		_, err := writeTool.Run(context.Background(), req)
 		if err == nil || !errors.Is(err, ErrBinaryFile) {
 			t.Errorf("expected ErrBinaryFile, got %v", err)
 		}
@@ -407,12 +388,7 @@ func TestWriteFile(t *testing.T) {
 
 		perm := os.FileMode(0755)
 
-		reqDTO := WriteFileDTO{Path: "executable.txt", Content: "content", Perm: &perm}
-		req, err := NewWriteFileRequest(reqDTO, cfg, workspaceRoot, fs)
-		if err != nil {
-			t.Fatalf("failed to create request: %v", err)
-		}
-
+		req := &WriteFileRequest{Path: "executable.txt", Content: "content", Perm: &perm}
 		resp, err := writeTool.Run(context.Background(), req)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -439,13 +415,8 @@ func TestWriteFile(t *testing.T) {
 		cfg := config.DefaultConfig()
 		writeTool := NewWriteFileTool(fs, newMockBinaryDetectorForWrite(), checksumManager, cfg, workspaceRoot)
 
-		reqDTO := WriteFileDTO{Path: "nested/deep/file.txt", Content: "content"}
-		req, err := NewWriteFileRequest(reqDTO, cfg, workspaceRoot, fs)
-		if err != nil {
-			t.Fatalf("failed to create request: %v", err)
-		}
-
-		_, err = writeTool.Run(context.Background(), req)
+		req := &WriteFileRequest{Path: "nested/deep/file.txt", Content: "content"}
+		_, err := writeTool.Run(context.Background(), req)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -466,8 +437,9 @@ func TestWriteFile(t *testing.T) {
 		fs.createSymlink("/workspace/link", "/outside")
 
 		cfg := config.DefaultConfig()
-		reqDTO := WriteFileDTO{Path: "link/escape.txt", Content: "content"}
-		_, err := NewWriteFileRequest(reqDTO, cfg, workspaceRoot, fs)
+		writeTool := NewWriteFileTool(fs, newMockBinaryDetectorForWrite(), newMockChecksumManagerForWrite(), cfg, workspaceRoot)
+		req := &WriteFileRequest{Path: "link/escape.txt", Content: "content"}
+		_, err := writeTool.Run(context.Background(), req)
 
 		if err == nil {
 			t.Error("expected error for symlink directory escape, got nil")

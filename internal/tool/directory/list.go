@@ -54,14 +54,19 @@ func NewListDirectoryTool(
 // It supports optional recursion and pagination, validating that the path is within
 // workspace boundaries, respecting gitignore rules, and returning entries sorted by path.
 func (t *ListDirectoryTool) Run(ctx context.Context, req *ListDirectoryRequest) (*ListDirectoryResponse, error) {
-	// Runtime Validation
-	abs := req.AbsPath()
-	rel := req.RelPath()
+	if err := req.Validate(t.config); err != nil {
+		return nil, err
+	}
 
-	// Use configured limits - constructor already checked bounds
+	abs, rel, err := pathutil.Resolve(t.workspaceRoot, t.fs, req.Path)
+	if err != nil {
+		return nil, err
+	}
+
+	// Use configured limits
 	limit := t.config.Tools.DefaultListDirectoryLimit
-	if req.Limit() != 0 {
-		limit = req.Limit()
+	if req.Limit != 0 {
+		limit = req.Limit
 	}
 
 	// Check if path exists and is a directory
@@ -78,7 +83,7 @@ func (t *ListDirectoryTool) Run(ctx context.Context, req *ListDirectoryRequest) 
 	}
 
 	// Set maxDepth: 0 = non-recursive (only immediate children), -1 or negative = unlimited
-	maxDepth := req.MaxDepth()
+	maxDepth := req.MaxDepth
 	if maxDepth < 0 {
 		maxDepth = -1 // unlimited
 	}
@@ -88,7 +93,7 @@ func (t *ListDirectoryTool) Run(ctx context.Context, req *ListDirectoryRequest) 
 	maxResults := t.config.Tools.MaxListDirectoryResults
 	var currentCount int
 
-	directoryEntries, capHit, err := t.listRecursive(ctx, abs, 0, maxDepth, visited, req.IncludeIgnored(), maxResults, &currentCount)
+	directoryEntries, capHit, err := t.listRecursive(ctx, abs, 0, maxDepth, visited, req.IncludeIgnored, maxResults, &currentCount)
 	if err != nil {
 		return nil, err
 	}
@@ -96,31 +101,31 @@ func (t *ListDirectoryTool) Run(ctx context.Context, req *ListDirectoryRequest) 
 	// Sort: directories first, then files, both alphabetically by RelativePath
 	sort.Slice(directoryEntries, func(i, j int) bool {
 		// Directories come before files
-		if directoryEntries[i].IsDir() && !directoryEntries[j].IsDir() {
+		if directoryEntries[i].IsDir && !directoryEntries[j].IsDir {
 			return true
 		}
-		if !directoryEntries[i].IsDir() && directoryEntries[j].IsDir() {
+		if !directoryEntries[i].IsDir && directoryEntries[j].IsDir {
 			return false
 		}
 		// Within same type, sort alphabetically
-		return directoryEntries[i].RelativePath() < directoryEntries[j].RelativePath()
+		return directoryEntries[i].RelativePath < directoryEntries[j].RelativePath
 	})
 
 	// Apply pagination
-	directoryEntries, paginationResult := paginationutil.ApplyPagination(directoryEntries, req.Offset(), limit)
+	directoryEntries, paginationResult := paginationutil.ApplyPagination(directoryEntries, req.Offset, limit)
 
 	var truncationReason string
 	if capHit {
 		paginationResult.Truncated = true
 		truncationReason = fmt.Sprintf("Results capped at %d entries.", maxResults)
 	} else if paginationResult.Truncated {
-		truncationReason = fmt.Sprintf("Page limit reached. More results at offset %d.", req.Offset()+limit)
+		truncationReason = fmt.Sprintf("Page limit reached. More results at offset %d.", req.Offset+limit)
 	}
 
 	return &ListDirectoryResponse{
 		DirectoryPath:    rel,
 		Entries:          directoryEntries,
-		Offset:           req.Offset(),
+		Offset:           req.Offset,
 		Limit:            limit,
 		TotalCount:       paginationResult.TotalCount,
 		Truncated:        paginationResult.Truncated,
@@ -193,7 +198,10 @@ func (t *ListDirectoryTool) listRecursive(ctx context.Context, abs string, curre
 			}
 		}
 
-		directoryEntry := NewDirectoryEntry(entryRel, entry.IsDir())
+		directoryEntry := DirectoryEntry{
+			RelativePath: entryRel,
+			IsDir:        entry.IsDir(),
+		}
 
 		directoryEntries = append(directoryEntries, directoryEntry)
 		*currentCount++

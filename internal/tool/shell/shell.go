@@ -9,6 +9,7 @@ import (
 
 	"github.com/Cyclone1070/iav/internal/config"
 	"github.com/Cyclone1070/iav/internal/tool/executil"
+	"github.com/Cyclone1070/iav/internal/tool/pathutil"
 )
 
 // ShellTool executes commands on the local machine.
@@ -41,12 +42,21 @@ func NewShellTool(
 // environment variable support, timeout handling, and output collection.
 // NOTE: This tool does NOT enforce policy - the caller is responsible for policy checks.
 func (t *ShellTool) Run(ctx context.Context, req *ShellRequest) (*ShellResponse, error) {
-	// Runtime Validation
-	wd := req.WorkingDirAbs()
+	if err := req.Validate(t.config); err != nil {
+		return nil, err
+	}
 
-	// Policy check removed - caller is responsible for enforcement
+	workingDir := req.WorkingDir
+	if workingDir == "" {
+		workingDir = "."
+	}
 
-	if IsDockerCommand(req.Command()) {
+	wdAbs, wdRel, err := pathutil.Resolve(t.workspaceRoot, t.fs, workingDir)
+	if err != nil {
+		return nil, err
+	}
+
+	if IsDockerCommand(req.Command) {
 		retryAttempts := t.config.Tools.DockerRetryAttempts
 		retryIntervalMs := t.config.Tools.DockerRetryIntervalMs
 
@@ -57,7 +67,12 @@ func (t *ShellTool) Run(ctx context.Context, req *ShellRequest) (*ShellResponse,
 
 	env := os.Environ()
 
-	for _, envFilePath := range req.EnvFilesAbsPaths() {
+	for _, envFile := range req.EnvFiles {
+		envFilePath, _, err := pathutil.Resolve(t.workspaceRoot, t.fs, envFile)
+		if err != nil {
+			return nil, err
+		}
+
 		envVars, err := ParseEnvFile(t.fs, envFilePath)
 		if err != nil {
 			return nil, err
@@ -70,11 +85,11 @@ func (t *ShellTool) Run(ctx context.Context, req *ShellRequest) (*ShellResponse,
 	}
 
 	// Request.Env overrides everything
-	for k, v := range req.Env() {
+	for k, v := range req.Env {
 		env = append(env, k+"="+v)
 	}
 
-	proc, stdout, stderr, err := t.commandExecutor.Start(ctx, req.Command(), wd, env)
+	proc, stdout, stderr, err := t.commandExecutor.Start(ctx, req.Command, wdAbs, env)
 	if err != nil {
 		return nil, err
 	}
@@ -86,7 +101,7 @@ func (t *ShellTool) Run(ctx context.Context, req *ShellRequest) (*ShellResponse,
 
 	stdoutStr, stderrStr, truncated, _ := executil.CollectProcessOutput(stdout, stderr, int(maxOutputSize), sampleSize)
 
-	timeout := time.Duration(req.TimeoutSeconds()) * time.Second
+	timeout := time.Duration(req.TimeoutSeconds) * time.Second
 	if timeout == 0 {
 		timeout = time.Duration(t.config.Tools.DefaultShellTimeout) * time.Second
 	}
@@ -94,12 +109,12 @@ func (t *ShellTool) Run(ctx context.Context, req *ShellRequest) (*ShellResponse,
 	// Use configured graceful shutdown
 	gracefulShutdownMs := t.config.Tools.DockerGracefulShutdownMs
 
-	execErr := executil.ExecuteWithTimeout(ctx, req.Command(), timeout, gracefulShutdownMs, proc)
+	execErr := executil.ExecuteWithTimeout(ctx, req.Command, timeout, gracefulShutdownMs, proc)
 
 	resp := &ShellResponse{
 		Stdout:     stdoutStr,
 		Stderr:     stderrStr,
-		WorkingDir: wd,
+		WorkingDir: wdRel,
 		Truncated:  truncated,
 	}
 
@@ -121,8 +136,8 @@ func (t *ShellTool) Run(ctx context.Context, req *ShellRequest) (*ShellResponse,
 
 	resp.ExitCode = 0
 
-	if IsDockerComposeUpDetached(req.Command()) {
-		ids, err := CollectComposeContainers(ctx, t.commandExecutor, wd)
+	if IsDockerComposeUpDetached(req.Command) {
+		ids, err := CollectComposeContainers(ctx, t.commandExecutor, wdAbs)
 		if err == nil {
 			resp.Notes = append(resp.Notes, FormatContainerStartedNote(ids))
 		} else {

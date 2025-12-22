@@ -6,11 +6,15 @@ import (
 	"os"
 
 	"github.com/Cyclone1070/iav/internal/config"
+	"github.com/Cyclone1070/iav/internal/tool/pathutil"
 )
 
 // fileReader defines the minimal filesystem operations needed for reading files.
 type fileReader interface {
 	Stat(path string) (os.FileInfo, error)
+	Lstat(path string) (os.FileInfo, error)
+	Readlink(path string) (string, error)
+	UserHomeDir() (string, error)
 	ReadFileRange(path string, offset, limit int64) ([]byte, error)
 }
 
@@ -53,9 +57,14 @@ func NewReadFileTool(
 //
 // Note: ctx is accepted for API consistency but not used - file I/O is synchronous.
 func (t *ReadFileTool) Run(ctx context.Context, req *ReadFileRequest) (*ReadFileResponse, error) {
-	// Runtime Validation
-	abs := req.AbsPath()
-	rel := req.RelPath()
+	if err := req.Validate(t.config); err != nil {
+		return nil, err
+	}
+
+	abs, rel, err := pathutil.Resolve(t.workspaceRoot, t.fileOps, req.Path)
+	if err != nil {
+		return nil, err
+	}
 
 	// Get file info (single stat syscall)
 	info, err := t.fileOps.Stat(abs)
@@ -74,12 +83,18 @@ func (t *ReadFileTool) Run(ctx context.Context, req *ReadFileRequest) (*ReadFile
 		return nil, fmt.Errorf("%w: %s (size %d, limit %d)", ErrFileTooLarge, abs, info.Size(), maxFileSize)
 	}
 
-	// Get offset and limit from validated request
-	actualOffset := req.Offset()
-	actualLimit := req.Limit()
+	var offset int64
+	if req.Offset != nil {
+		offset = *req.Offset
+	}
+
+	limit := maxFileSize
+	if req.Limit != nil && *req.Limit > 0 {
+		limit = *req.Limit
+	}
 
 	// Read the file range (single open+read syscall)
-	contentBytes, err := t.fileOps.ReadFileRange(abs, actualOffset, actualLimit)
+	contentBytes, err := t.fileOps.ReadFileRange(abs, offset, limit)
 	if err != nil {
 		return nil, &ReadError{Path: abs, Cause: err}
 	}
@@ -93,7 +108,7 @@ func (t *ReadFileTool) Run(ctx context.Context, req *ReadFileRequest) (*ReadFile
 	content := string(contentBytes)
 
 	// Only cache checksum if we read the entire file
-	isFullRead := actualOffset == 0 && int64(len(contentBytes)) == info.Size()
+	isFullRead := offset == 0 && int64(len(contentBytes)) == info.Size()
 
 	if isFullRead {
 		checksum := t.checksumManager.Compute(contentBytes)

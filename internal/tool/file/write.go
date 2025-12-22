@@ -7,11 +7,15 @@ import (
 	"path/filepath"
 
 	"github.com/Cyclone1070/iav/internal/config"
+	"github.com/Cyclone1070/iav/internal/tool/pathutil"
 )
 
 // fileWriter defines the minimal filesystem operations needed for writing files.
 type fileWriter interface {
 	Stat(path string) (os.FileInfo, error)
+	Lstat(path string) (os.FileInfo, error)
+	Readlink(path string) (string, error)
+	UserHomeDir() (string, error)
 	WriteFileAtomic(path string, content []byte, perm os.FileMode) error
 	EnsureDirs(path string) error
 }
@@ -55,12 +59,17 @@ func NewWriteFileTool(
 //
 // Note: ctx is accepted for API consistency but not used - file I/O is synchronous.
 func (t *WriteFileTool) Run(ctx context.Context, req *WriteFileRequest) (*WriteFileResponse, error) {
-	// Runtime Validation
-	abs := req.AbsPath()
-	rel := req.RelPath()
+	if err := req.Validate(t.config); err != nil {
+		return nil, err
+	}
+
+	abs, rel, err := pathutil.Resolve(t.workspaceRoot, t.fileOps, req.Path)
+	if err != nil {
+		return nil, err
+	}
 
 	// Check if file already exists
-	_, err := t.fileOps.Stat(abs)
+	_, err = t.fileOps.Stat(abs)
 	if err == nil {
 		return nil, fmt.Errorf("%w: %s", ErrFileExists, abs)
 	}
@@ -73,22 +82,25 @@ func (t *WriteFileTool) Run(ctx context.Context, req *WriteFileRequest) (*WriteF
 		return nil, &EnsureDirsError{Path: parentDir, Cause: err}
 	}
 
-	contentBytes := []byte(req.Content())
+	contentBytes := []byte(req.Content)
 
 	if t.binaryDetector.IsBinaryContent(contentBytes) {
 		return nil, fmt.Errorf("%w: %s", ErrBinaryFile, abs)
 	}
 
+	// Runtime limit check (redundant but safe)
 	maxFileSize := t.config.Tools.MaxFileSize
-
 	if int64(len(contentBytes)) > maxFileSize {
 		return nil, fmt.Errorf("%w: %s (size %d, limit %d)", ErrFileTooLarge, abs, len(contentBytes), maxFileSize)
 	}
 
-	filePerm := req.Perm()
+	perm := os.FileMode(0644)
+	if req.Perm != nil {
+		perm = *req.Perm
+	}
 
 	// Write the file atomically
-	if err := t.fileOps.WriteFileAtomic(abs, contentBytes, filePerm); err != nil {
+	if err := t.fileOps.WriteFileAtomic(abs, contentBytes, perm); err != nil {
 		return nil, &WriteError{Path: abs, Cause: err}
 	}
 
@@ -100,6 +112,6 @@ func (t *WriteFileTool) Run(ctx context.Context, req *WriteFileRequest) (*WriteF
 		AbsolutePath: abs,
 		RelativePath: rel,
 		BytesWritten: len(contentBytes),
-		FileMode:     uint32(filePerm),
+		FileMode:     uint32(perm),
 	}, nil
 }

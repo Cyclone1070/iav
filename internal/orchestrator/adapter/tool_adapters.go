@@ -5,12 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/Cyclone1070/iav/internal/config"
 	provider "github.com/Cyclone1070/iav/internal/provider/model"
-	"github.com/Cyclone1070/iav/internal/tool"
 	"github.com/Cyclone1070/iav/internal/tool/directory"
 	"github.com/Cyclone1070/iav/internal/tool/file"
-	"github.com/Cyclone1070/iav/internal/tool/pathutil"
 	"github.com/Cyclone1070/iav/internal/tool/search"
 	"github.com/Cyclone1070/iav/internal/tool/shell"
 	"github.com/Cyclone1070/iav/internal/tool/todo"
@@ -18,15 +15,12 @@ import (
 
 // ReadFileAdapter adapts file.ReadFileTool to the Tool interface
 type ReadFileAdapter struct {
-	tool          *file.ReadFileTool
-	cfg           *config.Config
-	workspaceRoot string
-	fs            pathutil.FileSystem
+	tool *file.ReadFileTool
 }
 
 // NewReadFileAdapter creates a new ReadFileAdapter
-func NewReadFileAdapter(tool *file.ReadFileTool, cfg *config.Config, root string, fs pathutil.FileSystem) *ReadFileAdapter {
-	return &ReadFileAdapter{tool: tool, cfg: cfg, workspaceRoot: root, fs: fs}
+func NewReadFileAdapter(tool *file.ReadFileTool) *ReadFileAdapter {
+	return &ReadFileAdapter{tool: tool}
 }
 
 func (a *ReadFileAdapter) Name() string {
@@ -63,21 +57,16 @@ func (a *ReadFileAdapter) Definition() provider.ToolDefinition {
 }
 
 func (a *ReadFileAdapter) Execute(ctx context.Context, args map[string]any) (string, error) {
-	var dto tool.ReadFileDTO
+	var req file.ReadFileRequest
 	argsJSON, err := json.Marshal(args)
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal args: %w", err)
 	}
-	if err := json.Unmarshal(argsJSON, &dto); err != nil {
+	if err := json.Unmarshal(argsJSON, &req); err != nil {
 		return "", fmt.Errorf("failed to unmarshal request: %w", err)
 	}
 
-	req, err := file.NewReadFileRequest(dto, a.cfg, a.workspaceRoot, a.fs)
-	if err != nil {
-		return "", err
-	}
-
-	resp, err := a.tool.Run(ctx, req)
+	resp, err := a.tool.Run(ctx, &req)
 	if err != nil {
 		return "", err
 	}
@@ -91,15 +80,12 @@ func (a *ReadFileAdapter) Execute(ctx context.Context, args map[string]any) (str
 
 // WriteFileAdapter adapts file.WriteFileTool to the Tool interface
 type WriteFileAdapter struct {
-	tool          *file.WriteFileTool
-	cfg           *config.Config
-	workspaceRoot string
-	fs            pathutil.FileSystem
+	tool *file.WriteFileTool
 }
 
 // NewWriteFileAdapter creates a new WriteFileAdapter
-func NewWriteFileAdapter(tool *file.WriteFileTool, cfg *config.Config, root string, fs pathutil.FileSystem) *WriteFileAdapter {
-	return &WriteFileAdapter{tool: tool, cfg: cfg, workspaceRoot: root, fs: fs}
+func NewWriteFileAdapter(tool *file.WriteFileTool) *WriteFileAdapter {
+	return &WriteFileAdapter{tool: tool}
 }
 
 func (a *WriteFileAdapter) Name() string {
@@ -136,21 +122,16 @@ func (a *WriteFileAdapter) Definition() provider.ToolDefinition {
 }
 
 func (a *WriteFileAdapter) Execute(ctx context.Context, args map[string]any) (string, error) {
-	var dto tool.WriteFileDTO
+	var req file.WriteFileRequest
 	argsJSON, err := json.Marshal(args)
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal args: %w", err)
 	}
-	if err := json.Unmarshal(argsJSON, &dto); err != nil {
+	if err := json.Unmarshal(argsJSON, &req); err != nil {
 		return "", fmt.Errorf("failed to unmarshal request: %w", err)
 	}
 
-	req, err := file.NewWriteFileRequest(dto, a.cfg, a.workspaceRoot, a.fs)
-	if err != nil {
-		return "", err
-	}
-
-	resp, err := a.tool.Run(ctx, req)
+	resp, err := a.tool.Run(ctx, &req)
 	if err != nil {
 		return "", err
 	}
@@ -164,15 +145,12 @@ func (a *WriteFileAdapter) Execute(ctx context.Context, args map[string]any) (st
 
 // EditFileAdapter adapts file.EditFileTool to the Tool interface
 type EditFileAdapter struct {
-	tool          *file.EditFileTool
-	cfg           *config.Config
-	workspaceRoot string
-	fs            pathutil.FileSystem
+	tool *file.EditFileTool
 }
 
 // NewEditFileAdapter creates a new EditFileAdapter
-func NewEditFileAdapter(tool *file.EditFileTool, cfg *config.Config, root string, fs pathutil.FileSystem) *EditFileAdapter {
-	return &EditFileAdapter{tool: tool, cfg: cfg, workspaceRoot: root, fs: fs}
+func NewEditFileAdapter(tool *file.EditFileTool) *EditFileAdapter {
+	return &EditFileAdapter{tool: tool}
 }
 
 func (a *EditFileAdapter) Name() string {
@@ -223,21 +201,16 @@ func (a *EditFileAdapter) Definition() provider.ToolDefinition {
 }
 
 func (a *EditFileAdapter) Execute(ctx context.Context, args map[string]any) (string, error) {
-	var dto tool.EditFileDTO
+	var req file.EditFileRequest
 	argsJSON, err := json.Marshal(args)
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal args: %w", err)
 	}
-	if err := json.Unmarshal(argsJSON, &dto); err != nil {
+	if err := json.Unmarshal(argsJSON, &req); err != nil {
 		return "", fmt.Errorf("failed to unmarshal request: %w", err)
 	}
 
-	req, err := file.NewEditFileRequest(dto, a.cfg, a.workspaceRoot, a.fs)
-	if err != nil {
-		return "", err
-	}
-
-	resp, err := a.tool.Run(ctx, req)
+	resp, err := a.tool.Run(ctx, &req)
 	if err != nil {
 		return "", err
 	}
@@ -251,15 +224,12 @@ func (a *EditFileAdapter) Execute(ctx context.Context, args map[string]any) (str
 
 // ListDirectoryAdapter adapts directory.ListDirectoryTool to the Tool interface
 type ListDirectoryAdapter struct {
-	tool          *directory.ListDirectoryTool
-	cfg           *config.Config
-	workspaceRoot string
-	fs            pathutil.FileSystem
+	tool *directory.ListDirectoryTool
 }
 
 // NewListDirectoryAdapter creates a new ListDirectoryAdapter
-func NewListDirectoryAdapter(tool *directory.ListDirectoryTool, cfg *config.Config, root string, fs pathutil.FileSystem) *ListDirectoryAdapter {
-	return &ListDirectoryAdapter{tool: tool, cfg: cfg, workspaceRoot: root, fs: fs}
+func NewListDirectoryAdapter(tool *directory.ListDirectoryTool) *ListDirectoryAdapter {
+	return &ListDirectoryAdapter{tool: tool}
 }
 
 func (a *ListDirectoryAdapter) Name() string {
@@ -304,21 +274,16 @@ func (a *ListDirectoryAdapter) Definition() provider.ToolDefinition {
 }
 
 func (a *ListDirectoryAdapter) Execute(ctx context.Context, args map[string]any) (string, error) {
-	var dto tool.ListDirectoryDTO
+	var req directory.ListDirectoryRequest
 	argsJSON, err := json.Marshal(args)
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal args: %w", err)
 	}
-	if err := json.Unmarshal(argsJSON, &dto); err != nil {
+	if err := json.Unmarshal(argsJSON, &req); err != nil {
 		return "", fmt.Errorf("failed to unmarshal request: %w", err)
 	}
 
-	req, err := directory.NewListDirectoryRequest(dto, a.cfg, a.workspaceRoot, a.fs)
-	if err != nil {
-		return "", err
-	}
-
-	resp, err := a.tool.Run(ctx, req)
+	resp, err := a.tool.Run(ctx, &req)
 	if err != nil {
 		return "", err
 	}
@@ -332,15 +297,12 @@ func (a *ListDirectoryAdapter) Execute(ctx context.Context, args map[string]any)
 
 // FindFileAdapter adapts directory.FindFileTool to the Tool interface
 type FindFileAdapter struct {
-	tool          *directory.FindFileTool
-	cfg           *config.Config
-	workspaceRoot string
-	fs            pathutil.FileSystem
+	tool *directory.FindFileTool
 }
 
 // NewFindFileAdapter creates a new FindFileAdapter
-func NewFindFileAdapter(tool *directory.FindFileTool, cfg *config.Config, root string, fs pathutil.FileSystem) *FindFileAdapter {
-	return &FindFileAdapter{tool: tool, cfg: cfg, workspaceRoot: root, fs: fs}
+func NewFindFileAdapter(tool *directory.FindFileTool) *FindFileAdapter {
+	return &FindFileAdapter{tool: tool}
 }
 
 func (a *FindFileAdapter) Name() string {
@@ -389,21 +351,16 @@ func (a *FindFileAdapter) Definition() provider.ToolDefinition {
 }
 
 func (a *FindFileAdapter) Execute(ctx context.Context, args map[string]any) (string, error) {
-	var dto tool.FindFileDTO
+	var req directory.FindFileRequest
 	argsJSON, err := json.Marshal(args)
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal args: %w", err)
 	}
-	if err := json.Unmarshal(argsJSON, &dto); err != nil {
+	if err := json.Unmarshal(argsJSON, &req); err != nil {
 		return "", fmt.Errorf("failed to unmarshal request: %w", err)
 	}
 
-	req, err := directory.NewFindFileRequest(dto, a.cfg, a.workspaceRoot, a.fs)
-	if err != nil {
-		return "", err
-	}
-
-	resp, err := a.tool.Run(ctx, req)
+	resp, err := a.tool.Run(ctx, &req)
 	if err != nil {
 		return "", err
 	}
@@ -417,15 +374,12 @@ func (a *FindFileAdapter) Execute(ctx context.Context, args map[string]any) (str
 
 // SearchContentAdapter adapts search.SearchContentTool to the Tool interface
 type SearchContentAdapter struct {
-	tool          *search.SearchContentTool
-	cfg           *config.Config
-	workspaceRoot string
-	fs            pathutil.FileSystem
+	tool *search.SearchContentTool
 }
 
 // NewSearchContentAdapter creates a new SearchContentAdapter
-func NewSearchContentAdapter(tool *search.SearchContentTool, cfg *config.Config, root string, fs pathutil.FileSystem) *SearchContentAdapter {
-	return &SearchContentAdapter{tool: tool, cfg: cfg, workspaceRoot: root, fs: fs}
+func NewSearchContentAdapter(tool *search.SearchContentTool) *SearchContentAdapter {
+	return &SearchContentAdapter{tool: tool}
 }
 
 func (a *SearchContentAdapter) Name() string {
@@ -474,21 +428,16 @@ func (a *SearchContentAdapter) Definition() provider.ToolDefinition {
 }
 
 func (a *SearchContentAdapter) Execute(ctx context.Context, args map[string]any) (string, error) {
-	var dto tool.SearchContentDTO
+	var req search.SearchContentRequest
 	argsJSON, err := json.Marshal(args)
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal args: %w", err)
 	}
-	if err := json.Unmarshal(argsJSON, &dto); err != nil {
+	if err := json.Unmarshal(argsJSON, &req); err != nil {
 		return "", fmt.Errorf("failed to unmarshal request: %w", err)
 	}
 
-	req, err := search.NewSearchContentRequest(dto, a.cfg, a.workspaceRoot, a.fs)
-	if err != nil {
-		return "", err
-	}
-
-	resp, err := a.tool.Run(ctx, req)
+	resp, err := a.tool.Run(ctx, &req)
 	if err != nil {
 		return "", err
 	}
@@ -502,15 +451,12 @@ func (a *SearchContentAdapter) Execute(ctx context.Context, args map[string]any)
 
 // ShellAdapter adapts shell.ShellTool to the Tool interface
 type ShellAdapter struct {
-	tool          *shell.ShellTool
-	cfg           *config.Config
-	workspaceRoot string
-	fs            pathutil.FileSystem
+	tool *shell.ShellTool
 }
 
 // NewShellAdapter creates a new ShellAdapter
-func NewShellAdapter(tool *shell.ShellTool, cfg *config.Config, root string, fs pathutil.FileSystem) *ShellAdapter {
-	return &ShellAdapter{tool: tool, cfg: cfg, workspaceRoot: root, fs: fs}
+func NewShellAdapter(tool *shell.ShellTool) *ShellAdapter {
+	return &ShellAdapter{tool: tool}
 }
 
 func (a *ShellAdapter) Name() string {
@@ -561,21 +507,16 @@ func (a *ShellAdapter) Definition() provider.ToolDefinition {
 }
 
 func (a *ShellAdapter) Execute(ctx context.Context, args map[string]any) (string, error) {
-	var dto tool.ShellDTO
+	var req shell.ShellRequest
 	argsJSON, err := json.Marshal(args)
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal args: %w", err)
 	}
-	if err := json.Unmarshal(argsJSON, &dto); err != nil {
+	if err := json.Unmarshal(argsJSON, &req); err != nil {
 		return "", fmt.Errorf("failed to unmarshal request: %w", err)
 	}
 
-	req, err := shell.NewShellRequest(dto, a.cfg, a.workspaceRoot, a.fs)
-	if err != nil {
-		return "", err
-	}
-
-	resp, err := a.tool.Run(ctx, req)
+	resp, err := a.tool.Run(ctx, &req)
 	if err != nil {
 		return "", err
 	}
@@ -590,12 +531,11 @@ func (a *ShellAdapter) Execute(ctx context.Context, args map[string]any) (string
 // ReadTodosAdapter adapts todo.ReadTodosTool to the Tool interface
 type ReadTodosAdapter struct {
 	tool *todo.ReadTodosTool
-	cfg  *config.Config
 }
 
 // NewReadTodosAdapter creates a new ReadTodosAdapter
-func NewReadTodosAdapter(tool *todo.ReadTodosTool, cfg *config.Config) *ReadTodosAdapter {
-	return &ReadTodosAdapter{tool: tool, cfg: cfg}
+func NewReadTodosAdapter(tool *todo.ReadTodosTool) *ReadTodosAdapter {
+	return &ReadTodosAdapter{tool: tool}
 }
 
 func (a *ReadTodosAdapter) Name() string {
@@ -619,21 +559,16 @@ func (a *ReadTodosAdapter) Definition() provider.ToolDefinition {
 }
 
 func (a *ReadTodosAdapter) Execute(ctx context.Context, args map[string]any) (string, error) {
-	var dto tool.ReadTodosDTO
+	var req todo.ReadTodosRequest
 	argsJSON, err := json.Marshal(args)
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal args: %w", err)
 	}
-	if err := json.Unmarshal(argsJSON, &dto); err != nil {
+	if err := json.Unmarshal(argsJSON, &req); err != nil {
 		return "", fmt.Errorf("failed to unmarshal request: %w", err)
 	}
 
-	req, err := todo.NewReadTodosRequest(dto, a.cfg)
-	if err != nil {
-		return "", err
-	}
-
-	resp, err := a.tool.Run(ctx, req)
+	resp, err := a.tool.Run(ctx, &req)
 	if err != nil {
 		return "", err
 	}
@@ -648,12 +583,11 @@ func (a *ReadTodosAdapter) Execute(ctx context.Context, args map[string]any) (st
 // WriteTodosAdapter adapts todo.WriteTodosTool to the Tool interface
 type WriteTodosAdapter struct {
 	tool *todo.WriteTodosTool
-	cfg  *config.Config
 }
 
 // NewWriteTodosAdapter creates a new WriteTodosAdapter
-func NewWriteTodosAdapter(tool *todo.WriteTodosTool, cfg *config.Config) *WriteTodosAdapter {
-	return &WriteTodosAdapter{tool: tool, cfg: cfg}
+func NewWriteTodosAdapter(tool *todo.WriteTodosTool) *WriteTodosAdapter {
+	return &WriteTodosAdapter{tool: tool}
 }
 
 func (a *WriteTodosAdapter) Name() string {
@@ -696,21 +630,16 @@ func (a *WriteTodosAdapter) Definition() provider.ToolDefinition {
 }
 
 func (a *WriteTodosAdapter) Execute(ctx context.Context, args map[string]any) (string, error) {
-	var dto tool.WriteTodosDTO
+	var req todo.WriteTodosRequest
 	argsJSON, err := json.Marshal(args)
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal args: %w", err)
 	}
-	if err := json.Unmarshal(argsJSON, &dto); err != nil {
+	if err := json.Unmarshal(argsJSON, &req); err != nil {
 		return "", fmt.Errorf("failed to unmarshal request: %w", err)
 	}
 
-	req, err := todo.NewWriteTodosRequest(dto, a.cfg)
-	if err != nil {
-		return "", err
-	}
-
-	resp, err := a.tool.Run(ctx, req)
+	resp, err := a.tool.Run(ctx, &req)
 	if err != nil {
 		return "", err
 	}

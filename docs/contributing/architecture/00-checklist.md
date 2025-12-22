@@ -25,11 +25,6 @@ Before submitting code, verify **every** item.
 - [ ] No unused methods in interfaces (grep to verify each method is called)
 - [ ] Exception: import interface from helper package if already coupled
 
-
-### Validation
-- [ ] Constructor validation for everything knowable from inputs
-- [ ] Runtime validation at method start (clearly commented `// Runtime Validation`)
-
 ### Testing
 - [ ] All mocks defined locally in `*_test.go` files (no shared `mock/` package)
 - [ ] All test helpers defined locally in test files

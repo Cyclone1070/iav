@@ -4,40 +4,19 @@ import (
 	"fmt"
 
 	"github.com/Cyclone1070/iav/internal/config"
-	"github.com/Cyclone1070/iav/internal/tool/pathutil"
 )
 
 // -- Contract Types --
 
 // SearchContentMatch represents a single match in a file
 type SearchContentMatch struct {
-	file        string // Relative path to the file
-	lineNumber  int    // 1-based line number
-	lineContent string // Content of the matching line
+	File        string `json:"file"`         // Relative path to the file
+	LineNumber  int    `json:"line_number"`  // 1-based line number
+	LineContent string `json:"line_content"` // Content of the matching line
 }
 
-// NewSearchContentMatch creates a new SearchContentMatch.
-func NewSearchContentMatch(file string, lineNumber int, lineContent string) SearchContentMatch {
-	return SearchContentMatch{file: file, lineNumber: lineNumber, lineContent: lineContent}
-}
-
-// File returns the relative path to the file.
-func (m SearchContentMatch) File() string {
-	return m.file
-}
-
-// LineNumber returns the 1-based line number.
-func (m SearchContentMatch) LineNumber() int {
-	return m.lineNumber
-}
-
-// LineContent returns the content of the matching line.
-func (m SearchContentMatch) LineContent() string {
-	return m.lineContent
-}
-
-// SearchContentDTO is the wire format for SearchContent operation
-type SearchContentDTO struct {
+// SearchContentRequest represents the parameters for a SearchContent operation
+type SearchContentRequest struct {
 	Query          string `json:"query"`
 	SearchPath     string `json:"search_path"`
 	CaseSensitive  bool   `json:"case_sensitive,omitempty"`
@@ -46,103 +25,27 @@ type SearchContentDTO struct {
 	Limit          int    `json:"limit,omitempty"`
 }
 
-// SearchContentRequest is the validated domain entity for SearchContent operation
-type SearchContentRequest struct {
-	query          string
-	searchAbsPath  string
-	searchRelPath  string
-	caseSensitive  bool
-	includeIgnored bool
-	offset         int
-	limit          int
-}
-
-// Query returns the search query
-func (r *SearchContentRequest) Query() string {
-	return r.query
-}
-
-// SearchAbsPath returns the absolute search path
-func (r *SearchContentRequest) SearchAbsPath() string {
-	return r.searchAbsPath
-}
-
-// SearchRelPath returns the relative search path
-func (r *SearchContentRequest) SearchRelPath() string {
-	return r.searchRelPath
-}
-
-// CaseSensitive returns whether the search is case sensitive
-func (r *SearchContentRequest) CaseSensitive() bool {
-	return r.caseSensitive
-}
-
-// IncludeIgnored returns whether to include ignored files
-func (r *SearchContentRequest) IncludeIgnored() bool {
-	return r.includeIgnored
-}
-
-// Offset returns the offset
-func (r *SearchContentRequest) Offset() int {
-	return r.offset
-}
-
-// Limit returns the limit
-func (r *SearchContentRequest) Limit() int {
-	return r.limit
-}
-
-// NewSearchContentRequest creates a validated SearchContentRequest from a DTO
-func NewSearchContentRequest(
-	dto SearchContentDTO,
-	cfg *config.Config,
-	workspaceRoot string,
-	fs pathutil.FileSystem,
-) (*SearchContentRequest, error) {
-	// Constructor validation
-	if dto.Query == "" {
-		return nil, ErrQueryRequired
+func (r *SearchContentRequest) Validate(cfg *config.Config) error {
+	if r.Query == "" {
+		return ErrQueryRequired
 	}
-	// Common validation rules could be extracted, but for now we define them locally
-	// if we wanted to avoid redundancy.
-	if dto.Offset < 0 {
-		return nil, fmt.Errorf("%w: %d", ErrInvalidOffset, dto.Offset)
+	if r.Offset < 0 {
+		return fmt.Errorf("%w: %d", ErrInvalidOffset, r.Offset)
 	}
-	if dto.Limit < 0 {
-		return nil, fmt.Errorf("%w: %d", ErrInvalidLimit, dto.Limit)
+	if r.Limit < 0 {
+		return fmt.Errorf("%w: %d", ErrInvalidLimit, r.Limit)
 	}
-	if dto.Limit > cfg.Tools.MaxSearchContentLimit {
-		return nil, fmt.Errorf("%w: %d (max %d)", ErrLimitExceeded, dto.Limit, cfg.Tools.MaxSearchContentLimit)
+	if r.Limit > cfg.Tools.MaxSearchContentLimit {
+		return fmt.Errorf("%w: %d (max %d)", ErrLimitExceeded, r.Limit, cfg.Tools.MaxSearchContentLimit)
 	}
-
-	// SearchPath defaults to "." if empty
-	searchPath := dto.SearchPath
-	if searchPath == "" {
-		searchPath = "."
-	}
-
-	// Path resolution for search path
-	searchAbs, searchRel, err := pathutil.Resolve(workspaceRoot, fs, searchPath)
-	if err != nil {
-		return nil, err
-	}
-
-	return &SearchContentRequest{
-		query:          dto.Query,
-		searchAbsPath:  searchAbs,
-		searchRelPath:  searchRel,
-		caseSensitive:  dto.CaseSensitive,
-		includeIgnored: dto.IncludeIgnored,
-		offset:         dto.Offset,
-		limit:          dto.Limit,
-	}, nil
+	return nil
 }
 
 // SearchContentResponse contains the result of a SearchContent operation
 type SearchContentResponse struct {
-	Matches    []SearchContentMatch
-	Offset     int
-	Limit      int
-	TotalCount int  // Total matches found (may be capped for performance)
-	Truncated  bool // True if more matches exist
+	Matches    []SearchContentMatch `json:"matches"`
+	Offset     int                  `json:"offset"`
+	Limit      int                  `json:"limit"`
+	TotalCount int                  `json:"total_count"` // Total matches found (may be capped for performance)
+	Truncated  bool                 `json:"truncated"`   // True if more matches exist
 }

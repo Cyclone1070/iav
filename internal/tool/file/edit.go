@@ -7,11 +7,15 @@ import (
 	"strings"
 
 	"github.com/Cyclone1070/iav/internal/config"
+	"github.com/Cyclone1070/iav/internal/tool/pathutil"
 )
 
 // fileEditor defines the minimal filesystem operations needed for editing files.
 type fileEditor interface {
 	Stat(path string) (os.FileInfo, error)
+	Lstat(path string) (os.FileInfo, error)
+	Readlink(path string) (string, error)
+	UserHomeDir() (string, error)
 	ReadFileRange(path string, offset, limit int64) ([]byte, error)
 	WriteFileAtomic(path string, content []byte, perm os.FileMode) error
 }
@@ -58,9 +62,14 @@ func NewEditFileTool(
 //
 // Note: ctx is accepted for API consistency but not used - file I/O is synchronous.
 func (t *EditFileTool) Run(ctx context.Context, req *EditFileRequest) (*EditFileResponse, error) {
-	// Runtime Validation
-	abs := req.AbsPath()
-	rel := req.RelPath()
+	if err := req.Validate(t.config); err != nil {
+		return nil, err
+	}
+
+	abs, rel, err := pathutil.Resolve(t.workspaceRoot, t.fileOps, req.Path)
+	if err != nil {
+		return nil, err
+	}
 
 	// Check if file exists
 	info, err := t.fileOps.Stat(abs)
@@ -98,13 +107,13 @@ func (t *EditFileTool) Run(ctx context.Context, req *EditFileRequest) (*EditFile
 
 	// Apply operations sequentially
 	operationsApplied := 0
-	for _, op := range req.Operations() {
-		count := strings.Count(content, op.Before())
+	for _, op := range req.Operations {
+		count := strings.Count(content, op.Before)
 		if count == 0 {
-			return nil, fmt.Errorf("%w: %s in %s", ErrSnippetNotFound, op.Before(), abs)
+			return nil, fmt.Errorf("%w: %s in %s", ErrSnippetNotFound, op.Before, abs)
 		}
 
-		expected := op.ExpectedReplacements()
+		expected := op.ExpectedReplacements
 		replaceLimit := expected
 		if expected == 0 {
 			replaceLimit = -1
@@ -112,7 +121,7 @@ func (t *EditFileTool) Run(ctx context.Context, req *EditFileRequest) (*EditFile
 			return nil, fmt.Errorf("%w in %s: expected %d, found %d", ErrReplacementMismatch, abs, expected, count)
 		}
 
-		content = strings.Replace(content, op.Before(), op.After(), replaceLimit)
+		content = strings.Replace(content, op.Before, op.After, replaceLimit)
 		operationsApplied++
 	}
 

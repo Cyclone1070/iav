@@ -1,61 +1,31 @@
 package directory
 
 import (
-	"os"
 	"testing"
 
 	"github.com/Cyclone1070/iav/internal/config"
 )
 
-// Minimal mock for validation tests
-type mockFSForTypes struct {
-	dirs map[string]bool
-}
-
-func (m *mockFSForTypes) Lstat(path string) (os.FileInfo, error) {
-	if m.dirs[path] {
-		return &mockFileInfoForTypes{isDir: true}, nil
-	}
-	return nil, os.ErrNotExist
-}
-
-func (m *mockFSForTypes) Readlink(path string) (string, error) {
-	return "", os.ErrInvalid
-}
-
-func (m *mockFSForTypes) UserHomeDir() (string, error) {
-	return "/home/user", nil
-}
-
-type mockFileInfoForTypes struct {
-	os.FileInfo
-	isDir bool
-}
-
-func (m *mockFileInfoForTypes) IsDir() bool { return m.isDir }
-
 func TestFindFileRequest_Validation(t *testing.T) {
 	cfg := config.DefaultConfig()
-	fs := &mockFSForTypes{dirs: map[string]bool{"/workspace": true}}
-	workspaceRoot := "/workspace"
 
 	tests := []struct {
 		name    string
-		dto     FindFileDTO
+		req     FindFileRequest
 		wantErr bool
 	}{
-		{"Valid", FindFileDTO{Pattern: "*.txt"}, false},
-		{"EmptyPattern", FindFileDTO{Pattern: ""}, true},
-		{"NegativeOffset", FindFileDTO{Pattern: "*.txt", Offset: -1}, true},
-		{"NegativeLimit", FindFileDTO{Pattern: "*.txt", Limit: -1}, true},
-		{"LimitExceedsMax", FindFileDTO{Pattern: "*.txt", Limit: cfg.Tools.MaxFindFileLimit + 1}, true},
+		{"Valid", FindFileRequest{Pattern: "*.txt"}, false},
+		{"EmptyPattern", FindFileRequest{Pattern: ""}, true},
+		{"NegativeOffset", FindFileRequest{Pattern: "*.txt", Offset: -1}, true},
+		{"NegativeLimit", FindFileRequest{Pattern: "*.txt", Limit: -1}, true},
+		{"LimitExceedsMax", FindFileRequest{Pattern: "*.txt", Limit: cfg.Tools.MaxFindFileLimit + 1}, true},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := NewFindFileRequest(tt.dto, cfg, workspaceRoot, fs)
+			err := tt.req.Validate(cfg)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("NewFindFileRequest() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
@@ -63,26 +33,24 @@ func TestFindFileRequest_Validation(t *testing.T) {
 
 func TestListDirectoryRequest_Validation(t *testing.T) {
 	cfg := config.DefaultConfig()
-	fs := &mockFSForTypes{dirs: map[string]bool{"/workspace": true}}
-	workspaceRoot := "/workspace"
 
 	tests := []struct {
 		name    string
-		dto     ListDirectoryDTO
+		req     ListDirectoryRequest
 		wantErr bool
 	}{
-		{"Valid", ListDirectoryDTO{Path: "."}, false},
-		{"EmptyPath", ListDirectoryDTO{Path: ""}, true}, // New: path is required
-		{"NegativeOffset", ListDirectoryDTO{Path: ".", Offset: -1}, true},
-		{"NegativeLimit", ListDirectoryDTO{Path: ".", Limit: -1}, true},
-		{"LimitExceedsMax", ListDirectoryDTO{Path: ".", Limit: cfg.Tools.MaxListDirectoryLimit + 1}, true},
+		{"Valid", ListDirectoryRequest{Path: "."}, false},
+		{"EmptyPath", ListDirectoryRequest{Path: ""}, true},
+		{"NegativeOffset", ListDirectoryRequest{Path: ".", Offset: -1}, true},
+		{"NegativeLimit", ListDirectoryRequest{Path: ".", Limit: -1}, true},
+		{"LimitExceedsMax", ListDirectoryRequest{Path: ".", Limit: cfg.Tools.MaxListDirectoryLimit + 1}, true},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := NewListDirectoryRequest(tt.dto, cfg, workspaceRoot, fs)
+			err := tt.req.Validate(cfg)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("NewListDirectoryRequest() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}

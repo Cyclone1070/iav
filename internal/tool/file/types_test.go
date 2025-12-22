@@ -36,25 +36,23 @@ func (m *mockFileInfoForTypes) IsDir() bool { return m.isDir }
 
 func TestReadFileRequest_Validation(t *testing.T) {
 	cfg := config.DefaultConfig()
-	fs := &mockFSForTypes{dirs: map[string]bool{"/workspace": true}}
-	workspaceRoot := "/workspace"
 
 	tests := []struct {
 		name    string
-		dto     ReadFileDTO
+		req     ReadFileRequest
 		wantErr bool
 	}{
-		{"Valid", ReadFileDTO{Path: "file.txt"}, false},
-		{"EmptyPath", ReadFileDTO{Path: ""}, true},
-		{"NegativeOffset", ReadFileDTO{Path: "file.txt", Offset: ptr(int64(-1))}, true},
-		{"NegativeLimit", ReadFileDTO{Path: "file.txt", Limit: ptr(int64(-1))}, true},
+		{"Valid", ReadFileRequest{Path: "file.txt"}, false},
+		{"EmptyPath", ReadFileRequest{Path: ""}, true},
+		{"NegativeOffset", ReadFileRequest{Path: "file.txt", Offset: ptr(int64(-1))}, true},
+		{"NegativeLimit", ReadFileRequest{Path: "file.txt", Limit: ptr(int64(-1))}, true},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := NewReadFileRequest(tt.dto, cfg, workspaceRoot, fs)
+			err := tt.req.Validate(cfg)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("NewReadFileRequest() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
@@ -62,25 +60,23 @@ func TestReadFileRequest_Validation(t *testing.T) {
 
 func TestWriteFileRequest_Validation(t *testing.T) {
 	cfg := config.DefaultConfig()
-	fs := &mockFSForTypes{dirs: map[string]bool{"/workspace": true}}
-	workspaceRoot := "/workspace"
 
 	tests := []struct {
 		name    string
-		dto     WriteFileDTO
+		req     WriteFileRequest
 		wantErr bool
 	}{
-		{"Valid", WriteFileDTO{Path: "file.txt", Content: "content"}, false},
-		{"EmptyPath", WriteFileDTO{Path: "", Content: "content"}, true},
-		{"EmptyContent", WriteFileDTO{Path: "file.txt", Content: ""}, true},
-		{"InvalidPerm", WriteFileDTO{Path: "file.txt", Content: "content", Perm: ptr(os.FileMode(07777))}, true},
+		{"Valid", WriteFileRequest{Path: "file.txt", Content: "content"}, false},
+		{"EmptyPath", WriteFileRequest{Path: "", Content: "content"}, true},
+		{"EmptyContent", WriteFileRequest{Path: "file.txt", Content: ""}, true},
+		{"InvalidPerm", WriteFileRequest{Path: "file.txt", Content: "content", Perm: ptr(os.FileMode(07777))}, true},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := NewWriteFileRequest(tt.dto, cfg, workspaceRoot, fs)
+			err := tt.req.Validate(cfg)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("NewWriteFileRequest() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
@@ -88,26 +84,24 @@ func TestWriteFileRequest_Validation(t *testing.T) {
 
 func TestEditFileRequest_Validation(t *testing.T) {
 	cfg := config.DefaultConfig()
-	fs := &mockFSForTypes{dirs: map[string]bool{"/workspace": true}}
-	workspaceRoot := "/workspace"
 
 	tests := []struct {
 		name    string
-		dto     EditFileDTO
+		req     EditFileRequest
 		wantErr bool
 	}{
-		{"Valid", EditFileDTO{Path: "file.txt", Operations: []OperationDTO{{Before: "old", After: "new"}}}, false},
-		{"EmptyPath", EditFileDTO{Path: "", Operations: []OperationDTO{{Before: "old"}}}, true},
-		{"EmptyOperations", EditFileDTO{Path: "file.txt", Operations: []OperationDTO{}}, true},
-		{"EmptyBefore", EditFileDTO{Path: "file.txt", Operations: []OperationDTO{{Before: ""}}}, true},
-		{"NegativeReplacements", EditFileDTO{Path: "file.txt", Operations: []OperationDTO{{Before: "old", ExpectedReplacements: -1}}}, true},
+		{"Valid", EditFileRequest{Path: "file.txt", Operations: []EditOperation{{Before: "old", After: "new"}}}, false},
+		{"EmptyPath", EditFileRequest{Path: "", Operations: []EditOperation{{Before: "old"}}}, true},
+		{"EmptyOperations", EditFileRequest{Path: "file.txt", Operations: []EditOperation{}}, true},
+		{"EmptyBefore", EditFileRequest{Path: "file.txt", Operations: []EditOperation{{Before: ""}}}, true},
+		{"NegativeReplacements", EditFileRequest{Path: "file.txt", Operations: []EditOperation{{Before: "old", ExpectedReplacements: -1}}}, true},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := NewEditFileRequest(tt.dto, cfg, workspaceRoot, fs)
+			err := tt.req.Validate(cfg)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("NewEditFileRequest() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}

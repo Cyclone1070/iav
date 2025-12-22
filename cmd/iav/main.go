@@ -104,20 +104,20 @@ func createTools(cfg *config.Config, workspaceRoot string) ([]orchadapter.Tool, 
 	findFileTool := directory.NewFindFileTool(osFS, commandExecutor, cfg, canonicalRoot)
 	searchContentTool := search.NewSearchContentTool(osFS, commandExecutor, cfg, canonicalRoot)
 	shellTool := shell.NewShellTool(osFS, commandExecutor, cfg, dockerConfig, canonicalRoot)
-	readTodosTool := todo.NewReadTodosTool(todoStore)
-	writeTodosTool := todo.NewWriteTodosTool(todoStore)
+	readTodosTool := todo.NewReadTodosTool(todoStore, cfg)
+	writeTodosTool := todo.NewWriteTodosTool(todoStore, cfg)
 
 	// Create adapters
 	return []orchadapter.Tool{
-		orchadapter.NewReadFileAdapter(readFileTool, cfg, canonicalRoot, osFS),
-		orchadapter.NewWriteFileAdapter(writeFileTool, cfg, canonicalRoot, osFS),
-		orchadapter.NewEditFileAdapter(editFileTool, cfg, canonicalRoot, osFS),
-		orchadapter.NewListDirectoryAdapter(listDirectoryTool, cfg, canonicalRoot, osFS),
-		orchadapter.NewFindFileAdapter(findFileTool, cfg, canonicalRoot, osFS),
-		orchadapter.NewSearchContentAdapter(searchContentTool, cfg, canonicalRoot, osFS),
-		orchadapter.NewShellAdapter(shellTool, cfg, canonicalRoot, osFS),
-		orchadapter.NewReadTodosAdapter(readTodosTool, cfg),
-		orchadapter.NewWriteTodosAdapter(writeTodosTool, cfg),
+		orchadapter.NewReadFileAdapter(readFileTool),
+		orchadapter.NewWriteFileAdapter(writeFileTool),
+		orchadapter.NewEditFileAdapter(editFileTool),
+		orchadapter.NewListDirectoryAdapter(listDirectoryTool),
+		orchadapter.NewFindFileAdapter(findFileTool),
+		orchadapter.NewSearchContentAdapter(searchContentTool),
+		orchadapter.NewShellAdapter(shellTool),
+		orchadapter.NewReadTodosAdapter(readTodosTool),
+		orchadapter.NewWriteTodosAdapter(writeTodosTool),
 	}, nil
 }
 

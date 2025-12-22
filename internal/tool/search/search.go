@@ -13,6 +13,7 @@ import (
 	"github.com/Cyclone1070/iav/internal/config"
 	"github.com/Cyclone1070/iav/internal/tool/executil"
 	"github.com/Cyclone1070/iav/internal/tool/paginationutil"
+	"github.com/Cyclone1070/iav/internal/tool/pathutil"
 )
 
 // SearchContentTool handles content searching operations.
@@ -42,8 +43,19 @@ func NewSearchContentTool(
 // It validates the search path is within workspace boundaries, respects gitignore rules
 // (unless includeIgnored is true), and returns matches with pagination support.
 func (t *SearchContentTool) Run(ctx context.Context, req *SearchContentRequest) (*SearchContentResponse, error) {
-	// Runtime Validation
-	absSearchPath := req.SearchAbsPath()
+	if err := req.Validate(t.config); err != nil {
+		return nil, err
+	}
+
+	searchPath := req.SearchPath
+	if searchPath == "" {
+		searchPath = "."
+	}
+
+	absSearchPath, _, err := pathutil.Resolve(t.workspaceRoot, t.fs, searchPath)
+	if err != nil {
+		return nil, err
+	}
 
 	// Check if search path exists
 	info, err := t.fs.Stat(absSearchPath)
@@ -58,10 +70,10 @@ func (t *SearchContentTool) Run(ctx context.Context, req *SearchContentRequest) 
 		return nil, fmt.Errorf("%w: %s", ErrNotADirectory, absSearchPath)
 	}
 
-	// Use configured limits - constructor already checked bounds
+	// Use configured limits
 	limit := t.config.Tools.DefaultSearchContentLimit
-	if req.Limit() != 0 {
-		limit = req.Limit()
+	if req.Limit != 0 {
+		limit = req.Limit
 	}
 
 	maxResults := t.config.Tools.MaxSearchContentResults
@@ -78,13 +90,13 @@ func (t *SearchContentTool) Run(ctx context.Context, req *SearchContentRequest) 
 	// Build ripgrep command
 	// rg --json "query" searchPath [--no-ignore]
 	cmd := []string{"rg", "--json"}
-	if !req.CaseSensitive() {
+	if !req.CaseSensitive {
 		cmd = append(cmd, "-i")
 	}
-	if req.IncludeIgnored() {
+	if req.IncludeIgnored {
 		cmd = append(cmd, "--no-ignore")
 	}
-	cmd = append(cmd, req.Query(), absSearchPath)
+	cmd = append(cmd, req.Query, absSearchPath)
 
 	// Execute command with streaming
 	proc, stdout, _, err := t.commandExecutor.Start(ctx, cmd, absSearchPath, nil)
@@ -140,11 +152,11 @@ func (t *SearchContentTool) Run(ctx context.Context, req *SearchContentRequest) 
 				lineContent = lineContent[:maxLineLength] + "...[truncated]"
 			}
 
-			matches = append(matches, NewSearchContentMatch(
-				filepath.ToSlash(relPath),
-				rgMatch.Data.LineNumber,
-				lineContent,
-			))
+			matches = append(matches, SearchContentMatch{
+				File:        filepath.ToSlash(relPath),
+				LineNumber:  rgMatch.Data.LineNumber,
+				LineContent: lineContent,
+			})
 
 			// Safety check for memory
 			if len(matches) >= maxResults {
@@ -171,18 +183,18 @@ func (t *SearchContentTool) Run(ctx context.Context, req *SearchContentRequest) 
 
 	// Sort results for consistency (by file, then line number)
 	sort.Slice(matches, func(i, j int) bool {
-		if matches[i].File() != matches[j].File() {
-			return matches[i].File() < matches[j].File()
+		if matches[i].File != matches[j].File {
+			return matches[i].File < matches[j].File
 		}
-		return matches[i].LineNumber() < matches[j].LineNumber()
+		return matches[i].LineNumber < matches[j].LineNumber
 	})
 
 	// Apply pagination
-	paginatedMatches, paginationResult := paginationutil.ApplyPagination(matches, req.Offset(), limit)
+	paginatedMatches, paginationResult := paginationutil.ApplyPagination(matches, req.Offset, limit)
 
 	return &SearchContentResponse{
 		Matches:    paginatedMatches,
-		Offset:     req.Offset(),
+		Offset:     req.Offset,
 		Limit:      limit,
 		TotalCount: paginationResult.TotalCount,
 		Truncated:  paginationResult.Truncated,

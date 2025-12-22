@@ -47,7 +47,7 @@ func TestToolAdapter_ReadFile(t *testing.T) {
 	readFileTool := file.NewReadFileTool(osFS, binaryDetector, checksumManager, cfg, canonicalRoot)
 
 	// Create adapter
-	adapter := orchadapter.NewReadFileAdapter(readFileTool, cfg, canonicalRoot, osFS)
+	adapter := orchadapter.NewReadFileAdapter(readFileTool)
 
 	// Execute with args
 	args := map[string]any{
@@ -114,20 +114,20 @@ func TestToolAdapter_AllTools(t *testing.T) {
 	findFileTool := directory.NewFindFileTool(osFS, commandExecutor, cfg, canonicalRoot)
 	searchContentTool := search.NewSearchContentTool(osFS, commandExecutor, cfg, canonicalRoot)
 	shellTool := shell.NewShellTool(osFS, commandExecutor, cfg, dockerConfig, canonicalRoot)
-	readTodosTool := todo.NewReadTodosTool(todoStore)
-	writeTodosTool := todo.NewWriteTodosTool(todoStore)
+	readTodosTool := todo.NewReadTodosTool(todoStore, cfg)
+	writeTodosTool := todo.NewWriteTodosTool(todoStore, cfg)
 
 	// Create all adapters
 	adapters := map[string]orchadapter.Tool{
-		"read_file":      orchadapter.NewReadFileAdapter(readFileTool, cfg, canonicalRoot, osFS),
-		"write_file":     orchadapter.NewWriteFileAdapter(writeFileTool, cfg, canonicalRoot, osFS),
-		"edit_file":      orchadapter.NewEditFileAdapter(editFileTool, cfg, canonicalRoot, osFS),
-		"list_directory": orchadapter.NewListDirectoryAdapter(listDirectoryTool, cfg, canonicalRoot, osFS),
-		"find_file":      orchadapter.NewFindFileAdapter(findFileTool, cfg, canonicalRoot, osFS),
-		"search_content": orchadapter.NewSearchContentAdapter(searchContentTool, cfg, canonicalRoot, osFS),
-		"run_shell":      orchadapter.NewShellAdapter(shellTool, cfg, canonicalRoot, osFS),
-		"read_todos":     orchadapter.NewReadTodosAdapter(readTodosTool, cfg),
-		"write_todos":    orchadapter.NewWriteTodosAdapter(writeTodosTool, cfg),
+		"read_file":      orchadapter.NewReadFileAdapter(readFileTool),
+		"write_file":     orchadapter.NewWriteFileAdapter(writeFileTool),
+		"edit_file":      orchadapter.NewEditFileAdapter(editFileTool),
+		"list_directory": orchadapter.NewListDirectoryAdapter(listDirectoryTool),
+		"find_file":      orchadapter.NewFindFileAdapter(findFileTool),
+		"search_content": orchadapter.NewSearchContentAdapter(searchContentTool),
+		"run_shell":      orchadapter.NewShellAdapter(shellTool),
+		"read_todos":     orchadapter.NewReadTodosAdapter(readTodosTool),
+		"write_todos":    orchadapter.NewWriteTodosAdapter(writeTodosTool),
 	}
 
 	// All expected tools present
@@ -174,7 +174,7 @@ func TestToolAdapter_ErrorHandling(t *testing.T) {
 	readFileTool := file.NewReadFileTool(osFS, binaryDetector, checksumManager, cfg, canonicalRoot)
 
 	// Create adapter
-	adapter := orchadapter.NewReadFileAdapter(readFileTool, cfg, canonicalRoot, osFS)
+	adapter := orchadapter.NewReadFileAdapter(readFileTool)
 
 	// Invalid arguments (wrong type)
 	invalidArgs := map[string]any{

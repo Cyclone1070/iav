@@ -119,12 +119,7 @@ func TestFindFile_BasicGlob(t *testing.T) {
 
 	findTool := NewFindFileTool(fs, mockRunner, cfg, workspaceRoot)
 
-	reqDTO := FindFileDTO{Pattern: "*.go", SearchPath: "", MaxDepth: 0, IncludeIgnored: false, Offset: 0, Limit: 100}
-	req, err := NewFindFileRequest(reqDTO, cfg, workspaceRoot, fs)
-	if err != nil {
-		t.Fatalf("failed to create request: %v", err)
-	}
-
+	req := &FindFileRequest{Pattern: "*.go", SearchPath: "", MaxDepth: 0, IncludeIgnored: false, Offset: 0, Limit: 100}
 	resp, err := findTool.Run(context.Background(), req)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -160,12 +155,7 @@ func TestFindFile_Pagination(t *testing.T) {
 
 	findTool := NewFindFileTool(fs, mockRunner, cfg, workspaceRoot)
 
-	reqDTO := FindFileDTO{Pattern: "*.txt", SearchPath: "", MaxDepth: 0, IncludeIgnored: false, Offset: 2, Limit: 2}
-	req, err := NewFindFileRequest(reqDTO, cfg, workspaceRoot, fs)
-	if err != nil {
-		t.Fatalf("failed to create request: %v", err)
-	}
-
+	req := &FindFileRequest{Pattern: "*.txt", SearchPath: "", MaxDepth: 0, IncludeIgnored: false, Offset: 2, Limit: 2}
 	resp, err := findTool.Run(context.Background(), req)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -205,13 +195,8 @@ func TestFindFile_InvalidGlob(t *testing.T) {
 
 	findTool := NewFindFileTool(fs, mockRunner, cfg, workspaceRoot)
 
-	reqDTO := FindFileDTO{Pattern: "[", SearchPath: "", MaxDepth: 0, IncludeIgnored: false, Offset: 0, Limit: 100}
-	req, err := NewFindFileRequest(reqDTO, cfg, workspaceRoot, fs)
-	if err != nil {
-		t.Fatalf("failed to create request: %v", err)
-	}
-
-	_, err = findTool.Run(context.Background(), req)
+	req := &FindFileRequest{Pattern: "[", SearchPath: "", MaxDepth: 0, IncludeIgnored: false, Offset: 0, Limit: 100}
+	_, err := findTool.Run(context.Background(), req)
 	if err == nil || !errors.Is(err, ErrInvalidPattern) {
 		t.Fatalf("expected ErrInvalidPattern for invalid glob, got %v", err)
 	}
@@ -225,25 +210,12 @@ func TestFindFile_PathOutsideWorkspace(t *testing.T) {
 
 	findTool := NewFindFileTool(fs, &mockCommandExecutorForFind{}, cfg, workspaceRoot)
 
-	reqDTO := FindFileDTO{Pattern: "*.go", SearchPath: "../outside", MaxDepth: 0, IncludeIgnored: false, Offset: 0, Limit: 0}
-	req, err := NewFindFileRequest(reqDTO, cfg, workspaceRoot, fs)
+	req := &FindFileRequest{Pattern: "*.go", SearchPath: "../outside", MaxDepth: 0, IncludeIgnored: false, Offset: 0, Limit: 0}
+	_, err := findTool.Run(context.Background(), req)
 
-	// NewFindFileRequest validates path traversal
-	if err != nil {
-		if errors.Is(err, pathutil.ErrOutsideWorkspace) {
-			return // Success
-		}
-		t.Errorf("expected ErrOutsideWorkspace in constructor, got %v", err)
-		return
+	if err == nil || !errors.Is(err, pathutil.ErrOutsideWorkspace) {
+		t.Errorf("expected ErrOutsideWorkspace, got %v", err)
 	}
-
-	// If it passes validation (unlikely given the input), then Run logic
-	_, err = findTool.Run(context.Background(), req)
-
-	if errors.Is(err, pathutil.ErrOutsideWorkspace) {
-		return // Success
-	}
-	t.Errorf("expected ErrOutsideWorkspace, got %v", err)
 }
 
 func TestFindFile_NonExistentPath(t *testing.T) {
@@ -254,14 +226,8 @@ func TestFindFile_NonExistentPath(t *testing.T) {
 
 	findTool := NewFindFileTool(fs, &mockCommandExecutorForFind{}, cfg, workspaceRoot)
 
-	reqDTO := FindFileDTO{Pattern: "*.go", SearchPath: "nonexistent/dir", MaxDepth: 0, IncludeIgnored: false, Offset: 0, Limit: 0}
-	req, err := NewFindFileRequest(reqDTO, cfg, workspaceRoot, fs)
-	if err != nil {
-		// Expect failed path resolution
-		return
-	}
-
-	_, err = findTool.Run(context.Background(), req)
+	req := &FindFileRequest{Pattern: "*.go", SearchPath: "nonexistent/dir", MaxDepth: 0, IncludeIgnored: false, Offset: 0, Limit: 0}
+	_, err := findTool.Run(context.Background(), req)
 	if err == nil || !errors.Is(err, ErrFileMissing) {
 		t.Fatalf("expected ErrFileMissing for non-existent path, got %v", err)
 	}
@@ -284,13 +250,8 @@ func TestFindFile_CommandFailure(t *testing.T) {
 
 	findTool := NewFindFileTool(fs, mockRunner, cfg, workspaceRoot)
 
-	reqDTO := FindFileDTO{Pattern: "*.go", SearchPath: "", MaxDepth: 0, IncludeIgnored: false, Offset: 0, Limit: 100}
-	req, err := NewFindFileRequest(reqDTO, cfg, workspaceRoot, fs)
-	if err != nil {
-		t.Fatalf("failed to create request: %v", err)
-	}
-
-	_, err = findTool.Run(context.Background(), req)
+	req := &FindFileRequest{Pattern: "*.go", SearchPath: "", MaxDepth: 0, IncludeIgnored: false, Offset: 0, Limit: 100}
+	_, err := findTool.Run(context.Background(), req)
 	if err == nil {
 		t.Fatal("expected error for command failure, got nil")
 	}
@@ -312,12 +273,7 @@ func TestFindFile_ShellInjection(t *testing.T) {
 	findTool := NewFindFileTool(fs, mockRunner, cfg, workspaceRoot)
 	pattern := "*.go; rm -rf /"
 
-	reqDTO := FindFileDTO{Pattern: pattern, SearchPath: "", MaxDepth: 0, IncludeIgnored: false, Offset: 0, Limit: 100}
-	req, err := NewFindFileRequest(reqDTO, cfg, workspaceRoot, fs)
-	if err != nil {
-		t.Fatalf("failed to create request: %v", err)
-	}
-
+	req := &FindFileRequest{Pattern: pattern, SearchPath: "", MaxDepth: 0, IncludeIgnored: false, Offset: 0, Limit: 100}
 	_, _ = findTool.Run(context.Background(), req)
 
 	found := slices.Contains(capturedCmd, pattern)
@@ -340,12 +296,7 @@ func TestFindFile_UnicodeFilenames(t *testing.T) {
 
 	findTool := NewFindFileTool(fs, mockRunner, cfg, workspaceRoot)
 
-	reqDTO := FindFileDTO{Pattern: "*.txt", SearchPath: "", MaxDepth: 0, IncludeIgnored: false, Offset: 0, Limit: 100}
-	req, err := NewFindFileRequest(reqDTO, cfg, workspaceRoot, fs)
-	if err != nil {
-		t.Fatalf("failed to create request: %v", err)
-	}
-
+	req := &FindFileRequest{Pattern: "*.txt", SearchPath: "", MaxDepth: 0, IncludeIgnored: false, Offset: 0, Limit: 100}
 	resp, err := findTool.Run(context.Background(), req)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -393,12 +344,7 @@ func TestFindFile_DeeplyNested(t *testing.T) {
 
 	findTool := NewFindFileTool(fs, mockRunner, cfg, workspaceRoot)
 
-	reqDTO := FindFileDTO{Pattern: "*.txt", SearchPath: "", MaxDepth: 0, IncludeIgnored: false, Offset: 0, Limit: 100}
-	req, err := NewFindFileRequest(reqDTO, cfg, workspaceRoot, fs)
-	if err != nil {
-		t.Fatalf("failed to create request: %v", err)
-	}
-
+	req := &FindFileRequest{Pattern: "*.txt", SearchPath: "", MaxDepth: 0, IncludeIgnored: false, Offset: 0, Limit: 100}
 	resp, err := findTool.Run(context.Background(), req)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -422,12 +368,7 @@ func TestFindFile_NoMatches(t *testing.T) {
 
 	findTool := NewFindFileTool(fs, mockRunner, cfg, workspaceRoot)
 
-	reqDTO := FindFileDTO{Pattern: "*.nonexistent", SearchPath: "", MaxDepth: 0, IncludeIgnored: false, Offset: 0, Limit: 100}
-	req, err := NewFindFileRequest(reqDTO, cfg, workspaceRoot, fs)
-	if err != nil {
-		t.Fatalf("failed to create request: %v", err)
-	}
-
+	req := &FindFileRequest{Pattern: "*.nonexistent", SearchPath: "", MaxDepth: 0, IncludeIgnored: false, Offset: 0, Limit: 100}
 	resp, err := findTool.Run(context.Background(), req)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -459,12 +400,7 @@ func TestFindFile_IncludeIgnored(t *testing.T) {
 
 	findTool := NewFindFileTool(fs, mockRunner, cfg, workspaceRoot)
 
-	reqDTO := FindFileDTO{Pattern: "*.go", SearchPath: "", MaxDepth: 0, IncludeIgnored: false, Offset: 0, Limit: 100}
-	req, err := NewFindFileRequest(reqDTO, cfg, workspaceRoot, fs)
-	if err != nil {
-		t.Fatalf("failed to create request: %v", err)
-	}
-
+	req := &FindFileRequest{Pattern: "*.go", SearchPath: "", MaxDepth: 0, IncludeIgnored: false, Offset: 0, Limit: 100}
 	resp, err := findTool.Run(context.Background(), req)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -483,15 +419,10 @@ func TestFindFile_IncludeIgnored(t *testing.T) {
 		return &mockProcessForFind{}, strings.NewReader(output), strings.NewReader(""), nil
 	}
 
-	reqDTO = FindFileDTO{Pattern: "*.go", SearchPath: "", MaxDepth: 0, IncludeIgnored: true, Offset: 0, Limit: 100}
-	req, err = NewFindFileRequest(reqDTO, cfg, workspaceRoot, fs)
-	if err != nil {
-		t.Fatalf("failed to create request for includeIgnored=true: %v", err)
-	}
-
+	req = &FindFileRequest{Pattern: "*.go", SearchPath: "", MaxDepth: 0, IncludeIgnored: true, Offset: 0, Limit: 100}
 	resp, err = findTool.Run(context.Background(), req)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf("unexpected error for includeIgnored=true: %v", err)
 	}
 
 	if len(resp.Matches) != 2 {
@@ -534,12 +465,7 @@ func TestFindFile_LimitValidation(t *testing.T) {
 	t.Run("zero limit uses default", func(t *testing.T) {
 		findTool := NewFindFileTool(fs, mockRunner, cfg, workspaceRoot)
 
-		reqDTO := FindFileDTO{Pattern: "*.go", Limit: 0}
-		req, err := NewFindFileRequest(reqDTO, cfg, workspaceRoot, fs)
-		if err != nil {
-			t.Fatalf("failed to create request: %v", err)
-		}
-
+		req := &FindFileRequest{Pattern: "*.go", Limit: 0}
 		resp, err := findTool.Run(context.Background(), req)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -553,12 +479,7 @@ func TestFindFile_LimitValidation(t *testing.T) {
 	t.Run("custom config limits are respected", func(t *testing.T) {
 		findTool := NewFindFileTool(fs, mockRunner, cfg, workspaceRoot)
 
-		reqDTO := FindFileDTO{Pattern: "*.go", Limit: 30}
-		req, err := NewFindFileRequest(reqDTO, cfg, workspaceRoot, fs)
-		if err != nil {
-			t.Fatalf("failed to create request: %v", err)
-		}
-
+		req := &FindFileRequest{Pattern: "*.go", Limit: 30}
 		resp, err := findTool.Run(context.Background(), req)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
