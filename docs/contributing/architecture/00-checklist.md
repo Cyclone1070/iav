@@ -25,12 +25,6 @@ Before submitting code, verify **every** item.
 - [ ] No unused methods in interfaces (grep to verify each method is called)
 - [ ] Exception: import interface from helper package if already coupled
 
-### Structs & Encapsulation
-- [ ] All domain entity fields are **private**
-- [ ] All domain entities have `New*` constructors
-- [ ] No direct struct initialization with `{}` — no exceptions
-- [ ] DTOs have **no methods** attached
-- [ ] No `json:`/`yaml:`/ORM tags on domain entities
 
 ### Validation
 - [ ] Constructor validation for everything knowable from inputs
