@@ -33,12 +33,10 @@ func (r *ShellRequest) Validate(cfg *config.Config) error {
 
 // ShellResponse represents the result of a local command execution.
 type ShellResponse struct {
-	Stdout         string   `json:"stdout"`
-	Stderr         string   `json:"stderr"`
-	ExitCode       int      `json:"exit_code"`
-	Truncated      bool     `json:"truncated"`
-	DurationMs     int64    `json:"duration_ms"`
-	WorkingDir     string   `json:"working_dir"`
-	Notes          []string `json:"notes,omitempty"`
-	BackgroundPIDs []int    `json:"background_pids,omitempty"`
+	Stdout     string   `json:"stdout"`
+	Stderr     string   `json:"stderr"`
+	ExitCode   int      `json:"exit_code"`
+	Truncated  bool     `json:"truncated"`
+	WorkingDir string   `json:"working_dir"`
+	Notes      []string `json:"notes,omitempty"`
 }
