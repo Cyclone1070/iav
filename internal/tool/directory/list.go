@@ -16,9 +16,6 @@ import (
 // dirLister defines the filesystem operations needed for listing directories.
 type dirLister interface {
 	Stat(path string) (os.FileInfo, error)
-	Lstat(path string) (os.FileInfo, error)
-	Readlink(path string) (string, error)
-	UserHomeDir() (string, error)
 	ListDir(path string) ([]os.FileInfo, error)
 }
 
@@ -32,7 +29,7 @@ type ListDirectoryTool struct {
 	fs               dirLister
 	gitignoreService gitignoreService
 	config           *config.Config
-	workspaceRoot    string
+	pathResolver     *pathutil.Resolver
 }
 
 // NewListDirectoryTool creates a new ListDirectoryTool with injected dependencies.
@@ -40,13 +37,13 @@ func NewListDirectoryTool(
 	fs dirLister,
 	gitignoreService gitignoreService,
 	cfg *config.Config,
-	workspaceRoot string,
+	pathResolver *pathutil.Resolver,
 ) *ListDirectoryTool {
 	return &ListDirectoryTool{
 		fs:               fs,
 		gitignoreService: gitignoreService,
 		config:           cfg,
-		workspaceRoot:    workspaceRoot,
+		pathResolver:     pathResolver,
 	}
 }
 
@@ -58,7 +55,7 @@ func (t *ListDirectoryTool) Run(ctx context.Context, req *ListDirectoryRequest) 
 		return nil, err
 	}
 
-	abs, rel, err := pathutil.Resolve(t.workspaceRoot, t.fs, req.Path)
+	abs, rel, err := t.pathResolver.Resolve(req.Path)
 	if err != nil {
 		return nil, err
 	}
@@ -182,7 +179,7 @@ func (t *ListDirectoryTool) listRecursive(ctx context.Context, abs string, curre
 
 		// Calculate relative path for this entry
 		entryAbs := filepath.Join(abs, entry.Name())
-		entryRel, err := filepath.Rel(t.workspaceRoot, entryAbs)
+		entryRel, err := filepath.Rel(t.pathResolver.WorkspaceRoot(), entryAbs)
 		if err != nil {
 			// This indicates a bug in path resolution - don't mask it
 			return nil, false, &RelPathError{Path: entryAbs, Cause: err}

@@ -13,9 +13,6 @@ import (
 // fileWriter defines the minimal filesystem operations needed for writing files.
 type fileWriter interface {
 	Stat(path string) (os.FileInfo, error)
-	Lstat(path string) (os.FileInfo, error)
-	Readlink(path string) (string, error)
-	UserHomeDir() (string, error)
 	WriteFileAtomic(path string, content []byte, perm os.FileMode) error
 	EnsureDirs(path string) error
 }
@@ -32,7 +29,7 @@ type WriteFileTool struct {
 	binaryDetector  binaryDetector
 	checksumManager checksumUpdater
 	config          *config.Config
-	workspaceRoot   string
+	pathResolver    *pathutil.Resolver
 }
 
 // NewWriteFileTool creates a new WriteFileTool with injected dependencies.
@@ -41,14 +38,14 @@ func NewWriteFileTool(
 	binaryDetector binaryDetector,
 	checksumManager checksumUpdater,
 	cfg *config.Config,
-	workspaceRoot string,
+	pathResolver *pathutil.Resolver,
 ) *WriteFileTool {
 	return &WriteFileTool{
 		fileOps:         fileOps,
 		binaryDetector:  binaryDetector,
 		checksumManager: checksumManager,
 		config:          cfg,
-		workspaceRoot:   workspaceRoot,
+		pathResolver:    pathResolver,
 	}
 }
 
@@ -63,7 +60,7 @@ func (t *WriteFileTool) Run(ctx context.Context, req *WriteFileRequest) (*WriteF
 		return nil, err
 	}
 
-	abs, rel, err := pathutil.Resolve(t.workspaceRoot, t.fileOps, req.Path)
+	abs, rel, err := t.pathResolver.Resolve(req.Path)
 	if err != nil {
 		return nil, err
 	}

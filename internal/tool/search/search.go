@@ -21,7 +21,7 @@ type SearchContentTool struct {
 	fs              fileSystem
 	commandExecutor commandExecutor
 	config          *config.Config
-	workspaceRoot   string
+	pathResolver    *pathutil.Resolver
 }
 
 // NewSearchContentTool creates a new SearchContentTool with injected dependencies.
@@ -29,13 +29,13 @@ func NewSearchContentTool(
 	fs fileSystem,
 	commandExecutor commandExecutor,
 	cfg *config.Config,
-	workspaceRoot string,
+	pathResolver *pathutil.Resolver,
 ) *SearchContentTool {
 	return &SearchContentTool{
 		fs:              fs,
 		commandExecutor: commandExecutor,
 		config:          cfg,
-		workspaceRoot:   workspaceRoot,
+		pathResolver:    pathResolver,
 	}
 }
 
@@ -52,7 +52,7 @@ func (t *SearchContentTool) Run(ctx context.Context, req *SearchContentRequest) 
 		searchPath = "."
 	}
 
-	absSearchPath, _, err := pathutil.Resolve(t.workspaceRoot, t.fs, searchPath)
+	absSearchPath, _, err := t.pathResolver.Resolve(searchPath)
 	if err != nil {
 		return nil, err
 	}
@@ -139,7 +139,7 @@ func (t *SearchContentTool) Run(ctx context.Context, req *SearchContentRequest) 
 
 		if rgMatch.Type == "match" {
 			// Convert absolute path to workspace-relative
-			relPath, err := filepath.Rel(t.workspaceRoot, rgMatch.Data.Path.Text)
+			relPath, err := filepath.Rel(t.pathResolver.WorkspaceRoot(), rgMatch.Data.Path.Text)
 			if err != nil {
 				// Should work if using absolute paths, but fallback to absolute if fails
 				relPath = rgMatch.Data.Path.Text

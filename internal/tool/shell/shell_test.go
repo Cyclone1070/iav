@@ -165,7 +165,7 @@ func TestShellTool_Run_SimpleCommand(t *testing.T) {
 		return proc, stdout, stderr, nil
 	}
 
-	shellTool := NewShellTool(mockFS, factory, cfg, DockerConfig{}, workspaceRoot)
+	shellTool := NewShellTool(mockFS, factory, cfg, DockerConfig{}, pathutil.NewResolver(workspaceRoot, mockFS))
 
 	req := &ShellRequest{Command: []string{"echo", "hello"}}
 	resp, err := shellTool.Run(context.Background(), req)
@@ -196,7 +196,7 @@ func TestShellTool_Run_WorkingDir(t *testing.T) {
 		return proc, strings.NewReader(""), strings.NewReader(""), nil
 	}
 
-	shellTool := NewShellTool(mockFS, factory, cfg, DockerConfig{}, workspaceRoot)
+	shellTool := NewShellTool(mockFS, factory, cfg, DockerConfig{}, pathutil.NewResolver(workspaceRoot, mockFS))
 
 	req := &ShellRequest{Command: []string{"pwd"}, WorkingDir: "subdir"}
 	_, err := shellTool.Run(context.Background(), req)
@@ -225,7 +225,7 @@ func TestShellTool_Run_Env(t *testing.T) {
 		return proc, strings.NewReader(""), strings.NewReader(""), nil
 	}
 
-	shellTool := NewShellTool(mockFS, factory, cfg, DockerConfig{}, workspaceRoot)
+	shellTool := NewShellTool(mockFS, factory, cfg, DockerConfig{}, pathutil.NewResolver(workspaceRoot, mockFS))
 
 	req := &ShellRequest{
 		Command: []string{"env"},
@@ -283,7 +283,7 @@ CACHE_URL=redis://localhost`
 		return proc, strings.NewReader(""), strings.NewReader(""), nil
 	}
 
-	shellTool := NewShellTool(mockFS, factory, cfg, DockerConfig{}, workspaceRoot)
+	shellTool := NewShellTool(mockFS, factory, cfg, DockerConfig{}, pathutil.NewResolver(workspaceRoot, mockFS))
 
 	t.Run("Single env file", func(t *testing.T) {
 		req := &ShellRequest{Command: []string{"env"}, EnvFiles: []string{".env"}}
@@ -373,7 +373,7 @@ CACHE_URL=redis://localhost`
 
 	t.Run("Nonexistent env file", func(t *testing.T) {
 		req := &ShellRequest{Command: []string{"env"}, EnvFiles: []string{".env.missing"}}
-		shellTool := NewShellTool(mockFS, &mockCommandExecutorForShell{}, cfg, DockerConfig{}, workspaceRoot)
+		shellTool := NewShellTool(mockFS, &mockCommandExecutorForShell{}, cfg, DockerConfig{}, pathutil.NewResolver(workspaceRoot, mockFS))
 		_, err := shellTool.Run(context.Background(), req)
 		if err == nil {
 			t.Fatal("Expected error for nonexistent env file, got nil")
@@ -396,7 +396,7 @@ func TestShellTool_Run_OutsideWorkspace(t *testing.T) {
 	workspaceRoot := "/workspace"
 	cfg := config.DefaultConfig()
 
-	shellTool := NewShellTool(mockFS, &mockCommandExecutorForShell{}, cfg, DockerConfig{}, workspaceRoot)
+	shellTool := NewShellTool(mockFS, &mockCommandExecutorForShell{}, cfg, DockerConfig{}, pathutil.NewResolver(workspaceRoot, mockFS))
 	req := &ShellRequest{Command: []string{"ls"}, WorkingDir: "../outside"}
 	_, err := shellTool.Run(context.Background(), req)
 	if !errors.Is(err, pathutil.ErrOutsideWorkspace) {
@@ -419,7 +419,7 @@ func TestShellTool_Run_NonZeroExit(t *testing.T) {
 		return proc, strings.NewReader(""), strings.NewReader("error output"), nil
 	}
 
-	shellTool := NewShellTool(mockFS, factory, cfg, DockerConfig{}, workspaceRoot)
+	shellTool := NewShellTool(mockFS, factory, cfg, DockerConfig{}, pathutil.NewResolver(workspaceRoot, mockFS))
 
 	req := &ShellRequest{Command: []string{"false"}}
 	resp, err := shellTool.Run(context.Background(), req)
@@ -445,7 +445,7 @@ func TestShellTool_Run_BinaryOutput(t *testing.T) {
 		return proc, bytes.NewReader(binaryData), strings.NewReader(""), nil
 	}
 
-	shellTool := NewShellTool(mockFS, factory, cfg, DockerConfig{}, workspaceRoot)
+	shellTool := NewShellTool(mockFS, factory, cfg, DockerConfig{}, pathutil.NewResolver(workspaceRoot, mockFS))
 
 	req := &ShellRequest{Command: []string{"cat", "binary.bin"}}
 	resp, err := shellTool.Run(context.Background(), req)
@@ -472,7 +472,7 @@ func TestShellTool_Run_CommandInjection(t *testing.T) {
 		return proc, strings.NewReader(""), strings.NewReader(""), nil
 	}
 
-	shellTool := NewShellTool(mockFS, factory, cfg, DockerConfig{}, workspaceRoot)
+	shellTool := NewShellTool(mockFS, factory, cfg, DockerConfig{}, pathutil.NewResolver(workspaceRoot, mockFS))
 
 	req := &ShellRequest{Command: []string{"echo", "hello; rm -rf /"}}
 	_, err := shellTool.Run(context.Background(), req)
@@ -506,7 +506,7 @@ func TestShellTool_Run_HugeOutput(t *testing.T) {
 		return proc, bytes.NewReader(hugeData), strings.NewReader(""), nil
 	}
 
-	shellTool := NewShellTool(mockFS, factory, cfg, DockerConfig{}, workspaceRoot)
+	shellTool := NewShellTool(mockFS, factory, cfg, DockerConfig{}, pathutil.NewResolver(workspaceRoot, mockFS))
 
 	req := &ShellRequest{Command: []string{"cat", "huge.txt"}}
 	resp, err := shellTool.Run(context.Background(), req)
@@ -543,7 +543,7 @@ func TestShellTool_Run_Timeout(t *testing.T) {
 		return proc, strings.NewReader(""), strings.NewReader(""), nil
 	}
 
-	shellTool := NewShellTool(mockFS, factory, cfg, DockerConfig{}, workspaceRoot)
+	shellTool := NewShellTool(mockFS, factory, cfg, DockerConfig{}, pathutil.NewResolver(workspaceRoot, mockFS))
 
 	req := &ShellRequest{Command: []string{"sleep", "10"}, TimeoutSeconds: 1}
 	_, err := shellTool.Run(context.Background(), req)
@@ -577,7 +577,7 @@ func TestShellTool_Run_DockerCheck(t *testing.T) {
 		CheckCommand: []string{"docker", "info"},
 	}
 
-	shellTool := NewShellTool(mockFS, factory, config.DefaultConfig(), dockerConfig, "/workspace")
+	shellTool := NewShellTool(mockFS, factory, config.DefaultConfig(), dockerConfig, pathutil.NewResolver("/workspace", mockFS))
 
 	req := &ShellRequest{Command: []string{"docker", "run", "hello"}}
 	resp, err := shellTool.Run(context.Background(), req)
@@ -604,7 +604,7 @@ func TestShellTool_Run_EnvInjection(t *testing.T) {
 		return proc, strings.NewReader(""), strings.NewReader(""), nil
 	}
 
-	shellTool := NewShellTool(mockFS, factory, cfg, DockerConfig{}, workspaceRoot)
+	shellTool := NewShellTool(mockFS, factory, cfg, DockerConfig{}, pathutil.NewResolver(workspaceRoot, mockFS))
 
 	req := &ShellRequest{Command: []string{"env"}, Env: map[string]string{"PATH": ""}}
 	_, err := shellTool.Run(context.Background(), req)
@@ -634,7 +634,7 @@ func TestShellTool_Run_ContextCancellation(t *testing.T) {
 		return proc, strings.NewReader(""), strings.NewReader(""), nil
 	}
 
-	shellTool := NewShellTool(mockFS, factory, cfg, DockerConfig{}, workspaceRoot)
+	shellTool := NewShellTool(mockFS, factory, cfg, DockerConfig{}, pathutil.NewResolver(workspaceRoot, mockFS))
 
 	req := &ShellRequest{Command: []string{"sleep", "100"}, TimeoutSeconds: 10}
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
@@ -672,7 +672,7 @@ func TestShellTool_Run_SpecificExitCode(t *testing.T) {
 		return proc, strings.NewReader(""), strings.NewReader(""), nil
 	}
 
-	shellTool := NewShellTool(mockFS, factory, cfg, DockerConfig{}, workspaceRoot)
+	shellTool := NewShellTool(mockFS, factory, cfg, DockerConfig{}, pathutil.NewResolver(workspaceRoot, mockFS))
 
 	req := &ShellRequest{Command: []string{"exit42"}}
 	resp, err := shellTool.Run(context.Background(), req)

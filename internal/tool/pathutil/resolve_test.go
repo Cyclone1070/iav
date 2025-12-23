@@ -209,7 +209,7 @@ func TestResolve(t *testing.T) {
 	t.Run("relative path resolution", func(t *testing.T) {
 		fs := newMockFileSystemForPath()
 
-		abs, rel, err := Resolve(workspaceRoot, fs, "test.txt")
+		abs, rel, err := NewResolver(workspaceRoot, fs).Resolve("test.txt")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -225,7 +225,7 @@ func TestResolve(t *testing.T) {
 	t.Run("absolute path within workspace", func(t *testing.T) {
 		fs := newMockFileSystemForPath()
 
-		abs, rel, err := Resolve(workspaceRoot, fs, "/workspace/nested/file.txt")
+		abs, rel, err := NewResolver(workspaceRoot, fs).Resolve("/workspace/nested/file.txt")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -241,7 +241,7 @@ func TestResolve(t *testing.T) {
 	t.Run("path outside workspace rejected", func(t *testing.T) {
 		fs := newMockFileSystemForPath()
 
-		_, _, err := Resolve(workspaceRoot, fs, "/outside/file.txt")
+		_, _, err := NewResolver(workspaceRoot, fs).Resolve("/outside/file.txt")
 		if err != ErrOutsideWorkspace {
 			t.Errorf("expected ErrOutsideWorkspace, got %v", err)
 		}
@@ -250,7 +250,7 @@ func TestResolve(t *testing.T) {
 	t.Run("path traversal rejected", func(t *testing.T) {
 		fs := newMockFileSystemForPath()
 
-		_, _, err := Resolve(workspaceRoot, fs, "../outside/file.txt")
+		_, _, err := NewResolver(workspaceRoot, fs).Resolve("../outside/file.txt")
 		if err != ErrOutsideWorkspace {
 			t.Errorf("expected ErrOutsideWorkspace, got %v", err)
 		}
@@ -261,7 +261,7 @@ func TestResolve(t *testing.T) {
 		fs.createDir("/workspace/nested")
 		fs.createFile("/workspace/file.txt", []byte("content"), 0644)
 
-		abs, rel, err := Resolve(workspaceRoot, fs, "nested/../file.txt")
+		abs, rel, err := NewResolver(workspaceRoot, fs).Resolve("nested/../file.txt")
 		if err != nil {
 			t.Fatalf("unexpected error for .. within workspace: %v", err)
 		}
@@ -280,7 +280,7 @@ func TestResolve(t *testing.T) {
 		fs.createFile("/workspace/target.txt", []byte("content"), 0644)
 		fs.createSymlink("/workspace/link.txt", "/workspace/target.txt")
 
-		abs, rel, err := Resolve(workspaceRoot, fs, "link.txt")
+		abs, rel, err := NewResolver(workspaceRoot, fs).Resolve("link.txt")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -298,7 +298,7 @@ func TestResolve(t *testing.T) {
 		fs.createFile("/tmp/outside.txt", []byte("content"), 0644)
 		fs.createSymlink("/workspace/link.txt", "/tmp/outside.txt")
 
-		_, _, err := Resolve(workspaceRoot, fs, "link.txt")
+		_, _, err := NewResolver(workspaceRoot, fs).Resolve("link.txt")
 		if err != ErrOutsideWorkspace {
 			t.Errorf("expected ErrOutsideWorkspace for escaping symlink, got %v", err)
 		}
@@ -310,7 +310,7 @@ func TestResolve(t *testing.T) {
 		fs.createSymlink("/workspace/link1.txt", "/workspace/link2.txt")
 		fs.createSymlink("/workspace/link2.txt", "/workspace/target.txt")
 
-		abs, _, err := Resolve(workspaceRoot, fs, "link1.txt")
+		abs, _, err := NewResolver(workspaceRoot, fs).Resolve("link1.txt")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -326,7 +326,7 @@ func TestResolve(t *testing.T) {
 		fs.createSymlink("/workspace/link1.txt", "/workspace/link2.txt")
 		fs.createSymlink("/workspace/link2.txt", "/tmp/outside.txt")
 
-		_, _, err := Resolve(workspaceRoot, fs, "link1.txt")
+		_, _, err := NewResolver(workspaceRoot, fs).Resolve("link1.txt")
 		if err != ErrOutsideWorkspace {
 			t.Errorf("expected ErrOutsideWorkspace for escaping symlink chain, got %v", err)
 		}
@@ -335,7 +335,7 @@ func TestResolve(t *testing.T) {
 	t.Run(".. escaping workspace rejected", func(t *testing.T) {
 		fs := newMockFileSystemForPath()
 
-		_, _, err := Resolve(workspaceRoot, fs, "../outside/file.txt")
+		_, _, err := NewResolver(workspaceRoot, fs).Resolve("../outside/file.txt")
 		if err != ErrOutsideWorkspace {
 			t.Errorf("expected ErrOutsideWorkspace for .. escaping workspace, got %v", err)
 		}
@@ -344,7 +344,7 @@ func TestResolve(t *testing.T) {
 	t.Run(".. at workspace root rejected", func(t *testing.T) {
 		fs := newMockFileSystemForPath()
 
-		_, _, err := Resolve(workspaceRoot, fs, "..")
+		_, _, err := NewResolver(workspaceRoot, fs).Resolve("..")
 		if err != ErrOutsideWorkspace {
 			t.Errorf("expected ErrOutsideWorkspace for .. at workspace root, got %v", err)
 		}
@@ -356,7 +356,7 @@ func TestResolve(t *testing.T) {
 		fs.createFile("/workspace/file.txt", []byte("content"), 0644)
 		fs.createSymlink("/workspace/link", "/workspace/nested/../file.txt")
 
-		abs, rel, err := Resolve(workspaceRoot, fs, "link")
+		abs, rel, err := NewResolver(workspaceRoot, fs).Resolve("link")
 		if err != nil {
 			t.Fatalf("unexpected error for symlink with .. in target: %v", err)
 		}
@@ -373,7 +373,7 @@ func TestResolve(t *testing.T) {
 		fs := newMockFileSystemForPath()
 		fs.createSymlink("/workspace/link", "/workspace/../outside/file.txt")
 
-		_, _, err := Resolve(workspaceRoot, fs, "link")
+		_, _, err := NewResolver(workspaceRoot, fs).Resolve("link")
 		if err != ErrOutsideWorkspace {
 			t.Errorf("expected ErrOutsideWorkspace for symlink with .. escaping workspace, got %v", err)
 		}
@@ -385,7 +385,7 @@ func TestResolve(t *testing.T) {
 		fs.createSymlink("/workspace/link2", "/workspace/target.txt")
 		fs.createFile("/workspace/target.txt", []byte("target"), 0644)
 
-		abs, _, err := Resolve(workspaceRoot, fs, "link1")
+		abs, _, err := NewResolver(workspaceRoot, fs).Resolve("link1")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -398,7 +398,7 @@ func TestResolve(t *testing.T) {
 	t.Run("filename with dots allowed", func(t *testing.T) {
 		fs := newMockFileSystemForPath()
 
-		abs, rel, err := Resolve(workspaceRoot, fs, "file..txt")
+		abs, rel, err := NewResolver(workspaceRoot, fs).Resolve("file..txt")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -414,7 +414,7 @@ func TestResolve(t *testing.T) {
 	t.Run("empty workspace root error", func(t *testing.T) {
 		fs := newMockFileSystemForPath()
 
-		_, _, err := Resolve("", fs, "test.txt")
+		_, _, err := NewResolver("", fs).Resolve("test.txt")
 		if !errors.Is(err, ErrWorkspaceRootNotSet) {
 			t.Errorf("expected ErrWorkspaceRootNotSet, got %v", err)
 		}
@@ -429,7 +429,7 @@ func TestResolveSymlinkEscapePrevention(t *testing.T) {
 		fs.createSymlink("/workspace/link", "/outside")
 		fs.createDir("/outside")
 
-		_, _, err := Resolve(workspaceRoot, fs, "link/escape.txt")
+		_, _, err := NewResolver(workspaceRoot, fs).Resolve("link/escape.txt")
 		if err != ErrOutsideWorkspace {
 			t.Errorf("expected ErrOutsideWorkspace for symlink directory escape, got %v", err)
 		}
@@ -441,7 +441,7 @@ func TestResolveSymlinkEscapePrevention(t *testing.T) {
 		fs.createDir("/workspace/target")
 		fs.createFile("/workspace/target/file.txt", []byte("content"), 0644)
 
-		abs, rel, err := Resolve(workspaceRoot, fs, "link/file.txt")
+		abs, rel, err := NewResolver(workspaceRoot, fs).Resolve("link/file.txt")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -460,7 +460,7 @@ func TestResolveSymlinkEscapePrevention(t *testing.T) {
 		fs.createSymlink("/workspace/nested/link", "/outside")
 		fs.createDir("/outside")
 
-		_, _, err := Resolve(workspaceRoot, fs, "nested/link/escape.txt")
+		_, _, err := NewResolver(workspaceRoot, fs).Resolve("nested/link/escape.txt")
 		if err != ErrOutsideWorkspace {
 			t.Errorf("expected ErrOutsideWorkspace for nested symlink escape, got %v", err)
 		}
@@ -473,7 +473,7 @@ func TestResolveMissingDirectories(t *testing.T) {
 	t.Run("missing intermediate directories resolve successfully", func(t *testing.T) {
 		fs := newMockFileSystemForPath()
 
-		abs, rel, err := Resolve(workspaceRoot, fs, "nested/new/file.txt")
+		abs, rel, err := NewResolver(workspaceRoot, fs).Resolve("nested/new/file.txt")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -492,7 +492,7 @@ func TestResolveMissingDirectories(t *testing.T) {
 		fs.createSymlink("/workspace/link", "/workspace/target")
 		fs.createDir("/workspace/target")
 
-		abs, rel, err := Resolve(workspaceRoot, fs, "link/missing/sub/file.txt")
+		abs, rel, err := NewResolver(workspaceRoot, fs).Resolve("link/missing/sub/file.txt")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -516,7 +516,7 @@ func TestResolveSymlinkChains(t *testing.T) {
 		fs.createSymlink("/workspace/link2", "/workspace/target.txt")
 		fs.createFile("/workspace/target.txt", []byte("target"), 0644)
 
-		abs, rel, err := Resolve(workspaceRoot, fs, "link1")
+		abs, rel, err := NewResolver(workspaceRoot, fs).Resolve("link1")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -534,7 +534,7 @@ func TestResolveSymlinkChains(t *testing.T) {
 		fs.createSymlink("/workspace/link1", "/tmp/outside")
 		fs.createDir("/tmp/outside")
 
-		_, _, err := Resolve(workspaceRoot, fs, "link1")
+		_, _, err := NewResolver(workspaceRoot, fs).Resolve("link1")
 		if err != ErrOutsideWorkspace {
 			t.Errorf("expected ErrOutsideWorkspace for escaping chain, got %v", err)
 		}
@@ -546,7 +546,7 @@ func TestResolveSymlinkChains(t *testing.T) {
 		fs.createSymlink("/workspace/link2", "/tmp/outside")
 		fs.createDir("/tmp/outside")
 
-		_, _, err := Resolve(workspaceRoot, fs, "link1")
+		_, _, err := NewResolver(workspaceRoot, fs).Resolve("link1")
 		if err != ErrOutsideWorkspace {
 			t.Errorf("expected ErrOutsideWorkspace for escaping chain at second hop, got %v", err)
 		}
@@ -557,7 +557,7 @@ func TestResolveSymlinkChains(t *testing.T) {
 		fs.createSymlink("/workspace/loop1", "/workspace/loop2")
 		fs.createSymlink("/workspace/loop2", "/workspace/loop1")
 
-		_, _, err := Resolve(workspaceRoot, fs, "loop1")
+		_, _, err := NewResolver(workspaceRoot, fs).Resolve("loop1")
 		if !errors.Is(err, ErrSymlinkLoop) {
 			t.Errorf("expected ErrSymlinkLoop, got %v", err)
 		}
@@ -567,7 +567,7 @@ func TestResolveSymlinkChains(t *testing.T) {
 		fs := newMockFileSystemForPath()
 		fs.createSymlink("/workspace/dangling", "/workspace/nonexistent/file.txt")
 
-		abs, rel, err := Resolve(workspaceRoot, fs, "dangling")
+		abs, rel, err := NewResolver(workspaceRoot, fs).Resolve("dangling")
 		if err != nil {
 			t.Fatalf("unexpected error for dangling symlink inside workspace: %v", err)
 		}
@@ -585,7 +585,7 @@ func TestResolveSymlinkChains(t *testing.T) {
 		fs := newMockFileSystemForPath()
 		fs.createSymlink("/workspace/dangling", "/tmp/outside/file.txt")
 
-		_, _, err := Resolve(workspaceRoot, fs, "dangling")
+		_, _, err := NewResolver(workspaceRoot, fs).Resolve("dangling")
 		if err != ErrOutsideWorkspace {
 			t.Errorf("expected ErrOutsideWorkspace for dangling symlink outside workspace, got %v", err)
 		}
@@ -608,7 +608,7 @@ func TestResolveSymlinkChains(t *testing.T) {
 			fs.createSymlink(fmt.Sprintf("/workspace/link%d", i), target)
 		}
 
-		_, _, err := Resolve(workspaceRoot, fs, "link0")
+		_, _, err := NewResolver(workspaceRoot, fs).Resolve("link0")
 		if !errors.Is(err, ErrSymlinkChainTooLong) {
 			t.Errorf("expected ErrSymlinkChainTooLong, got %v", err)
 		}
@@ -631,7 +631,7 @@ func TestResolveSymlinkChains(t *testing.T) {
 			fs.createSymlink(fmt.Sprintf("/workspace/link%d", i), target)
 		}
 
-		abs, rel, err := Resolve(workspaceRoot, fs, "link0")
+		abs, rel, err := NewResolver(workspaceRoot, fs).Resolve("link0")
 		if err != nil {
 			t.Fatalf("unexpected error for symlink chain at max hops: %v", err)
 		}
@@ -653,7 +653,7 @@ func TestResolveTildeExpansion(t *testing.T) {
 
 		// MockFileSystem.UserHomeDir returns "/home/user"
 		// Since /home/user/file.txt is outside /workspace, this should fail
-		_, _, err := Resolve(workspaceRoot, fs, "~/file.txt")
+		_, _, err := NewResolver(workspaceRoot, fs).Resolve("~/file.txt")
 		if err != ErrOutsideWorkspace {
 			t.Errorf("expected ErrOutsideWorkspace for path outside workspace after tilde expansion, got %v", err)
 		}
@@ -666,7 +666,7 @@ func TestResolveAbsoluteVsRelative(t *testing.T) {
 	t.Run("absolute path within workspace", func(t *testing.T) {
 		fs := newMockFileSystemForPath()
 
-		abs, rel, err := Resolve(workspaceRoot, fs, "/workspace/nested/file.txt")
+		abs, rel, err := NewResolver(workspaceRoot, fs).Resolve("/workspace/nested/file.txt")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -682,7 +682,7 @@ func TestResolveAbsoluteVsRelative(t *testing.T) {
 	t.Run("relative path resolves correctly", func(t *testing.T) {
 		fs := newMockFileSystemForPath()
 
-		abs, rel, err := Resolve(workspaceRoot, fs, "nested/file.txt")
+		abs, rel, err := NewResolver(workspaceRoot, fs).Resolve("nested/file.txt")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}

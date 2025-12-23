@@ -20,9 +20,6 @@ import (
 // Note: Does NOT include ListDir - this tool uses the fd command instead.
 type dirFinder interface {
 	Stat(path string) (os.FileInfo, error)
-	Lstat(path string) (os.FileInfo, error)
-	Readlink(path string) (string, error)
-	UserHomeDir() (string, error)
 }
 
 // commandExecutor defines the interface for executing shell commands.
@@ -35,7 +32,7 @@ type FindFileTool struct {
 	fs              dirFinder
 	commandExecutor commandExecutor
 	config          *config.Config
-	workspaceRoot   string
+	pathResolver    *pathutil.Resolver
 }
 
 // NewFindFileTool creates a new FindFileTool with injected dependencies.
@@ -43,13 +40,13 @@ func NewFindFileTool(
 	fs dirFinder,
 	commandExecutor commandExecutor,
 	cfg *config.Config,
-	workspaceRoot string,
+	pathResolver *pathutil.Resolver,
 ) *FindFileTool {
 	return &FindFileTool{
 		fs:              fs,
 		commandExecutor: commandExecutor,
 		config:          cfg,
-		workspaceRoot:   workspaceRoot,
+		pathResolver:    pathResolver,
 	}
 }
 
@@ -65,7 +62,7 @@ func (t *FindFileTool) Run(ctx context.Context, req *FindFileRequest) (*FindFile
 		searchPath = "."
 	}
 
-	absSearchPath, _, err := pathutil.Resolve(t.workspaceRoot, t.fs, searchPath)
+	absSearchPath, _, err := t.pathResolver.Resolve(searchPath)
 	if err != nil {
 		return nil, err
 	}
@@ -130,7 +127,7 @@ func (t *FindFileTool) Run(ctx context.Context, req *FindFileRequest) (*FindFile
 		}
 
 		// Convert absolute to relative
-		relPath, err := filepath.Rel(t.workspaceRoot, line)
+		relPath, err := filepath.Rel(t.pathResolver.WorkspaceRoot(), line)
 		if err != nil {
 			relPath = line // Fallback
 		}

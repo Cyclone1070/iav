@@ -12,9 +12,6 @@ import (
 // fileReader defines the minimal filesystem operations needed for reading files.
 type fileReader interface {
 	Stat(path string) (os.FileInfo, error)
-	Lstat(path string) (os.FileInfo, error)
-	Readlink(path string) (string, error)
-	UserHomeDir() (string, error)
 	ReadFileRange(path string, offset, limit int64) ([]byte, error)
 }
 
@@ -30,7 +27,7 @@ type ReadFileTool struct {
 	binaryDetector  binaryDetector
 	checksumManager checksumComputer
 	config          *config.Config
-	workspaceRoot   string
+	pathResolver    *pathutil.Resolver
 }
 
 // NewReadFileTool creates a new ReadFileTool with injected dependencies.
@@ -39,14 +36,14 @@ func NewReadFileTool(
 	binaryDetector binaryDetector,
 	checksumManager checksumComputer,
 	cfg *config.Config,
-	workspaceRoot string,
+	pathResolver *pathutil.Resolver,
 ) *ReadFileTool {
 	return &ReadFileTool{
 		fileOps:         fileOps,
 		binaryDetector:  binaryDetector,
 		checksumManager: checksumManager,
 		config:          cfg,
-		workspaceRoot:   workspaceRoot,
+		pathResolver:    pathResolver,
 	}
 }
 
@@ -61,7 +58,7 @@ func (t *ReadFileTool) Run(ctx context.Context, req *ReadFileRequest) (*ReadFile
 		return nil, err
 	}
 
-	abs, rel, err := pathutil.Resolve(t.workspaceRoot, t.fileOps, req.Path)
+	abs, rel, err := t.pathResolver.Resolve(req.Path)
 	if err != nil {
 		return nil, err
 	}

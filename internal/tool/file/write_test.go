@@ -276,7 +276,7 @@ func TestWriteFile(t *testing.T) {
 		cfg := config.DefaultConfig()
 		cfg.Tools.MaxFileSize = maxFileSize
 
-		writeTool := NewWriteFileTool(fs, newMockBinaryDetectorForWrite(), checksumManager, cfg, workspaceRoot)
+		writeTool := NewWriteFileTool(fs, newMockBinaryDetectorForWrite(), checksumManager, cfg, pathutil.NewResolver(workspaceRoot, fs))
 		content := "test content"
 
 		req := &WriteFileRequest{Path: "new.txt", Content: content}
@@ -313,7 +313,7 @@ func TestWriteFile(t *testing.T) {
 		checksumManager := newMockChecksumManagerForWrite()
 		fs.createFile("/workspace/existing.txt", []byte("existing"), 0644)
 
-		writeTool := NewWriteFileTool(fs, newMockBinaryDetectorForWrite(), checksumManager, config.DefaultConfig(), workspaceRoot)
+		writeTool := NewWriteFileTool(fs, newMockBinaryDetectorForWrite(), checksumManager, config.DefaultConfig(), pathutil.NewResolver(workspaceRoot, fs))
 
 		req := &WriteFileRequest{Path: "existing.txt", Content: "new content"}
 		_, err := writeTool.Run(context.Background(), req)
@@ -327,7 +327,7 @@ func TestWriteFile(t *testing.T) {
 		// Create symlink pointing outside workspace
 		fs.createSymlink("/workspace/escape", "/outside/target.txt")
 
-		writeTool := NewWriteFileTool(fs, newMockBinaryDetectorForWrite(), newMockChecksumManagerForWrite(), config.DefaultConfig(), workspaceRoot)
+		writeTool := NewWriteFileTool(fs, newMockBinaryDetectorForWrite(), newMockChecksumManagerForWrite(), config.DefaultConfig(), pathutil.NewResolver(workspaceRoot, fs))
 		req := &WriteFileRequest{Path: "escape", Content: "content"}
 		_, err := writeTool.Run(context.Background(), req)
 
@@ -351,7 +351,7 @@ func TestWriteFile(t *testing.T) {
 			largeContent[i] = 'A'
 		}
 
-		writeTool := NewWriteFileTool(fs, newMockBinaryDetectorForWrite(), checksumManager, cfg, workspaceRoot)
+		writeTool := NewWriteFileTool(fs, newMockBinaryDetectorForWrite(), checksumManager, cfg, pathutil.NewResolver(workspaceRoot, fs))
 
 		req := &WriteFileRequest{Path: "large.txt", Content: string(largeContent)}
 		_, err := writeTool.Run(context.Background(), req)
@@ -368,7 +368,7 @@ func TestWriteFile(t *testing.T) {
 			return true
 		}
 
-		writeTool := NewWriteFileTool(fs, detector, checksumManager, config.DefaultConfig(), workspaceRoot)
+		writeTool := NewWriteFileTool(fs, detector, checksumManager, config.DefaultConfig(), pathutil.NewResolver(workspaceRoot, fs))
 		// Content with NUL byte
 		binaryContent := []byte{0x48, 0x65, 0x6C, 0x00, 0x6C, 0x6F}
 
@@ -384,7 +384,7 @@ func TestWriteFile(t *testing.T) {
 		checksumManager := newMockChecksumManagerForWrite()
 
 		cfg := config.DefaultConfig()
-		writeTool := NewWriteFileTool(fs, newMockBinaryDetectorForWrite(), checksumManager, cfg, workspaceRoot)
+		writeTool := NewWriteFileTool(fs, newMockBinaryDetectorForWrite(), checksumManager, cfg, pathutil.NewResolver(workspaceRoot, fs))
 
 		perm := os.FileMode(0755)
 
@@ -413,7 +413,7 @@ func TestWriteFile(t *testing.T) {
 		checksumManager := newMockChecksumManagerForWrite()
 
 		cfg := config.DefaultConfig()
-		writeTool := NewWriteFileTool(fs, newMockBinaryDetectorForWrite(), checksumManager, cfg, workspaceRoot)
+		writeTool := NewWriteFileTool(fs, newMockBinaryDetectorForWrite(), checksumManager, cfg, pathutil.NewResolver(workspaceRoot, fs))
 
 		req := &WriteFileRequest{Path: "nested/deep/file.txt", Content: "content"}
 		_, err := writeTool.Run(context.Background(), req)
@@ -437,7 +437,7 @@ func TestWriteFile(t *testing.T) {
 		fs.createSymlink("/workspace/link", "/outside")
 
 		cfg := config.DefaultConfig()
-		writeTool := NewWriteFileTool(fs, newMockBinaryDetectorForWrite(), newMockChecksumManagerForWrite(), cfg, workspaceRoot)
+		writeTool := NewWriteFileTool(fs, newMockBinaryDetectorForWrite(), newMockChecksumManagerForWrite(), cfg, pathutil.NewResolver(workspaceRoot, fs))
 		req := &WriteFileRequest{Path: "link/escape.txt", Content: "content"}
 		_, err := writeTool.Run(context.Background(), req)
 

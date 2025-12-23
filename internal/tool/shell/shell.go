@@ -18,7 +18,7 @@ type ShellTool struct {
 	commandExecutor commandExecutor
 	config          *config.Config
 	dockerConfig    DockerConfig
-	workspaceRoot   string
+	pathResolver    *pathutil.Resolver
 }
 
 // NewShellTool creates a new ShellTool with injected dependencies.
@@ -27,14 +27,14 @@ func NewShellTool(
 	commandExecutor commandExecutor,
 	cfg *config.Config,
 	dockerConfig DockerConfig,
-	workspaceRoot string,
+	pathResolver *pathutil.Resolver,
 ) *ShellTool {
 	return &ShellTool{
 		fs:              fs,
 		commandExecutor: commandExecutor,
 		config:          cfg,
 		dockerConfig:    dockerConfig,
-		workspaceRoot:   workspaceRoot,
+		pathResolver:    pathResolver,
 	}
 }
 
@@ -51,7 +51,7 @@ func (t *ShellTool) Run(ctx context.Context, req *ShellRequest) (*ShellResponse,
 		workingDir = "."
 	}
 
-	wdAbs, wdRel, err := pathutil.Resolve(t.workspaceRoot, t.fs, workingDir)
+	wdAbs, wdRel, err := t.pathResolver.Resolve(workingDir)
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +68,7 @@ func (t *ShellTool) Run(ctx context.Context, req *ShellRequest) (*ShellResponse,
 	env := os.Environ()
 
 	for _, envFile := range req.EnvFiles {
-		envFilePath, _, err := pathutil.Resolve(t.workspaceRoot, t.fs, envFile)
+		envFilePath, _, err := t.pathResolver.Resolve(envFile)
 		if err != nil {
 			return nil, err
 		}

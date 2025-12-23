@@ -25,6 +25,10 @@ Before submitting code, verify **every** item.
 - [ ] No unused methods in interfaces (grep to verify each method is called)
 - [ ] Exception: import interface from helper package if already coupled
 
+### Struct Design
+- [ ] Services & domain entities use private fields + `NewT()` constructor
+- [ ] DTOs & data holders use public fields + `Validate()` method if needed
+
 ### Testing
 - [ ] All mocks defined locally in `*_test.go` files (no shared `mock/` package)
 - [ ] All test helpers defined locally in test files

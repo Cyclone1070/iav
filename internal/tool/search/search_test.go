@@ -12,6 +12,7 @@ import (
 
 	"github.com/Cyclone1070/iav/internal/config"
 	"github.com/Cyclone1070/iav/internal/tool/executil"
+	"github.com/Cyclone1070/iav/internal/tool/pathutil"
 )
 
 // Local mocks for search tests
@@ -113,7 +114,7 @@ func TestSearchContent_BasicRegex(t *testing.T) {
 		return &mockProcessForSearch{}, strings.NewReader(rgOutput), strings.NewReader(""), nil
 	}
 
-	searchTool := NewSearchContentTool(fs, mockRunner, cfg, workspaceRoot)
+	searchTool := NewSearchContentTool(fs, mockRunner, cfg, pathutil.NewResolver(workspaceRoot, fs))
 
 	req := &SearchContentRequest{Query: "func .*", SearchPath: "", CaseSensitive: true, IncludeIgnored: false, Offset: 0, Limit: 100}
 	resp, err := searchTool.Run(context.Background(), req)
@@ -153,7 +154,7 @@ func TestSearchContent_CaseInsensitive(t *testing.T) {
 		return proc, strings.NewReader(""), strings.NewReader(""), nil
 	}
 
-	searchTool := NewSearchContentTool(fs, mockRunner, cfg, workspaceRoot)
+	searchTool := NewSearchContentTool(fs, mockRunner, cfg, pathutil.NewResolver(workspaceRoot, fs))
 
 	req := &SearchContentRequest{Query: "pattern", SearchPath: "", CaseSensitive: false, IncludeIgnored: false, Offset: 0, Limit: 100}
 	_, _ = searchTool.Run(context.Background(), req)
@@ -170,7 +171,7 @@ func TestSearchContent_PathOutsideWorkspace(t *testing.T) {
 	workspaceRoot := "/workspace"
 	cfg := config.DefaultConfig()
 
-	searchTool := NewSearchContentTool(fs, &mockCommandExecutorForSearch{}, cfg, workspaceRoot)
+	searchTool := NewSearchContentTool(fs, &mockCommandExecutorForSearch{}, cfg, pathutil.NewResolver(workspaceRoot, fs))
 
 	req := &SearchContentRequest{Query: "pattern", SearchPath: "../outside", CaseSensitive: true, IncludeIgnored: false, Offset: 0, Limit: 100}
 	_, err := searchTool.Run(context.Background(), req)
@@ -194,7 +195,7 @@ func TestSearchContent_VeryLongLine(t *testing.T) {
 		return &mockProcessForSearch{}, strings.NewReader(rgOutput), strings.NewReader(""), nil
 	}
 
-	searchTool := NewSearchContentTool(fs, mockRunner, cfg, workspaceRoot)
+	searchTool := NewSearchContentTool(fs, mockRunner, cfg, pathutil.NewResolver(workspaceRoot, fs))
 
 	req := &SearchContentRequest{Query: "pattern", SearchPath: "", CaseSensitive: true, IncludeIgnored: false, Offset: 0, Limit: 100}
 	resp, err := searchTool.Run(context.Background(), req)
@@ -232,7 +233,7 @@ func TestSearchContent_CommandInjection(t *testing.T) {
 		return proc, strings.NewReader(""), strings.NewReader(""), nil
 	}
 
-	searchTool := NewSearchContentTool(fs, mockRunner, cfg, workspaceRoot)
+	searchTool := NewSearchContentTool(fs, mockRunner, cfg, pathutil.NewResolver(workspaceRoot, fs))
 	query := "foo; rm -rf /"
 
 	req := &SearchContentRequest{Query: query, SearchPath: "", CaseSensitive: true, IncludeIgnored: false, Offset: 0, Limit: 100}
@@ -259,7 +260,7 @@ func TestSearchContent_NoMatches(t *testing.T) {
 		return proc, strings.NewReader(""), strings.NewReader(""), nil
 	}
 
-	searchTool := NewSearchContentTool(fs, mockRunner, cfg, workspaceRoot)
+	searchTool := NewSearchContentTool(fs, mockRunner, cfg, pathutil.NewResolver(workspaceRoot, fs))
 
 	req := &SearchContentRequest{Query: "nonexistent", SearchPath: "", CaseSensitive: true, IncludeIgnored: false, Offset: 0, Limit: 100}
 	resp, err := searchTool.Run(context.Background(), req)
@@ -293,7 +294,7 @@ func TestSearchContent_Pagination(t *testing.T) {
 		return &mockProcessForSearch{}, strings.NewReader(rgOutput), strings.NewReader(""), nil
 	}
 
-	searchTool := NewSearchContentTool(fs, mockRunner, cfg, workspaceRoot)
+	searchTool := NewSearchContentTool(fs, mockRunner, cfg, pathutil.NewResolver(workspaceRoot, fs))
 
 	req := &SearchContentRequest{Query: "pattern", SearchPath: "", CaseSensitive: true, IncludeIgnored: false, Offset: 2, Limit: 2}
 	resp, err := searchTool.Run(context.Background(), req)
@@ -333,7 +334,7 @@ func TestSearchContent_MultipleFiles(t *testing.T) {
 		return &mockProcessForSearch{}, strings.NewReader(rgOutput), strings.NewReader(""), nil
 	}
 
-	searchTool := NewSearchContentTool(fs, mockRunner, cfg, workspaceRoot)
+	searchTool := NewSearchContentTool(fs, mockRunner, cfg, pathutil.NewResolver(workspaceRoot, fs))
 
 	req := &SearchContentRequest{Query: "pattern", SearchPath: "", CaseSensitive: true, IncludeIgnored: false, Offset: 0, Limit: 100}
 	resp, err := searchTool.Run(context.Background(), req)
@@ -372,7 +373,7 @@ invalid json line
 		return &mockProcessForSearch{}, strings.NewReader(rgOutput), strings.NewReader(""), nil
 	}
 
-	searchTool := NewSearchContentTool(fs, mockRunner, cfg, workspaceRoot)
+	searchTool := NewSearchContentTool(fs, mockRunner, cfg, pathutil.NewResolver(workspaceRoot, fs))
 
 	req := &SearchContentRequest{Query: "pattern", SearchPath: "", CaseSensitive: true, IncludeIgnored: false, Offset: 0, Limit: 100}
 	resp, err := searchTool.Run(context.Background(), req)
@@ -400,7 +401,7 @@ func TestSearchContent_CommandFailure(t *testing.T) {
 		return proc, strings.NewReader(""), strings.NewReader(""), nil
 	}
 
-	searchTool := NewSearchContentTool(fs, mockRunner, cfg, workspaceRoot)
+	searchTool := NewSearchContentTool(fs, mockRunner, cfg, pathutil.NewResolver(workspaceRoot, fs))
 
 	req := &SearchContentRequest{Query: "pattern", SearchPath: "", CaseSensitive: true, IncludeIgnored: false, Offset: 0, Limit: 100}
 	_, err := searchTool.Run(context.Background(), req)
@@ -424,7 +425,7 @@ func TestSearchContent_IncludeIgnored(t *testing.T) {
 		return &mockProcessForSearch{}, strings.NewReader(output), strings.NewReader(""), nil
 	}
 
-	searchTool := NewSearchContentTool(fs, mockRunner, cfg, workspaceRoot)
+	searchTool := NewSearchContentTool(fs, mockRunner, cfg, pathutil.NewResolver(workspaceRoot, fs))
 
 	req := &SearchContentRequest{Query: "func main", SearchPath: "", CaseSensitive: true, IncludeIgnored: false, Offset: 0, Limit: 100}
 	resp, err := searchTool.Run(context.Background(), req)
@@ -485,7 +486,7 @@ func TestSearchContent_LimitValidation(t *testing.T) {
 	}
 
 	t.Run("zero limit uses default", func(t *testing.T) {
-		searchTool := NewSearchContentTool(fs, mockRunner, config.DefaultConfig(), "/workspace")
+		searchTool := NewSearchContentTool(fs, mockRunner, config.DefaultConfig(), pathutil.NewResolver("/workspace", fs))
 
 		req := &SearchContentRequest{Query: "test", Limit: 0}
 		resp, err := searchTool.Run(context.Background(), req)
@@ -502,7 +503,7 @@ func TestSearchContent_LimitValidation(t *testing.T) {
 		cfg.Tools.DefaultSearchContentLimit = 25
 		cfg.Tools.MaxSearchContentLimit = 50
 
-		searchTool := NewSearchContentTool(fs, mockRunner, cfg, "/workspace")
+		searchTool := NewSearchContentTool(fs, mockRunner, cfg, pathutil.NewResolver("/workspace", fs))
 
 		req := &SearchContentRequest{Query: "test", Limit: 30}
 		resp, err := searchTool.Run(context.Background(), req)
@@ -524,7 +525,7 @@ func TestSearchContent_OffsetValidation(t *testing.T) {
 		return &mockProcessForSearch{}, strings.NewReader(""), strings.NewReader(""), nil
 	}
 
-	searchTool := NewSearchContentTool(fs, mockRunner, config.DefaultConfig(), "/workspace")
+	searchTool := NewSearchContentTool(fs, mockRunner, config.DefaultConfig(), pathutil.NewResolver("/workspace", fs))
 
 	t.Run("zero offset is valid", func(t *testing.T) {
 		req := &SearchContentRequest{Query: "test", Offset: 0, Limit: 10}
@@ -551,7 +552,7 @@ func TestSearchContent_SearchPathValidation(t *testing.T) {
 		fs := newMockFileSystemForSearch()
 		// No dir created
 		runner := &mockCommandExecutorForSearch{}
-		searchTool := NewSearchContentTool(fs, runner, cfg, workspaceRoot)
+		searchTool := NewSearchContentTool(fs, runner, cfg, pathutil.NewResolver(workspaceRoot, fs))
 
 		req := &SearchContentRequest{Query: "test", SearchPath: "nonexistent"}
 		_, err := searchTool.Run(context.Background(), req)
@@ -564,7 +565,7 @@ func TestSearchContent_SearchPathValidation(t *testing.T) {
 		fs := newMockFileSystemForSearch()
 		fs.dirs["/workspace/file.txt"] = false // explicitly marked as NOT a dir
 		runner := &mockCommandExecutorForSearch{}
-		searchTool := NewSearchContentTool(fs, runner, cfg, workspaceRoot)
+		searchTool := NewSearchContentTool(fs, runner, cfg, pathutil.NewResolver(workspaceRoot, fs))
 
 		req := &SearchContentRequest{Query: "test", SearchPath: "file.txt"}
 		_, err := searchTool.Run(context.Background(), req)

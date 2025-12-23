@@ -15,6 +15,7 @@ import (
 	provider "github.com/Cyclone1070/iav/internal/provider/model"
 	"github.com/Cyclone1070/iav/internal/tool/contentutil"
 	"github.com/Cyclone1070/iav/internal/tool/directory"
+	"github.com/Cyclone1070/iav/internal/tool/executil"
 	"github.com/Cyclone1070/iav/internal/tool/file"
 	"github.com/Cyclone1070/iav/internal/tool/fsutil"
 	"github.com/Cyclone1070/iav/internal/tool/gitutil"
@@ -74,8 +75,9 @@ func createTools(cfg *config.Config, workspaceRoot string) ([]orchadapter.Tool, 
 	osFS := fsutil.NewOSFileSystem()
 	binaryDetector := contentutil.NewSystemBinaryDetector(cfg.Tools.BinaryDetectionSampleSize)
 	checksumManager := hashutil.NewChecksumManager()
-	commandExecutor := shell.NewOSCommandExecutor()
+	commandExecutor := executil.NewOSCommandExecutor()
 	todoStore := todo.NewInMemoryTodoStore()
+	pathResolver := pathutil.NewResolver(canonicalRoot, osFS)
 
 	// Initialize gitignore service
 	var gitignoreService interface {
@@ -97,13 +99,13 @@ func createTools(cfg *config.Config, workspaceRoot string) ([]orchadapter.Tool, 
 	}
 
 	// Instantiate all tools with their dependencies
-	readFileTool := file.NewReadFileTool(osFS, binaryDetector, checksumManager, cfg, canonicalRoot)
-	writeFileTool := file.NewWriteFileTool(osFS, binaryDetector, checksumManager, cfg, canonicalRoot)
-	editFileTool := file.NewEditFileTool(osFS, binaryDetector, checksumManager, cfg, canonicalRoot)
-	listDirectoryTool := directory.NewListDirectoryTool(osFS, gitignoreService, cfg, canonicalRoot)
-	findFileTool := directory.NewFindFileTool(osFS, commandExecutor, cfg, canonicalRoot)
-	searchContentTool := search.NewSearchContentTool(osFS, commandExecutor, cfg, canonicalRoot)
-	shellTool := shell.NewShellTool(osFS, commandExecutor, cfg, dockerConfig, canonicalRoot)
+	readFileTool := file.NewReadFileTool(osFS, binaryDetector, checksumManager, cfg, pathResolver)
+	writeFileTool := file.NewWriteFileTool(osFS, binaryDetector, checksumManager, cfg, pathResolver)
+	editFileTool := file.NewEditFileTool(osFS, binaryDetector, checksumManager, cfg, pathResolver)
+	listDirectoryTool := directory.NewListDirectoryTool(osFS, gitignoreService, cfg, pathResolver)
+	findFileTool := directory.NewFindFileTool(osFS, commandExecutor, cfg, pathResolver)
+	searchContentTool := search.NewSearchContentTool(osFS, commandExecutor, cfg, pathResolver)
+	shellTool := shell.NewShellTool(osFS, commandExecutor, cfg, dockerConfig, pathResolver)
 	readTodosTool := todo.NewReadTodosTool(todoStore, cfg)
 	writeTodosTool := todo.NewWriteTodosTool(todoStore, cfg)
 

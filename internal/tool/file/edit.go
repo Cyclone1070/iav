@@ -13,9 +13,6 @@ import (
 // fileEditor defines the minimal filesystem operations needed for editing files.
 type fileEditor interface {
 	Stat(path string) (os.FileInfo, error)
-	Lstat(path string) (os.FileInfo, error)
-	Readlink(path string) (string, error)
-	UserHomeDir() (string, error)
 	ReadFileRange(path string, offset, limit int64) ([]byte, error)
 	WriteFileAtomic(path string, content []byte, perm os.FileMode) error
 }
@@ -33,7 +30,7 @@ type EditFileTool struct {
 	binaryDetector  binaryDetector
 	checksumManager checksumManager
 	config          *config.Config
-	workspaceRoot   string
+	pathResolver    *pathutil.Resolver
 }
 
 // NewEditFileTool creates a new EditFileTool with injected dependencies.
@@ -42,14 +39,14 @@ func NewEditFileTool(
 	binaryDetector binaryDetector,
 	checksumManager checksumManager,
 	cfg *config.Config,
-	workspaceRoot string,
+	pathResolver *pathutil.Resolver,
 ) *EditFileTool {
 	return &EditFileTool{
 		fileOps:         fileOps,
 		binaryDetector:  binaryDetector,
 		checksumManager: checksumManager,
 		config:          cfg,
-		workspaceRoot:   workspaceRoot,
+		pathResolver:    pathResolver,
 	}
 }
 
@@ -66,7 +63,7 @@ func (t *EditFileTool) Run(ctx context.Context, req *EditFileRequest) (*EditFile
 		return nil, err
 	}
 
-	abs, rel, err := pathutil.Resolve(t.workspaceRoot, t.fileOps, req.Path)
+	abs, rel, err := t.pathResolver.Resolve(req.Path)
 	if err != nil {
 		return nil, err
 	}

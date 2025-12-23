@@ -117,7 +117,7 @@ func TestFindFile_BasicGlob(t *testing.T) {
 		return &mockProcessForFind{}, strings.NewReader(output), strings.NewReader(""), nil
 	}
 
-	findTool := NewFindFileTool(fs, mockRunner, cfg, workspaceRoot)
+	findTool := NewFindFileTool(fs, mockRunner, cfg, pathutil.NewResolver(workspaceRoot, fs))
 
 	req := &FindFileRequest{Pattern: "*.go", SearchPath: "", MaxDepth: 0, IncludeIgnored: false, Offset: 0, Limit: 100}
 	resp, err := findTool.Run(context.Background(), req)
@@ -153,7 +153,7 @@ func TestFindFile_Pagination(t *testing.T) {
 		return &mockProcessForFind{}, strings.NewReader(output), strings.NewReader(""), nil
 	}
 
-	findTool := NewFindFileTool(fs, mockRunner, cfg, workspaceRoot)
+	findTool := NewFindFileTool(fs, mockRunner, cfg, pathutil.NewResolver(workspaceRoot, fs))
 
 	req := &FindFileRequest{Pattern: "*.txt", SearchPath: "", MaxDepth: 0, IncludeIgnored: false, Offset: 2, Limit: 2}
 	resp, err := findTool.Run(context.Background(), req)
@@ -193,7 +193,7 @@ func TestFindFile_InvalidGlob(t *testing.T) {
 		return proc, strings.NewReader(""), strings.NewReader(""), nil
 	}
 
-	findTool := NewFindFileTool(fs, mockRunner, cfg, workspaceRoot)
+	findTool := NewFindFileTool(fs, mockRunner, cfg, pathutil.NewResolver(workspaceRoot, fs))
 
 	req := &FindFileRequest{Pattern: "[", SearchPath: "", MaxDepth: 0, IncludeIgnored: false, Offset: 0, Limit: 100}
 	_, err := findTool.Run(context.Background(), req)
@@ -208,7 +208,7 @@ func TestFindFile_PathOutsideWorkspace(t *testing.T) {
 	workspaceRoot := "/workspace"
 	cfg := config.DefaultConfig()
 
-	findTool := NewFindFileTool(fs, &mockCommandExecutorForFind{}, cfg, workspaceRoot)
+	findTool := NewFindFileTool(fs, &mockCommandExecutorForFind{}, cfg, pathutil.NewResolver(workspaceRoot, fs))
 
 	req := &FindFileRequest{Pattern: "*.go", SearchPath: "../outside", MaxDepth: 0, IncludeIgnored: false, Offset: 0, Limit: 0}
 	_, err := findTool.Run(context.Background(), req)
@@ -224,7 +224,7 @@ func TestFindFile_NonExistentPath(t *testing.T) {
 	workspaceRoot := "/workspace"
 	cfg := config.DefaultConfig()
 
-	findTool := NewFindFileTool(fs, &mockCommandExecutorForFind{}, cfg, workspaceRoot)
+	findTool := NewFindFileTool(fs, &mockCommandExecutorForFind{}, cfg, pathutil.NewResolver(workspaceRoot, fs))
 
 	req := &FindFileRequest{Pattern: "*.go", SearchPath: "nonexistent/dir", MaxDepth: 0, IncludeIgnored: false, Offset: 0, Limit: 0}
 	_, err := findTool.Run(context.Background(), req)
@@ -248,7 +248,7 @@ func TestFindFile_CommandFailure(t *testing.T) {
 		return proc, strings.NewReader(""), strings.NewReader(""), nil
 	}
 
-	findTool := NewFindFileTool(fs, mockRunner, cfg, workspaceRoot)
+	findTool := NewFindFileTool(fs, mockRunner, cfg, pathutil.NewResolver(workspaceRoot, fs))
 
 	req := &FindFileRequest{Pattern: "*.go", SearchPath: "", MaxDepth: 0, IncludeIgnored: false, Offset: 0, Limit: 100}
 	_, err := findTool.Run(context.Background(), req)
@@ -270,7 +270,7 @@ func TestFindFile_ShellInjection(t *testing.T) {
 		return &mockProcessForFind{}, strings.NewReader(""), strings.NewReader(""), nil
 	}
 
-	findTool := NewFindFileTool(fs, mockRunner, cfg, workspaceRoot)
+	findTool := NewFindFileTool(fs, mockRunner, cfg, pathutil.NewResolver(workspaceRoot, fs))
 	pattern := "*.go; rm -rf /"
 
 	req := &FindFileRequest{Pattern: pattern, SearchPath: "", MaxDepth: 0, IncludeIgnored: false, Offset: 0, Limit: 100}
@@ -294,7 +294,7 @@ func TestFindFile_UnicodeFilenames(t *testing.T) {
 		return &mockProcessForFind{}, strings.NewReader(output), strings.NewReader(""), nil
 	}
 
-	findTool := NewFindFileTool(fs, mockRunner, cfg, workspaceRoot)
+	findTool := NewFindFileTool(fs, mockRunner, cfg, pathutil.NewResolver(workspaceRoot, fs))
 
 	req := &FindFileRequest{Pattern: "*.txt", SearchPath: "", MaxDepth: 0, IncludeIgnored: false, Offset: 0, Limit: 100}
 	resp, err := findTool.Run(context.Background(), req)
@@ -342,7 +342,7 @@ func TestFindFile_DeeplyNested(t *testing.T) {
 		return &mockProcessForFind{}, strings.NewReader(deepPath + "\n"), strings.NewReader(""), nil
 	}
 
-	findTool := NewFindFileTool(fs, mockRunner, cfg, workspaceRoot)
+	findTool := NewFindFileTool(fs, mockRunner, cfg, pathutil.NewResolver(workspaceRoot, fs))
 
 	req := &FindFileRequest{Pattern: "*.txt", SearchPath: "", MaxDepth: 0, IncludeIgnored: false, Offset: 0, Limit: 100}
 	resp, err := findTool.Run(context.Background(), req)
@@ -366,7 +366,7 @@ func TestFindFile_NoMatches(t *testing.T) {
 		return &mockProcessForFind{}, strings.NewReader(""), strings.NewReader(""), nil
 	}
 
-	findTool := NewFindFileTool(fs, mockRunner, cfg, workspaceRoot)
+	findTool := NewFindFileTool(fs, mockRunner, cfg, pathutil.NewResolver(workspaceRoot, fs))
 
 	req := &FindFileRequest{Pattern: "*.nonexistent", SearchPath: "", MaxDepth: 0, IncludeIgnored: false, Offset: 0, Limit: 100}
 	resp, err := findTool.Run(context.Background(), req)
@@ -398,7 +398,7 @@ func TestFindFile_IncludeIgnored(t *testing.T) {
 		return &mockProcessForFind{}, strings.NewReader(output), strings.NewReader(""), nil
 	}
 
-	findTool := NewFindFileTool(fs, mockRunner, cfg, workspaceRoot)
+	findTool := NewFindFileTool(fs, mockRunner, cfg, pathutil.NewResolver(workspaceRoot, fs))
 
 	req := &FindFileRequest{Pattern: "*.go", SearchPath: "", MaxDepth: 0, IncludeIgnored: false, Offset: 0, Limit: 100}
 	resp, err := findTool.Run(context.Background(), req)
@@ -463,7 +463,7 @@ func TestFindFile_LimitValidation(t *testing.T) {
 	}
 
 	t.Run("zero limit uses default", func(t *testing.T) {
-		findTool := NewFindFileTool(fs, mockRunner, cfg, workspaceRoot)
+		findTool := NewFindFileTool(fs, mockRunner, cfg, pathutil.NewResolver(workspaceRoot, fs))
 
 		req := &FindFileRequest{Pattern: "*.go", Limit: 0}
 		resp, err := findTool.Run(context.Background(), req)
@@ -477,7 +477,7 @@ func TestFindFile_LimitValidation(t *testing.T) {
 	})
 
 	t.Run("custom config limits are respected", func(t *testing.T) {
-		findTool := NewFindFileTool(fs, mockRunner, cfg, workspaceRoot)
+		findTool := NewFindFileTool(fs, mockRunner, cfg, pathutil.NewResolver(workspaceRoot, fs))
 
 		req := &FindFileRequest{Pattern: "*.go", Limit: 30}
 		resp, err := findTool.Run(context.Background(), req)

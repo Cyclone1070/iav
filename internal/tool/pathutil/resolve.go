@@ -15,6 +15,25 @@ type FileSystem interface {
 	UserHomeDir() (string, error)
 }
 
+// Resolver provides path resolution within a workspace boundary.
+type Resolver struct {
+	workspaceRoot string
+	fs            FileSystem
+}
+
+// NewResolver creates a new path resolver for the given workspace.
+func NewResolver(workspaceRoot string, fs FileSystem) *Resolver {
+	return &Resolver{
+		workspaceRoot: workspaceRoot,
+		fs:            fs,
+	}
+}
+
+// WorkspaceRoot returns the absolute path of the workspace root.
+func (r *Resolver) WorkspaceRoot() string {
+	return r.workspaceRoot
+}
+
 // CanonicaliseRoot canonicalises a workspace root path by making it absolute and resolving symlinks.
 // Returns an error if the path doesn't exist or isn't a directory.
 func CanonicaliseRoot(root string) (string, error) {
@@ -43,14 +62,14 @@ func CanonicaliseRoot(root string) (string, error) {
 // It handles symlink resolution component-by-component, prevents path traversal attacks,
 // and validates that the resolved path stays within the workspace boundary.
 // Returns the absolute path, relative path, and any error.
-func Resolve(workspaceRoot string, fs FileSystem, path string) (abs string, rel string, err error) {
-	if workspaceRoot == "" {
+func (r *Resolver) Resolve(path string) (abs string, rel string, err error) {
+	if r.workspaceRoot == "" {
 		return "", "", ErrWorkspaceRootNotSet
 	}
 
 	// Handle tilde expansion
 	if strings.HasPrefix(path, "~/") {
-		home, err := fs.UserHomeDir()
+		home, err := r.fs.UserHomeDir()
 		if err != nil {
 			return "", "", &TildeExpansionError{Cause: err}
 		}
@@ -62,10 +81,10 @@ func Resolve(workspaceRoot string, fs FileSystem, path string) (abs string, rel 
 	if filepath.IsAbs(path) {
 		absInput = filepath.Clean(path)
 	} else {
-		absInput = filepath.Join(workspaceRoot, path)
+		absInput = filepath.Join(r.workspaceRoot, path)
 	}
 
-	workspaceRootAbs := filepath.Clean(workspaceRoot)
+	workspaceRootAbs := filepath.Clean(r.workspaceRoot)
 
 	// Calculate initial relative path to see if it's lexically within root
 	// We use filepath.Rel which handles cleaning
@@ -86,7 +105,7 @@ func Resolve(workspaceRoot string, fs FileSystem, path string) (abs string, rel 
 
 	// Resolve symlinks component-by-component using the relative path
 	// This ensures we only validate components *inside* the workspace
-	resolvedAbs, err := resolveRelativePath(workspaceRoot, fs, relPath)
+	resolvedAbs, err := r.resolveRelativePath(relPath)
 	if err != nil {
 		return "", "", err
 	}
@@ -109,8 +128,8 @@ func Resolve(workspaceRoot string, fs FileSystem, path string) (abs string, rel 
 // resolveRelativePath resolves a relative path component-by-component with symlink resolution.
 // It assumes the input relPath is lexically within the workspace (does not start with ..).
 // Returns the resolved absolute path or an error if the path escapes the workspace.
-func resolveRelativePath(workspaceRoot string, fs FileSystem, relPath string) (string, error) {
-	workspaceRootAbs := filepath.Clean(workspaceRoot)
+func (r *Resolver) resolveRelativePath(relPath string) (string, error) {
+	workspaceRootAbs := filepath.Clean(r.workspaceRoot)
 	const maxHops = 64
 
 	// Split path into components for component-wise traversal
@@ -146,7 +165,7 @@ func resolveRelativePath(workspaceRoot string, fs FileSystem, relPath string) (s
 		next := filepath.Join(currentAbs, parts[i])
 
 		// Follow symlink chain for this component
-		resolved, exists, err := followSymlinkChain(fs, next, workspaceRootAbs, maxHops)
+		resolved, exists, err := r.followSymlinkChain(next, workspaceRootAbs, maxHops)
 		if err != nil {
 			return "", err
 		}
@@ -186,7 +205,7 @@ func resolveRelativePath(workspaceRoot string, fs FileSystem, relPath string) (s
 // followSymlinkChain follows a symlink chain until it reaches a non-symlink or detects a loop.
 // Returns the resolved path, whether the path exists, and any error.
 // Returns an error if the chain exceeds maxHops or escapes the workspace.
-func followSymlinkChain(fs FileSystem, path string, workspaceRoot string, maxHops int) (resolved string, exists bool, err error) {
+func (r *Resolver) followSymlinkChain(path string, workspaceRoot string, maxHops int) (resolved string, exists bool, err error) {
 	visited := make(map[string]struct{})
 	current := path
 
@@ -198,7 +217,7 @@ func followSymlinkChain(fs FileSystem, path string, workspaceRoot string, maxHop
 		visited[current] = struct{}{}
 
 		// Check if current path is a symlink
-		info, err := fs.Lstat(current)
+		info, err := r.fs.Lstat(current)
 		if err != nil {
 			if os.IsNotExist(err) {
 				return current, false, nil
@@ -216,7 +235,7 @@ func followSymlinkChain(fs FileSystem, path string, workspaceRoot string, maxHop
 		}
 
 		// Read the symlink target
-		linkTarget, err := fs.Readlink(current)
+		linkTarget, err := r.fs.Readlink(current)
 		if err != nil {
 			return "", false, &ReadlinkError{Path: current, Cause: err}
 		}
