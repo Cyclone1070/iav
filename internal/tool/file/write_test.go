@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/Cyclone1070/iav/internal/config"
-	"github.com/Cyclone1070/iav/internal/tool/pathutil"
+	"github.com/Cyclone1070/iav/internal/tool/service/path"
 )
 
 // Local mocks for write tests
@@ -220,23 +220,6 @@ func (m *mockFileSystemForWrite) Chmod(name string, mode os.FileMode) error {
 	return nil
 }
 
-type mockBinaryDetectorForWrite struct {
-	isBinaryFunc func([]byte) bool
-}
-
-func newMockBinaryDetectorForWrite() *mockBinaryDetectorForWrite {
-	return &mockBinaryDetectorForWrite{
-		isBinaryFunc: func([]byte) bool { return false },
-	}
-}
-
-func (m *mockBinaryDetectorForWrite) IsBinaryContent(content []byte) bool {
-	if m.isBinaryFunc != nil {
-		return m.isBinaryFunc(content)
-	}
-	return false
-}
-
 type mockChecksumManagerForWrite struct {
 	checksums map[string]string
 }
@@ -276,7 +259,7 @@ func TestWriteFile(t *testing.T) {
 		cfg := config.DefaultConfig()
 		cfg.Tools.MaxFileSize = maxFileSize
 
-		writeTool := NewWriteFileTool(fs, newMockBinaryDetectorForWrite(), checksumManager, cfg, pathutil.NewResolver(workspaceRoot))
+		writeTool := NewWriteFileTool(fs, checksumManager, cfg, path.NewResolver(workspaceRoot))
 		content := "test content"
 
 		req := &WriteFileRequest{Path: "new.txt", Content: content}
@@ -313,7 +296,7 @@ func TestWriteFile(t *testing.T) {
 		checksumManager := newMockChecksumManagerForWrite()
 		fs.createFile("/workspace/existing.txt", []byte("existing"), 0644)
 
-		writeTool := NewWriteFileTool(fs, newMockBinaryDetectorForWrite(), checksumManager, config.DefaultConfig(), pathutil.NewResolver(workspaceRoot))
+		writeTool := NewWriteFileTool(fs, checksumManager, config.DefaultConfig(), path.NewResolver(workspaceRoot))
 
 		req := &WriteFileRequest{Path: "existing.txt", Content: "new content"}
 		_, err := writeTool.Run(context.Background(), req)
@@ -334,7 +317,7 @@ func TestWriteFile(t *testing.T) {
 			largeContent[i] = 'A'
 		}
 
-		writeTool := NewWriteFileTool(fs, newMockBinaryDetectorForWrite(), checksumManager, cfg, pathutil.NewResolver(workspaceRoot))
+		writeTool := NewWriteFileTool(fs, checksumManager, cfg, path.NewResolver(workspaceRoot))
 
 		req := &WriteFileRequest{Path: "large.txt", Content: string(largeContent)}
 		_, err := writeTool.Run(context.Background(), req)
@@ -346,12 +329,8 @@ func TestWriteFile(t *testing.T) {
 	t.Run("binary content rejection", func(t *testing.T) {
 		fs := newMockFileSystemForWrite()
 		checksumManager := newMockChecksumManagerForWrite()
-		detector := newMockBinaryDetectorForWrite()
-		detector.isBinaryFunc = func(content []byte) bool {
-			return true
-		}
 
-		writeTool := NewWriteFileTool(fs, detector, checksumManager, config.DefaultConfig(), pathutil.NewResolver(workspaceRoot))
+		writeTool := NewWriteFileTool(fs, checksumManager, config.DefaultConfig(), path.NewResolver(workspaceRoot))
 		// Content with NUL byte
 		binaryContent := []byte{0x48, 0x65, 0x6C, 0x00, 0x6C, 0x6F}
 
@@ -367,7 +346,7 @@ func TestWriteFile(t *testing.T) {
 		checksumManager := newMockChecksumManagerForWrite()
 
 		cfg := config.DefaultConfig()
-		writeTool := NewWriteFileTool(fs, newMockBinaryDetectorForWrite(), checksumManager, cfg, pathutil.NewResolver(workspaceRoot))
+		writeTool := NewWriteFileTool(fs, checksumManager, cfg, path.NewResolver(workspaceRoot))
 
 		perm := os.FileMode(0755)
 
@@ -396,7 +375,7 @@ func TestWriteFile(t *testing.T) {
 		checksumManager := newMockChecksumManagerForWrite()
 
 		cfg := config.DefaultConfig()
-		writeTool := NewWriteFileTool(fs, newMockBinaryDetectorForWrite(), checksumManager, cfg, pathutil.NewResolver(workspaceRoot))
+		writeTool := NewWriteFileTool(fs, checksumManager, cfg, path.NewResolver(workspaceRoot))
 
 		req := &WriteFileRequest{Path: "nested/deep/file.txt", Content: "content"}
 		_, err := writeTool.Run(context.Background(), req)

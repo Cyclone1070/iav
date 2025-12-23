@@ -1,4 +1,4 @@
-package paginationutil
+package pagination
 
 // PaginationResult holds pagination metadata.
 type PaginationResult struct {

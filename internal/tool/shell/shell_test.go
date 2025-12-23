@@ -12,7 +12,7 @@ import (
 
 	"github.com/Cyclone1070/iav/internal/config"
 	"github.com/Cyclone1070/iav/internal/tool/executor"
-	"github.com/Cyclone1070/iav/internal/tool/pathutil"
+	"github.com/Cyclone1070/iav/internal/tool/service/path"
 )
 
 // Local mocks for shell tests
@@ -131,7 +131,7 @@ func TestShellTool_Run_Truncated(t *testing.T) {
 		}, nil
 	}
 
-	shellTool := NewShellTool(mockFS, factory, cfg, DockerConfig{}, pathutil.NewResolver(workspaceRoot))
+	shellTool := NewShellTool(mockFS, factory, cfg, DockerConfig{}, path.NewResolver(workspaceRoot))
 
 	req := &ShellRequest{Command: []string{"echo", "something"}}
 	resp, err := shellTool.Run(context.Background(), req)
@@ -159,7 +159,7 @@ func TestShellTool_Run_SimpleCommand(t *testing.T) {
 		return &executor.Result{Stdout: "hello\n", ExitCode: 0}, nil
 	}
 
-	shellTool := NewShellTool(mockFS, factory, cfg, DockerConfig{}, pathutil.NewResolver(workspaceRoot))
+	shellTool := NewShellTool(mockFS, factory, cfg, DockerConfig{}, path.NewResolver(workspaceRoot))
 
 	req := &ShellRequest{Command: []string{"echo", "hello"}}
 	resp, err := shellTool.Run(context.Background(), req)
@@ -188,7 +188,7 @@ func TestShellTool_Run_WorkingDir(t *testing.T) {
 		return &executor.Result{Stdout: "", ExitCode: 0}, nil
 	}
 
-	shellTool := NewShellTool(mockFS, factory, cfg, DockerConfig{}, pathutil.NewResolver(workspaceRoot))
+	shellTool := NewShellTool(mockFS, factory, cfg, DockerConfig{}, path.NewResolver(workspaceRoot))
 
 	req := &ShellRequest{Command: []string{"pwd"}, WorkingDir: "subdir"}
 	_, err := shellTool.Run(context.Background(), req)
@@ -215,7 +215,7 @@ func TestShellTool_Run_Env(t *testing.T) {
 		return &executor.Result{Stdout: "", ExitCode: 0}, nil
 	}
 
-	shellTool := NewShellTool(mockFS, factory, cfg, DockerConfig{}, pathutil.NewResolver(workspaceRoot))
+	shellTool := NewShellTool(mockFS, factory, cfg, DockerConfig{}, path.NewResolver(workspaceRoot))
 
 	req := &ShellRequest{
 		Command: []string{"env"},
@@ -271,7 +271,7 @@ CACHE_URL=redis://localhost`
 		return &executor.Result{Stdout: "", ExitCode: 0}, nil
 	}
 
-	shellTool := NewShellTool(mockFS, factory, cfg, DockerConfig{}, pathutil.NewResolver(workspaceRoot))
+	shellTool := NewShellTool(mockFS, factory, cfg, DockerConfig{}, path.NewResolver(workspaceRoot))
 
 	t.Run("Single env file", func(t *testing.T) {
 		req := &ShellRequest{Command: []string{"env"}, EnvFiles: []string{".env"}}
@@ -361,7 +361,7 @@ CACHE_URL=redis://localhost`
 
 	t.Run("Nonexistent env file", func(t *testing.T) {
 		req := &ShellRequest{Command: []string{"env"}, EnvFiles: []string{".env.missing"}}
-		shellTool := NewShellTool(mockFS, &mockCommandExecutorForShell{}, cfg, DockerConfig{}, pathutil.NewResolver(workspaceRoot))
+		shellTool := NewShellTool(mockFS, &mockCommandExecutorForShell{}, cfg, DockerConfig{}, path.NewResolver(workspaceRoot))
 		_, err := shellTool.Run(context.Background(), req)
 		if err == nil {
 			t.Fatal("Expected error for nonexistent env file, got nil")
@@ -373,7 +373,7 @@ CACHE_URL=redis://localhost`
 
 	req := &ShellRequest{Command: []string{"env"}, EnvFiles: []string{"../../etc/passwd"}}
 	_, err := shellTool.Run(context.Background(), req)
-	if !errors.Is(err, pathutil.ErrOutsideWorkspace) {
+	if !errors.Is(err, path.ErrOutsideWorkspace) {
 		t.Errorf("Expected ErrOutsideWorkspace error, got %v", err)
 	}
 }
@@ -384,10 +384,10 @@ func TestShellTool_Run_OutsideWorkspace(t *testing.T) {
 	workspaceRoot := "/workspace"
 	cfg := config.DefaultConfig()
 
-	shellTool := NewShellTool(mockFS, &mockCommandExecutorForShell{}, cfg, DockerConfig{}, pathutil.NewResolver(workspaceRoot))
+	shellTool := NewShellTool(mockFS, &mockCommandExecutorForShell{}, cfg, DockerConfig{}, path.NewResolver(workspaceRoot))
 	req := &ShellRequest{Command: []string{"ls"}, WorkingDir: "../outside"}
 	_, err := shellTool.Run(context.Background(), req)
-	if !errors.Is(err, pathutil.ErrOutsideWorkspace) {
+	if !errors.Is(err, path.ErrOutsideWorkspace) {
 		t.Errorf("Expected ErrOutsideWorkspace error, got %v", err)
 	}
 }
@@ -403,7 +403,7 @@ func TestShellTool_Run_NonZeroExit(t *testing.T) {
 		return &executor.Result{Stderr: "error output", ExitCode: 1}, newMockExitError(1)
 	}
 
-	shellTool := NewShellTool(mockFS, factory, cfg, DockerConfig{}, pathutil.NewResolver(workspaceRoot))
+	shellTool := NewShellTool(mockFS, factory, cfg, DockerConfig{}, path.NewResolver(workspaceRoot))
 
 	req := &ShellRequest{Command: []string{"false"}}
 	resp, err := shellTool.Run(context.Background(), req)
@@ -428,7 +428,7 @@ func TestShellTool_Run_CommandInjection(t *testing.T) {
 		return &executor.Result{Stdout: "", ExitCode: 0}, nil
 	}
 
-	shellTool := NewShellTool(mockFS, factory, cfg, DockerConfig{}, pathutil.NewResolver(workspaceRoot))
+	shellTool := NewShellTool(mockFS, factory, cfg, DockerConfig{}, path.NewResolver(workspaceRoot))
 
 	req := &ShellRequest{Command: []string{"echo", "hello; rm -rf /"}}
 	_, err := shellTool.Run(context.Background(), req)
@@ -455,7 +455,7 @@ func TestShellTool_Run_Timeout(t *testing.T) {
 		return nil, context.DeadlineExceeded
 	}
 
-	shellTool := NewShellTool(mockFS, factory, cfg, DockerConfig{}, pathutil.NewResolver(workspaceRoot))
+	shellTool := NewShellTool(mockFS, factory, cfg, DockerConfig{}, path.NewResolver(workspaceRoot))
 
 	req := &ShellRequest{Command: []string{"sleep", "10"}, TimeoutSeconds: 1}
 	_, err := shellTool.Run(context.Background(), req)
@@ -487,7 +487,7 @@ func TestShellTool_Run_DockerCheck(t *testing.T) {
 		CheckCommand: []string{"docker", "info"},
 	}
 
-	shellTool := NewShellTool(mockFS, factory, config.DefaultConfig(), dockerConfig, pathutil.NewResolver("/workspace"))
+	shellTool := NewShellTool(mockFS, factory, config.DefaultConfig(), dockerConfig, path.NewResolver("/workspace"))
 
 	req := &ShellRequest{Command: []string{"docker", "run", "hello"}}
 	resp, err := shellTool.Run(context.Background(), req)
@@ -512,7 +512,7 @@ func TestShellTool_Run_EnvInjection(t *testing.T) {
 		return &executor.Result{Stdout: "", ExitCode: 0}, nil
 	}
 
-	shellTool := NewShellTool(mockFS, factory, cfg, DockerConfig{}, pathutil.NewResolver(workspaceRoot))
+	shellTool := NewShellTool(mockFS, factory, cfg, DockerConfig{}, path.NewResolver(workspaceRoot))
 
 	req := &ShellRequest{Command: []string{"env"}, Env: map[string]string{"PATH": ""}}
 	_, err := shellTool.Run(context.Background(), req)
@@ -538,7 +538,7 @@ func TestShellTool_Run_ContextCancellation(t *testing.T) {
 		return &executor.Result{Stdout: "", ExitCode: -1}, ctx.Err()
 	}
 
-	shellTool := NewShellTool(mockFS, factory, cfg, DockerConfig{}, pathutil.NewResolver(workspaceRoot))
+	shellTool := NewShellTool(mockFS, factory, cfg, DockerConfig{}, path.NewResolver(workspaceRoot))
 
 	req := &ShellRequest{Command: []string{"sleep", "100"}, TimeoutSeconds: 10}
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
@@ -571,7 +571,7 @@ func TestShellTool_Run_SpecificExitCode(t *testing.T) {
 		return &executor.Result{Stdout: "", ExitCode: 42}, newMockExitError(42)
 	}
 
-	shellTool := NewShellTool(mockFS, factory, cfg, DockerConfig{}, pathutil.NewResolver(workspaceRoot))
+	shellTool := NewShellTool(mockFS, factory, cfg, DockerConfig{}, path.NewResolver(workspaceRoot))
 
 	req := &ShellRequest{Command: []string{"exit42"}}
 	resp, err := shellTool.Run(context.Background(), req)

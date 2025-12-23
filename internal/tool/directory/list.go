@@ -9,8 +9,8 @@ import (
 	"sort"
 
 	"github.com/Cyclone1070/iav/internal/config"
-	"github.com/Cyclone1070/iav/internal/tool/paginationutil"
-	"github.com/Cyclone1070/iav/internal/tool/pathutil"
+	"github.com/Cyclone1070/iav/internal/tool/helper/pagination"
+	"github.com/Cyclone1070/iav/internal/tool/service/path"
 )
 
 // dirLister defines the filesystem operations needed for listing directories.
@@ -29,7 +29,7 @@ type ListDirectoryTool struct {
 	fs               dirLister
 	gitignoreService gitignoreService
 	config           *config.Config
-	pathResolver     *pathutil.Resolver
+	pathResolver     *path.Resolver
 }
 
 // NewListDirectoryTool creates a new ListDirectoryTool with injected dependencies.
@@ -37,7 +37,7 @@ func NewListDirectoryTool(
 	fs dirLister,
 	gitignoreService gitignoreService,
 	cfg *config.Config,
-	pathResolver *pathutil.Resolver,
+	pathResolver *path.Resolver,
 ) *ListDirectoryTool {
 	return &ListDirectoryTool{
 		fs:               fs,
@@ -113,7 +113,7 @@ func (t *ListDirectoryTool) Run(ctx context.Context, req *ListDirectoryRequest) 
 	})
 
 	// Apply pagination
-	directoryEntries, paginationResult := paginationutil.ApplyPagination(directoryEntries, req.Offset, limit)
+	directoryEntries, paginationResult := pagination.ApplyPagination(directoryEntries, req.Offset, limit)
 
 	var truncationReason string
 	if capHit {
@@ -167,7 +167,7 @@ func (t *ListDirectoryTool) listRecursive(ctx context.Context, abs string, curre
 	allEntries, err := t.fs.ListDir(abs)
 	if err != nil {
 		// Detect specific error conditions using errors.Is
-		if errors.Is(err, pathutil.ErrOutsideWorkspace) {
+		if errors.Is(err, path.ErrOutsideWorkspace) {
 			return nil, false, err
 		}
 

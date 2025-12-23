@@ -9,7 +9,7 @@ import (
 
 	"github.com/Cyclone1070/iav/internal/config"
 	"github.com/Cyclone1070/iav/internal/tool/executor"
-	"github.com/Cyclone1070/iav/internal/tool/pathutil"
+	"github.com/Cyclone1070/iav/internal/tool/service/path"
 )
 
 // ShellTool executes commands on the local machine.
@@ -18,7 +18,7 @@ type ShellTool struct {
 	commandExecutor commandExecutor
 	config          *config.Config
 	dockerConfig    DockerConfig
-	pathResolver    *pathutil.Resolver
+	pathResolver    *path.Resolver
 }
 
 // NewShellTool creates a new ShellTool with injected dependencies.
@@ -27,7 +27,7 @@ func NewShellTool(
 	commandExecutor commandExecutor,
 	cfg *config.Config,
 	dockerConfig DockerConfig,
-	pathResolver *pathutil.Resolver,
+	pathResolver *path.Resolver,
 ) *ShellTool {
 	return &ShellTool{
 		fs:              fs,

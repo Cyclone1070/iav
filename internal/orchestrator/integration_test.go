@@ -14,12 +14,13 @@ import (
 	orchmodel "github.com/Cyclone1070/iav/internal/orchestrator/model"
 	pmodel "github.com/Cyclone1070/iav/internal/provider/model"
 	"github.com/Cyclone1070/iav/internal/testing/mock"
-	"github.com/Cyclone1070/iav/internal/tool/contentutil"
 	"github.com/Cyclone1070/iav/internal/tool/directory"
+	"github.com/Cyclone1070/iav/internal/tool/executor"
 	"github.com/Cyclone1070/iav/internal/tool/file"
-	"github.com/Cyclone1070/iav/internal/tool/fsutil"
-	"github.com/Cyclone1070/iav/internal/tool/gitutil"
-	"github.com/Cyclone1070/iav/internal/tool/hashutil"
+	"github.com/Cyclone1070/iav/internal/tool/service/fs"
+	"github.com/Cyclone1070/iav/internal/tool/service/git"
+	"github.com/Cyclone1070/iav/internal/tool/service/hash"
+	"github.com/Cyclone1070/iav/internal/tool/service/path"
 	"github.com/Cyclone1070/iav/internal/tool/search"
 	"github.com/Cyclone1070/iav/internal/tool/shell"
 	"github.com/Cyclone1070/iav/internal/tool/todo"
@@ -34,11 +35,11 @@ func TestOrchestratorProvider_ToolCallResponse(t *testing.T) {
 
 	// Create workspace context dependencies
 	workspaceRoot := t.TempDir()
-	fileSystem := fsutil.NewOSFileSystem()
-	binaryDetector := contentutil.NewSystemBinaryDetector(8192)
-	checksumMgr := hashutil.NewChecksumManager()
-	gitignoreSvc, _ := gitutil.NewService(workspaceRoot, fileSystem)
+	fileSystem := fs.NewOSFileSystem()
+	checksumMgr := hash.NewChecksumManager()
+	gitignoreSvc, _ := git.NewService(workspaceRoot, fileSystem)
 	cfg := config.DefaultConfig()
+	pathResolver := path.NewResolver(workspaceRoot)
 
 	// Create UI
 	channels := ui.NewUIChannels(nil)
@@ -93,11 +94,11 @@ func TestOrchestratorProvider_ToolCallResponse(t *testing.T) {
 	}()
 
 	// Initialize tools and adapters
-	listTool := directory.NewListDirectoryTool(fileSystem, gitignoreSvc, cfg, workspaceRoot)
-	listAdapter := orchadapter.NewListDirectoryAdapter(listTool, cfg, workspaceRoot, fileSystem)
+	listTool := directory.NewListDirectoryTool(fileSystem, gitignoreSvc, cfg, pathResolver)
+	listAdapter := orchadapter.NewListDirectoryAdapter(listTool)
 
-	writeTool := file.NewWriteFileTool(fileSystem, binaryDetector, checksumMgr, cfg, workspaceRoot)
-	writeAdapter := orchadapter.NewWriteFileAdapter(writeTool, cfg, workspaceRoot, fileSystem)
+	writeTool := file.NewWriteFileTool(fileSystem, checksumMgr, cfg, pathResolver)
+	writeAdapter := orchadapter.NewWriteFileAdapter(writeTool)
 
 	toolList := []orchadapter.Tool{
 		listAdapter,
@@ -173,40 +174,40 @@ func TestFullToolIntegration(t *testing.T) {
 	t.Parallel()
 
 	workspaceRoot := t.TempDir()
-	fs := fsutil.NewOSFileSystem()
+	fs := fs.NewOSFileSystem()
 	cfg := config.DefaultConfig()
-	binaryDetector := contentutil.NewSystemBinaryDetector(8192)
-	checksumMgr := hashutil.NewChecksumManager()
-	gitignoreSvc, _ := gitutil.NewService(workspaceRoot, fs)
+	checksumMgr := hash.NewChecksumManager()
+	gitignoreSvc, _ := git.NewService(workspaceRoot, fs)
 	userInterface := mock.NewMockUI()
-	executor := &shell.OSCommandExecutor{}
+	commandExecutor := executor.NewOSCommandExecutor(cfg)
+	pathResolver := path.NewResolver(workspaceRoot)
 	dockerConfig := shell.DockerConfig{
 		CheckCommand: []string{"docker", "info"},
 		StartCommand: []string{"docker", "desktop", "start"},
 	}
 
 	// Initialize all real tools
-	listTool := directory.NewListDirectoryTool(fs, gitignoreSvc, cfg, workspaceRoot)
-	findTool := directory.NewFindFileTool(fs, executor, cfg, workspaceRoot)
-	readTool := file.NewReadFileTool(fs, binaryDetector, checksumMgr, cfg, workspaceRoot)
-	writeTool := file.NewWriteFileTool(fs, binaryDetector, checksumMgr, cfg, workspaceRoot)
-	editTool := file.NewEditFileTool(fs, binaryDetector, checksumMgr, cfg, workspaceRoot)
-	searchTool := search.NewSearchContentTool(fs, executor, cfg, workspaceRoot)
-	shellTool := shell.NewShellTool(fs, executor, cfg, dockerConfig, workspaceRoot)
-	todoReadTool := todo.NewReadTodosTool(todo.NewInMemoryTodoStore())
-	todoWriteTool := todo.NewWriteTodosTool(todo.NewInMemoryTodoStore())
+	listTool := directory.NewListDirectoryTool(fs, gitignoreSvc, cfg, pathResolver)
+	findTool := directory.NewFindFileTool(fs, commandExecutor, cfg, pathResolver)
+	readTool := file.NewReadFileTool(fs, checksumMgr, cfg, pathResolver)
+	writeTool := file.NewWriteFileTool(fs, checksumMgr, cfg, pathResolver)
+	editTool := file.NewEditFileTool(fs, checksumMgr, cfg, pathResolver)
+	searchTool := search.NewSearchContentTool(fs, commandExecutor, cfg, pathResolver)
+	shellTool := shell.NewShellTool(fs, commandExecutor, cfg, dockerConfig, pathResolver)
+	todoReadTool := todo.NewReadTodosTool(todo.NewInMemoryTodoStore(), cfg)
+	todoWriteTool := todo.NewWriteTodosTool(todo.NewInMemoryTodoStore(), cfg)
 
 	// Initialize all adapters
 	tools := []orchadapter.Tool{
-		orchadapter.NewListDirectoryAdapter(listTool, cfg, workspaceRoot, fs),
-		orchadapter.NewFindFileAdapter(findTool, cfg, workspaceRoot, fs),
-		orchadapter.NewReadFileAdapter(readTool, cfg, workspaceRoot, fs),
-		orchadapter.NewWriteFileAdapter(writeTool, cfg, workspaceRoot, fs),
-		orchadapter.NewEditFileAdapter(editTool, cfg, workspaceRoot, fs),
-		orchadapter.NewSearchContentAdapter(searchTool, cfg, workspaceRoot, fs),
-		orchadapter.NewShellAdapter(shellTool, cfg, workspaceRoot, fs),
-		orchadapter.NewReadTodosAdapter(todoReadTool, cfg),
-		orchadapter.NewWriteTodosAdapter(todoWriteTool, cfg),
+		orchadapter.NewListDirectoryAdapter(listTool),
+		orchadapter.NewFindFileAdapter(findTool),
+		orchadapter.NewReadFileAdapter(readTool),
+		orchadapter.NewWriteFileAdapter(writeTool),
+		orchadapter.NewEditFileAdapter(editTool),
+		orchadapter.NewSearchContentAdapter(searchTool),
+		orchadapter.NewShellAdapter(shellTool),
+		orchadapter.NewReadTodosAdapter(todoReadTool),
+		orchadapter.NewWriteTodosAdapter(todoWriteTool),
 	}
 
 	// Provider mock that just exits

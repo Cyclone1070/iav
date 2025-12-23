@@ -1,6 +1,10 @@
 package executor
 
-import "bytes"
+import (
+	"bytes"
+
+	"github.com/Cyclone1070/iav/internal/tool/helper/content"
+)
 
 // collector captures command output with size limits and binary content detection.
 type collector struct {
@@ -32,7 +36,7 @@ func (c *collector) Write(p []byte) (n int, err error) {
 			toCheck = toCheck[:remainingCheck]
 		}
 
-		if bytes.IndexByte(toCheck, 0) != -1 {
+		if content.IsBinaryContent(toCheck) {
 			c.isBinary = true
 			c.truncated = true
 			return len(p), nil

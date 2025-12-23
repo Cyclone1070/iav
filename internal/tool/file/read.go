@@ -6,7 +6,8 @@ import (
 	"os"
 
 	"github.com/Cyclone1070/iav/internal/config"
-	"github.com/Cyclone1070/iav/internal/tool/pathutil"
+	"github.com/Cyclone1070/iav/internal/tool/helper/content"
+	"github.com/Cyclone1070/iav/internal/tool/service/path"
 )
 
 // fileReader defines the minimal filesystem operations needed for reading files.
@@ -24,23 +25,20 @@ type checksumComputer interface {
 // ReadFileTool handles file reading operations.
 type ReadFileTool struct {
 	fileOps         fileReader
-	binaryDetector  binaryDetector
 	checksumManager checksumComputer
 	config          *config.Config
-	pathResolver    *pathutil.Resolver
+	pathResolver    *path.Resolver
 }
 
 // NewReadFileTool creates a new ReadFileTool with injected dependencies.
 func NewReadFileTool(
 	fileOps fileReader,
-	binaryDetector binaryDetector,
 	checksumManager checksumComputer,
 	cfg *config.Config,
-	pathResolver *pathutil.Resolver,
+	pathResolver *path.Resolver,
 ) *ReadFileTool {
 	return &ReadFileTool{
 		fileOps:         fileOps,
-		binaryDetector:  binaryDetector,
 		checksumManager: checksumManager,
 		config:          cfg,
 		pathResolver:    pathResolver,
@@ -101,7 +99,8 @@ func (t *ReadFileTool) Run(ctx context.Context, req *ReadFileRequest) (*ReadFile
 	}
 
 	// Check for binary using content we already read
-	if t.binaryDetector.IsBinaryContent(contentBytes) {
+	// Check for binary content
+	if content.IsBinaryContent(contentBytes) {
 		return nil, fmt.Errorf("%w: %s", ErrBinaryFile, abs)
 	}
 

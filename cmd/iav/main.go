@@ -13,14 +13,13 @@ import (
 	orchadapter "github.com/Cyclone1070/iav/internal/orchestrator/adapter"
 	"github.com/Cyclone1070/iav/internal/provider/gemini"
 	provider "github.com/Cyclone1070/iav/internal/provider/model"
-	"github.com/Cyclone1070/iav/internal/tool/contentutil"
 	"github.com/Cyclone1070/iav/internal/tool/directory"
 	"github.com/Cyclone1070/iav/internal/tool/executor"
 	"github.com/Cyclone1070/iav/internal/tool/file"
-	"github.com/Cyclone1070/iav/internal/tool/fsutil"
-	"github.com/Cyclone1070/iav/internal/tool/gitutil"
-	"github.com/Cyclone1070/iav/internal/tool/hashutil"
-	"github.com/Cyclone1070/iav/internal/tool/pathutil"
+	"github.com/Cyclone1070/iav/internal/tool/service/fs"
+	"github.com/Cyclone1070/iav/internal/tool/service/git"
+	"github.com/Cyclone1070/iav/internal/tool/service/hash"
+	"github.com/Cyclone1070/iav/internal/tool/service/path"
 	"github.com/Cyclone1070/iav/internal/tool/search"
 	"github.com/Cyclone1070/iav/internal/tool/shell"
 	"github.com/Cyclone1070/iav/internal/tool/todo"
@@ -66,28 +65,27 @@ func createRealProviderFactory(cfg *config.Config) func(context.Context) (provid
 
 func createTools(cfg *config.Config, workspaceRoot string) ([]orchadapter.Tool, error) {
 	// Canonicalize workspace root
-	canonicalRoot, err := pathutil.CanonicaliseRoot(workspaceRoot)
+	canonicalRoot, err := path.CanonicaliseRoot(workspaceRoot)
 	if err != nil {
 		return nil, fmt.Errorf("failed to canonicalize workspace root: %w", err)
 	}
 
 	// Instantiate concrete dependencies
-	osFS := fsutil.NewOSFileSystem()
-	binaryDetector := contentutil.NewSystemBinaryDetector(cfg.Tools.BinaryDetectionSampleSize)
-	checksumManager := hashutil.NewChecksumManager()
+	osFS := fs.NewOSFileSystem()
+	checksumManager := hash.NewChecksumManager()
 	commandExecutor := executor.NewOSCommandExecutor(cfg)
 	todoStore := todo.NewInMemoryTodoStore()
-	pathResolver := pathutil.NewResolver(canonicalRoot)
+	pathResolver := path.NewResolver(canonicalRoot)
 
 	// Initialize gitignore service
 	var gitignoreService interface {
 		ShouldIgnore(relativePath string) bool
 	}
-	svc, err := gitutil.NewService(canonicalRoot, osFS)
+	svc, err := git.NewService(canonicalRoot, osFS)
 	if err != nil {
 		// Log error but continue with NoOpService
 		fmt.Fprintf(os.Stderr, "Warning: failed to initialize gitignore service: %v\n", err)
-		gitignoreService = &gitutil.NoOpService{}
+		gitignoreService = &git.NoOpService{}
 	} else {
 		gitignoreService = svc
 	}
@@ -99,9 +97,9 @@ func createTools(cfg *config.Config, workspaceRoot string) ([]orchadapter.Tool, 
 	}
 
 	// Instantiate all tools with their dependencies
-	readFileTool := file.NewReadFileTool(osFS, binaryDetector, checksumManager, cfg, pathResolver)
-	writeFileTool := file.NewWriteFileTool(osFS, binaryDetector, checksumManager, cfg, pathResolver)
-	editFileTool := file.NewEditFileTool(osFS, binaryDetector, checksumManager, cfg, pathResolver)
+	readFileTool := file.NewReadFileTool(osFS, checksumManager, cfg, pathResolver)
+	writeFileTool := file.NewWriteFileTool(osFS, checksumManager, cfg, pathResolver)
+	editFileTool := file.NewEditFileTool(osFS, checksumManager, cfg, pathResolver)
 	listDirectoryTool := directory.NewListDirectoryTool(osFS, gitignoreService, cfg, pathResolver)
 	findFileTool := directory.NewFindFileTool(osFS, commandExecutor, cfg, pathResolver)
 	searchContentTool := search.NewSearchContentTool(osFS, commandExecutor, cfg, pathResolver)

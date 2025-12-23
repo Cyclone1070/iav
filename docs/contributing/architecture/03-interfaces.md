@@ -40,8 +40,8 @@
 > In this case, **import its interface directly** rather than redefining an identical interface locally.
 > See [Pure Helpers](02-dependency-injection.md) for more on this distinction.
 >
-> *   **Bad**: Redefining `type pathResolver interface { Lstat()... }` when you already import `pathutil.Resolve`.
-> *   **Good**: Use `pathutil.FileSystem` directly since coupling already exists.
+> *   **Bad**: Redefining `type pathResolver interface { Lstat()... }` when you already import `path.Resolve`.
+> *   **Good**: Use `path.FileSystem` directly since coupling already exists.
 > *   **Why**: Redefining the interface is noise. It disguises where the requirement comes from.
 
 **Example**:

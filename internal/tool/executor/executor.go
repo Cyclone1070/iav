@@ -164,11 +164,10 @@ func (f *OSCommandExecutor) RunWithTimeout(ctx context.Context, command []string
 }
 
 func (f *OSCommandExecutor) collectOutput(stdout, stderr io.Reader) (string, string, bool) {
-	sampleSize := f.config.Tools.BinaryDetectionSampleSize
 	maxBytes := int(f.config.Tools.DefaultMaxCommandOutputSize)
 
-	stdoutCollector := newCollector(maxBytes, sampleSize)
-	stderrCollector := newCollector(maxBytes, sampleSize)
+	stdoutCollector := newCollector(maxBytes, 8000)
+	stderrCollector := newCollector(maxBytes, 8000)
 
 	var wg sync.WaitGroup
 	wg.Add(2)

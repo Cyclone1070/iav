@@ -11,13 +11,13 @@ import (
 
 	"github.com/Cyclone1070/iav/internal/config"
 	orchadapter "github.com/Cyclone1070/iav/internal/orchestrator/adapter"
-	"github.com/Cyclone1070/iav/internal/tool/contentutil"
 	"github.com/Cyclone1070/iav/internal/tool/directory"
+	"github.com/Cyclone1070/iav/internal/tool/executor"
 	"github.com/Cyclone1070/iav/internal/tool/file"
-	"github.com/Cyclone1070/iav/internal/tool/fsutil"
-	"github.com/Cyclone1070/iav/internal/tool/gitutil"
-	"github.com/Cyclone1070/iav/internal/tool/hashutil"
-	"github.com/Cyclone1070/iav/internal/tool/pathutil"
+	"github.com/Cyclone1070/iav/internal/tool/service/fs"
+	"github.com/Cyclone1070/iav/internal/tool/service/git"
+	"github.com/Cyclone1070/iav/internal/tool/service/hash"
+	"github.com/Cyclone1070/iav/internal/tool/service/path"
 	"github.com/Cyclone1070/iav/internal/tool/search"
 	"github.com/Cyclone1070/iav/internal/tool/shell"
 	"github.com/Cyclone1070/iav/internal/tool/todo"
@@ -34,17 +34,17 @@ func TestToolAdapter_ReadFile(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Canonicalize workspace root
-	canonicalRoot, err := pathutil.CanonicaliseRoot(workspaceRoot)
+	canonicalRoot, err := path.CanonicaliseRoot(workspaceRoot)
 	assert.NoError(t, err)
 
 	// Create dependencies
 	cfg := config.DefaultConfig()
-	osFS := fsutil.NewOSFileSystem()
-	binaryDetector := contentutil.NewSystemBinaryDetector(cfg.Tools.BinaryDetectionSampleSize)
-	checksumManager := hashutil.NewChecksumManager()
+	osFS := fs.NewOSFileSystem()
+	checksumManager := hash.NewChecksumManager()
+	pathResolver := path.NewResolver(canonicalRoot)
 
 	// Create tool
-	readFileTool := file.NewReadFileTool(osFS, binaryDetector, checksumManager, cfg, canonicalRoot)
+	readFileTool := file.NewReadFileTool(osFS, checksumManager, cfg, pathResolver)
 
 	// Create adapter
 	adapter := orchadapter.NewReadFileAdapter(readFileTool)
@@ -78,24 +78,24 @@ func TestToolAdapter_AllTools(t *testing.T) {
 	workspaceRoot := t.TempDir()
 
 	// Canonicalize workspace root
-	canonicalRoot, err := pathutil.CanonicaliseRoot(workspaceRoot)
+	canonicalRoot, err := path.CanonicaliseRoot(workspaceRoot)
 	assert.NoError(t, err)
 
 	// Create dependencies
 	cfg := config.DefaultConfig()
-	osFS := fsutil.NewOSFileSystem()
-	binaryDetector := contentutil.NewSystemBinaryDetector(cfg.Tools.BinaryDetectionSampleSize)
-	checksumManager := hashutil.NewChecksumManager()
-	commandExecutor := shell.NewOSCommandExecutor()
+	osFS := fs.NewOSFileSystem()
+	checksumManager := hash.NewChecksumManager()
+	commandExecutor := executor.NewOSCommandExecutor(cfg)
 	todoStore := todo.NewInMemoryTodoStore()
+	pathResolver := path.NewResolver(canonicalRoot)
 
 	// Initialize gitignore service
 	var gitignoreService interface {
 		ShouldIgnore(relativePath string) bool
 	}
-	svc, err := gitutil.NewService(canonicalRoot, osFS)
+	svc, err := git.NewService(canonicalRoot, osFS)
 	if err != nil {
-		gitignoreService = &gitutil.NoOpService{}
+		gitignoreService = &git.NoOpService{}
 	} else {
 		gitignoreService = svc
 	}
@@ -107,13 +107,13 @@ func TestToolAdapter_AllTools(t *testing.T) {
 	}
 
 	// Create all tools
-	readFileTool := file.NewReadFileTool(osFS, binaryDetector, checksumManager, cfg, canonicalRoot)
-	writeFileTool := file.NewWriteFileTool(osFS, binaryDetector, checksumManager, cfg, canonicalRoot)
-	editFileTool := file.NewEditFileTool(osFS, binaryDetector, checksumManager, cfg, canonicalRoot)
-	listDirectoryTool := directory.NewListDirectoryTool(osFS, gitignoreService, cfg, canonicalRoot)
-	findFileTool := directory.NewFindFileTool(osFS, commandExecutor, cfg, canonicalRoot)
-	searchContentTool := search.NewSearchContentTool(osFS, commandExecutor, cfg, canonicalRoot)
-	shellTool := shell.NewShellTool(osFS, commandExecutor, cfg, dockerConfig, canonicalRoot)
+	readFileTool := file.NewReadFileTool(osFS, checksumManager, cfg, pathResolver)
+	writeFileTool := file.NewWriteFileTool(osFS, checksumManager, cfg, pathResolver)
+	editFileTool := file.NewEditFileTool(osFS, checksumManager, cfg, pathResolver)
+	listDirectoryTool := directory.NewListDirectoryTool(osFS, gitignoreService, cfg, pathResolver)
+	findFileTool := directory.NewFindFileTool(osFS, commandExecutor, cfg, pathResolver)
+	searchContentTool := search.NewSearchContentTool(osFS, commandExecutor, cfg, pathResolver)
+	shellTool := shell.NewShellTool(osFS, commandExecutor, cfg, dockerConfig, pathResolver)
 	readTodosTool := todo.NewReadTodosTool(todoStore, cfg)
 	writeTodosTool := todo.NewWriteTodosTool(todoStore, cfg)
 
@@ -161,17 +161,17 @@ func TestToolAdapter_ErrorHandling(t *testing.T) {
 	workspaceRoot := t.TempDir()
 
 	// Canonicalize workspace root
-	canonicalRoot, err := pathutil.CanonicaliseRoot(workspaceRoot)
+	canonicalRoot, err := path.CanonicaliseRoot(workspaceRoot)
 	assert.NoError(t, err)
 
 	// Create dependencies
 	cfg := config.DefaultConfig()
-	osFS := fsutil.NewOSFileSystem()
-	binaryDetector := contentutil.NewSystemBinaryDetector(cfg.Tools.BinaryDetectionSampleSize)
-	checksumManager := hashutil.NewChecksumManager()
+	osFS := fs.NewOSFileSystem()
+	checksumManager := hash.NewChecksumManager()
+	pathResolver := path.NewResolver(canonicalRoot)
 
 	// Create tool
-	readFileTool := file.NewReadFileTool(osFS, binaryDetector, checksumManager, cfg, canonicalRoot)
+	readFileTool := file.NewReadFileTool(osFS, checksumManager, cfg, pathResolver)
 
 	// Create adapter
 	adapter := orchadapter.NewReadFileAdapter(readFileTool)

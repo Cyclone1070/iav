@@ -46,9 +46,6 @@ func (c *Config) Validate() error {
 	if c.Tools.MaxFileSize < 1 {
 		errs = append(errs, "tools.max_file_size must be >= 1")
 	}
-	if c.Tools.BinaryDetectionSampleSize < 1 {
-		errs = append(errs, "tools.binary_detection_sample_size must be >= 1")
-	}
 	if c.Tools.DefaultListDirectoryLimit < 1 {
 		errs = append(errs, "tools.default_list_directory_limit must be >= 1")
 	}

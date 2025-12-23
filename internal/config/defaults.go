@@ -25,8 +25,7 @@ type ProviderConfig struct {
 
 type ToolsConfig struct {
 	// File Operations
-	MaxFileSize               int64 `json:"max_file_size"`                // Default: 5 * 1024 * 1024 (5MB)
-	BinaryDetectionSampleSize int   `json:"binary_detection_sample_size"` // Default: 4096
+	MaxFileSize int64 `json:"max_file_size"` // Default: 5 * 1024 * 1024 (5MB)
 
 	// Directory Listing
 	DefaultListDirectoryLimit int `json:"default_list_directory_limit"` // Default: 1000
@@ -107,7 +106,6 @@ func DefaultConfig() *Config {
 		},
 		Tools: ToolsConfig{
 			MaxFileSize:                 5 * 1024 * 1024,
-			BinaryDetectionSampleSize:   4096,
 			DefaultListDirectoryLimit:   1000,
 			MaxListDirectoryLimit:       10000,
 			MaxListDirectoryResults:     50000,

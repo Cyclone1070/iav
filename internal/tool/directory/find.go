@@ -10,8 +10,8 @@ import (
 
 	"github.com/Cyclone1070/iav/internal/config"
 	"github.com/Cyclone1070/iav/internal/tool/executor"
-	"github.com/Cyclone1070/iav/internal/tool/paginationutil"
-	"github.com/Cyclone1070/iav/internal/tool/pathutil"
+	"github.com/Cyclone1070/iav/internal/tool/helper/pagination"
+	"github.com/Cyclone1070/iav/internal/tool/service/path"
 )
 
 // FindFileTool handles file finding operations.
@@ -19,7 +19,7 @@ type FindFileTool struct {
 	fs              dirFinder
 	commandExecutor commandExecutor
 	config          *config.Config
-	pathResolver    *pathutil.Resolver
+	pathResolver    *path.Resolver
 }
 
 // NewFindFileTool creates a new FindFileTool with injected dependencies.
@@ -27,7 +27,7 @@ func NewFindFileTool(
 	fs dirFinder,
 	commandExecutor commandExecutor,
 	cfg *config.Config,
-	pathResolver *pathutil.Resolver,
+	pathResolver *path.Resolver,
 ) *FindFileTool {
 	return &FindFileTool{
 		fs:              fs,
@@ -126,7 +126,7 @@ func (t *FindFileTool) Run(ctx context.Context, req *FindFileRequest) (*FindFile
 	sort.Strings(matches)
 
 	// Apply pagination
-	paginatedMatches, paginationResult := paginationutil.ApplyPagination(matches, req.Offset, limit)
+	paginatedMatches, paginationResult := pagination.ApplyPagination(matches, req.Offset, limit)
 
 	return &FindFileResponse{
 		Matches:    paginatedMatches,

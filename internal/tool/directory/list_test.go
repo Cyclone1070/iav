@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/Cyclone1070/iav/internal/config"
-	"github.com/Cyclone1070/iav/internal/tool/pathutil"
+	"github.com/Cyclone1070/iav/internal/tool/service/path"
 )
 
 // Local mocks for directory listing tests
@@ -236,7 +236,7 @@ func TestListDirectory(t *testing.T) {
 		fs.createDir("/workspace/subdir2")
 
 		cfg := config.DefaultConfig()
-		listTool := NewListDirectoryTool(fs, nil, cfg, pathutil.NewResolver(workspaceRoot))
+		listTool := NewListDirectoryTool(fs, nil, cfg, path.NewResolver(workspaceRoot))
 
 		req := &ListDirectoryRequest{Path: ".", MaxDepth: -1, Offset: 0, Limit: 1000}
 		resp, err := listTool.Run(context.Background(), req)
@@ -283,7 +283,7 @@ func TestListDirectory(t *testing.T) {
 		fs.createDir("/workspace/src/internal")
 
 		cfg := config.DefaultConfig()
-		listTool := NewListDirectoryTool(fs, nil, cfg, pathutil.NewResolver(workspaceRoot))
+		listTool := NewListDirectoryTool(fs, nil, cfg, path.NewResolver(workspaceRoot))
 
 		req := &ListDirectoryRequest{Path: "src", MaxDepth: -1, Offset: 0, Limit: 1000}
 		resp, err := listTool.Run(context.Background(), req)
@@ -306,7 +306,7 @@ func TestListDirectory(t *testing.T) {
 		fs.createDir("/workspace/empty")
 
 		cfg := config.DefaultConfig()
-		listTool := NewListDirectoryTool(fs, nil, cfg, pathutil.NewResolver(workspaceRoot))
+		listTool := NewListDirectoryTool(fs, nil, cfg, path.NewResolver(workspaceRoot))
 
 		req := &ListDirectoryRequest{Path: "empty", MaxDepth: -1, Offset: 0, Limit: 1000}
 		resp, err := listTool.Run(context.Background(), req)
@@ -326,7 +326,7 @@ func TestListDirectory(t *testing.T) {
 		cfg := config.DefaultConfig()
 
 		req := &ListDirectoryRequest{Path: "file.txt", MaxDepth: -1, Offset: 0, Limit: 1000}
-		listTool := NewListDirectoryTool(fs, nil, cfg, pathutil.NewResolver(workspaceRoot))
+		listTool := NewListDirectoryTool(fs, nil, cfg, path.NewResolver(workspaceRoot))
 		_, err := listTool.Run(context.Background(), req)
 
 		if err == nil || !errors.Is(err, ErrNotADirectory) {
@@ -340,7 +340,7 @@ func TestListDirectory(t *testing.T) {
 		fs.createDir("/tmp/outside")
 
 		cfg := config.DefaultConfig()
-		listTool := NewListDirectoryTool(fs, nil, cfg, pathutil.NewResolver(workspaceRoot))
+		listTool := NewListDirectoryTool(fs, nil, cfg, path.NewResolver(workspaceRoot))
 
 		req := &ListDirectoryRequest{Path: "../tmp/outside", MaxDepth: -1, Offset: 0, Limit: 1000}
 		_, err := listTool.Run(context.Background(), req)
@@ -349,7 +349,7 @@ func TestListDirectory(t *testing.T) {
 			t.Fatal("expected error, got nil")
 		}
 
-		if !errors.Is(err, pathutil.ErrOutsideWorkspace) {
+		if !errors.Is(err, path.ErrOutsideWorkspace) {
 			t.Errorf("expected ErrOutsideWorkspace, got %v", err)
 		}
 	})
@@ -360,7 +360,7 @@ func TestListDirectory(t *testing.T) {
 		cfg := config.DefaultConfig()
 
 		req := &ListDirectoryRequest{Path: "nonexistent", MaxDepth: -1, Offset: 0, Limit: 1000}
-		listTool := NewListDirectoryTool(fs, nil, cfg, pathutil.NewResolver(workspaceRoot))
+		listTool := NewListDirectoryTool(fs, nil, cfg, path.NewResolver(workspaceRoot))
 		_, err := listTool.Run(context.Background(), req)
 		if err == nil || !errors.Is(err, ErrFileMissing) {
 			t.Errorf("expected ErrFileMissing, got %v", err)
@@ -374,7 +374,7 @@ func TestListDirectory(t *testing.T) {
 		fs.createFile("/workspace/src/main.go", []byte("package main"), 0644)
 
 		cfg := config.DefaultConfig()
-		listTool := NewListDirectoryTool(fs, nil, cfg, pathutil.NewResolver(workspaceRoot))
+		listTool := NewListDirectoryTool(fs, nil, cfg, path.NewResolver(workspaceRoot))
 
 		req := &ListDirectoryRequest{Path: "src", MaxDepth: -1, Offset: 0, Limit: 1000}
 		resp, err := listTool.Run(context.Background(), req)
@@ -394,7 +394,7 @@ func TestListDirectory(t *testing.T) {
 		fs.createFile("/workspace/src/main.go", []byte("package main"), 0644)
 
 		cfg := config.DefaultConfig()
-		listTool := NewListDirectoryTool(fs, nil, cfg, pathutil.NewResolver(workspaceRoot))
+		listTool := NewListDirectoryTool(fs, nil, cfg, path.NewResolver(workspaceRoot))
 
 		req := &ListDirectoryRequest{Path: "/workspace/src", MaxDepth: -1, Offset: 0, Limit: 1000}
 		resp, err := listTool.Run(context.Background(), req)
@@ -413,7 +413,7 @@ func TestListDirectory(t *testing.T) {
 		fs.createFile("/workspace/file.txt", []byte("content"), 0644)
 
 		cfg := config.DefaultConfig()
-		listTool := NewListDirectoryTool(fs, nil, cfg, pathutil.NewResolver(workspaceRoot))
+		listTool := NewListDirectoryTool(fs, nil, cfg, path.NewResolver(workspaceRoot))
 
 		req := &ListDirectoryRequest{Path: ".", MaxDepth: -1, Offset: 0, Limit: 1000}
 		resp, err := listTool.Run(context.Background(), req)
@@ -439,7 +439,7 @@ func TestListDirectory_Pagination(t *testing.T) {
 		}
 
 		cfg := config.DefaultConfig()
-		listTool := NewListDirectoryTool(fs, nil, cfg, pathutil.NewResolver(workspaceRoot))
+		listTool := NewListDirectoryTool(fs, nil, cfg, path.NewResolver(workspaceRoot))
 
 		// Get first 5
 		req1 := &ListDirectoryRequest{Path: ".", MaxDepth: -1, Offset: 0, Limit: 5}
@@ -481,7 +481,7 @@ func TestListDirectory_WithSymlinks(t *testing.T) {
 		fs.createSymlink("/workspace/linkdir", "/workspace/dir")
 
 		cfg := config.DefaultConfig()
-		listTool := NewListDirectoryTool(fs, nil, cfg, pathutil.NewResolver(workspaceRoot))
+		listTool := NewListDirectoryTool(fs, nil, cfg, path.NewResolver(workspaceRoot))
 
 		req := &ListDirectoryRequest{Path: ".", MaxDepth: -1, Offset: 0, Limit: 1000}
 		resp, err := listTool.Run(context.Background(), req)
@@ -507,7 +507,7 @@ func TestListDirectory_UnicodeFilenames(t *testing.T) {
 		fs.createFile("/workspace/ファイル.txt", []byte("content"), 0644)
 
 		cfg := config.DefaultConfig()
-		listTool := NewListDirectoryTool(fs, nil, cfg, pathutil.NewResolver(workspaceRoot))
+		listTool := NewListDirectoryTool(fs, nil, cfg, path.NewResolver(workspaceRoot))
 
 		req := &ListDirectoryRequest{Path: ".", MaxDepth: -1, Offset: 0, Limit: 1000}
 		resp, err := listTool.Run(context.Background(), req)
@@ -537,7 +537,7 @@ func TestListDirectory_DotfilesWithGitignore(t *testing.T) {
 		}
 
 		cfg := config.DefaultConfig()
-		listTool := NewListDirectoryTool(fs, gitignore, cfg, pathutil.NewResolver(workspaceRoot))
+		listTool := NewListDirectoryTool(fs, gitignore, cfg, path.NewResolver(workspaceRoot))
 
 		req := &ListDirectoryRequest{Path: ".", MaxDepth: -1, Offset: 0, Limit: 1000}
 		resp, err := listTool.Run(context.Background(), req)
@@ -567,7 +567,7 @@ func TestListDirectory_DotfilesWithoutGitignore(t *testing.T) {
 		fs.createFile("/workspace/.gitignore", []byte("content"), 0644)
 
 		cfg := config.DefaultConfig()
-		listTool := NewListDirectoryTool(fs, nil, cfg, pathutil.NewResolver(workspaceRoot))
+		listTool := NewListDirectoryTool(fs, nil, cfg, path.NewResolver(workspaceRoot))
 
 		req := &ListDirectoryRequest{Path: ".", MaxDepth: -1, Offset: 0, Limit: 1000}
 		resp, err := listTool.Run(context.Background(), req)
@@ -594,7 +594,7 @@ func TestListDirectory_LargeDirectory(t *testing.T) {
 		}
 
 		cfg := config.DefaultConfig()
-		listTool := NewListDirectoryTool(fs, nil, cfg, pathutil.NewResolver(workspaceRoot))
+		listTool := NewListDirectoryTool(fs, nil, cfg, path.NewResolver(workspaceRoot))
 
 		req := &ListDirectoryRequest{Path: ".", MaxDepth: -1, Offset: 0, Limit: 50}
 		resp, err := listTool.Run(context.Background(), req)
@@ -621,7 +621,7 @@ func TestListDirectory_OffsetBeyondEnd(t *testing.T) {
 		fs.createFile("/workspace/file.txt", []byte("content"), 0644)
 
 		cfg := config.DefaultConfig()
-		listTool := NewListDirectoryTool(fs, nil, cfg, pathutil.NewResolver(workspaceRoot))
+		listTool := NewListDirectoryTool(fs, nil, cfg, path.NewResolver(workspaceRoot))
 
 		req := &ListDirectoryRequest{Path: ".", MaxDepth: -1, Offset: 100, Limit: 10}
 		resp, err := listTool.Run(context.Background(), req)
@@ -650,7 +650,7 @@ func TestListDirectory_FilesystemErrorPropagation(t *testing.T) {
 		cfg := config.DefaultConfig()
 
 		req := &ListDirectoryRequest{Path: "testdir", MaxDepth: -1, Offset: 0, Limit: 1000}
-		listTool := NewListDirectoryTool(fs, nil, cfg, pathutil.NewResolver(workspaceRoot))
+		listTool := NewListDirectoryTool(fs, nil, cfg, path.NewResolver(workspaceRoot))
 		_, err := listTool.Run(context.Background(), req)
 		if err == nil {
 			t.Fatal("expected error, got nil")
@@ -672,7 +672,7 @@ func TestListDirectory_EntryMetadata(t *testing.T) {
 		fs.createDir("/workspace/subdir")
 
 		cfg := config.DefaultConfig()
-		listTool := NewListDirectoryTool(fs, nil, cfg, pathutil.NewResolver(workspaceRoot))
+		listTool := NewListDirectoryTool(fs, nil, cfg, path.NewResolver(workspaceRoot))
 
 		req := &ListDirectoryRequest{Path: ".", MaxDepth: -1, Offset: 0, Limit: 1000}
 		resp, err := listTool.Run(context.Background(), req)
@@ -731,7 +731,7 @@ func TestListDirectory_Sorting(t *testing.T) {
 		fs.createDir("/workspace/alpha")
 
 		cfg := config.DefaultConfig()
-		listTool := NewListDirectoryTool(fs, nil, cfg, pathutil.NewResolver(workspaceRoot))
+		listTool := NewListDirectoryTool(fs, nil, cfg, path.NewResolver(workspaceRoot))
 
 		req := &ListDirectoryRequest{Path: ".", MaxDepth: -1, Offset: 0, Limit: 1000}
 		resp, err := listTool.Run(context.Background(), req)
@@ -773,7 +773,7 @@ func TestListDirectory_NestedRelativePath(t *testing.T) {
 		fs.createFile("/workspace/src/app/main.go", []byte("package main"), 0644)
 
 		cfg := config.DefaultConfig()
-		listTool := NewListDirectoryTool(fs, nil, cfg, pathutil.NewResolver(workspaceRoot))
+		listTool := NewListDirectoryTool(fs, nil, cfg, path.NewResolver(workspaceRoot))
 
 		req := &ListDirectoryRequest{Path: "src/app", MaxDepth: -1, Offset: 0, Limit: 1000}
 		resp, err := listTool.Run(context.Background(), req)
@@ -804,7 +804,7 @@ func TestListDirectory_InvalidPagination(t *testing.T) {
 		fs.createFile("/workspace/file.txt", []byte("content"), 0644)
 
 		cfg := config.DefaultConfig()
-		listTool := NewListDirectoryTool(fs, nil, cfg, pathutil.NewResolver(workspaceRoot))
+		listTool := NewListDirectoryTool(fs, nil, cfg, path.NewResolver(workspaceRoot))
 
 		// Limit=0 should use default
 		req := &ListDirectoryRequest{Path: ".", MaxDepth: -1, Offset: 0, Limit: 0}

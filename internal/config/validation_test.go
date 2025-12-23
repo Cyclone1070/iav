@@ -49,14 +49,6 @@ func TestValidate_Tools(t *testing.T) {
 		assert.Contains(t, err.Error(), "max_file_size")
 	})
 
-	t.Run("Zero Binary Detection Sample Fails", func(t *testing.T) {
-		cfg := DefaultConfig()
-		cfg.Tools.BinaryDetectionSampleSize = 0
-		err := cfg.Validate()
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "binary_detection_sample_size")
-	})
-
 	t.Run("Zero Docker Retry Fails", func(t *testing.T) {
 		cfg := DefaultConfig()
 		cfg.Tools.DockerRetryAttempts = 0

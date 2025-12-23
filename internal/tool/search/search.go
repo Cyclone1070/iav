@@ -11,8 +11,8 @@ import (
 
 	"github.com/Cyclone1070/iav/internal/config"
 	"github.com/Cyclone1070/iav/internal/tool/executor"
-	"github.com/Cyclone1070/iav/internal/tool/paginationutil"
-	"github.com/Cyclone1070/iav/internal/tool/pathutil"
+	"github.com/Cyclone1070/iav/internal/tool/helper/pagination"
+	"github.com/Cyclone1070/iav/internal/tool/service/path"
 )
 
 // SearchContentTool handles content searching operations.
@@ -20,7 +20,7 @@ type SearchContentTool struct {
 	fs              fileSystem
 	commandExecutor commandExecutor
 	config          *config.Config
-	pathResolver    *pathutil.Resolver
+	pathResolver    *path.Resolver
 }
 
 // NewSearchContentTool creates a new SearchContentTool with injected dependencies.
@@ -28,7 +28,7 @@ func NewSearchContentTool(
 	fs fileSystem,
 	commandExecutor commandExecutor,
 	cfg *config.Config,
-	pathResolver *pathutil.Resolver,
+	pathResolver *path.Resolver,
 ) *SearchContentTool {
 	return &SearchContentTool{
 		fs:              fs,
@@ -166,7 +166,7 @@ func (t *SearchContentTool) Run(ctx context.Context, req *SearchContentRequest) 
 	})
 
 	// Apply pagination
-	paginatedMatches, paginationResult := paginationutil.ApplyPagination(matches, req.Offset, limit)
+	paginatedMatches, paginationResult := pagination.ApplyPagination(matches, req.Offset, limit)
 
 	return &SearchContentResponse{
 		Matches:    paginatedMatches,

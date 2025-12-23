@@ -7,7 +7,8 @@ import (
 	"strings"
 
 	"github.com/Cyclone1070/iav/internal/config"
-	"github.com/Cyclone1070/iav/internal/tool/pathutil"
+	"github.com/Cyclone1070/iav/internal/tool/helper/content"
+	"github.com/Cyclone1070/iav/internal/tool/service/path"
 )
 
 // fileEditor defines the minimal filesystem operations needed for editing files.
@@ -27,23 +28,20 @@ type checksumManager interface {
 // EditFileTool handles file editing operations.
 type EditFileTool struct {
 	fileOps         fileEditor
-	binaryDetector  binaryDetector
 	checksumManager checksumManager
 	config          *config.Config
-	pathResolver    *pathutil.Resolver
+	pathResolver    *path.Resolver
 }
 
 // NewEditFileTool creates a new EditFileTool with injected dependencies.
 func NewEditFileTool(
 	fileOps fileEditor,
-	binaryDetector binaryDetector,
 	checksumManager checksumManager,
 	cfg *config.Config,
-	pathResolver *pathutil.Resolver,
+	pathResolver *path.Resolver,
 ) *EditFileTool {
 	return &EditFileTool{
 		fileOps:         fileOps,
-		binaryDetector:  binaryDetector,
 		checksumManager: checksumManager,
 		config:          cfg,
 		pathResolver:    pathResolver,
@@ -87,8 +85,8 @@ func (t *EditFileTool) Run(ctx context.Context, req *EditFileRequest) (*EditFile
 		return nil, &ReadError{Path: abs, Cause: err}
 	}
 
-	// Check for binary using content we already read
-	if t.binaryDetector.IsBinaryContent(contentBytes) {
+	// Check for binary content
+	if content.IsBinaryContent(contentBytes) {
 		return nil, fmt.Errorf("%w: %s", ErrBinaryFile, abs)
 	}
 

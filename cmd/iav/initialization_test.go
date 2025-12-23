@@ -9,38 +9,22 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Cyclone1070/iav/internal/config"
 	providermodel "github.com/Cyclone1070/iav/internal/provider/model"
 	"github.com/Cyclone1070/iav/internal/testing/mock"
-	"github.com/Cyclone1070/iav/internal/tool/model"
-	"github.com/Cyclone1070/iav/internal/tool/service"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestMain_InitTools(t *testing.T) {
 	t.Parallel()
 
-	// Create workspace context
+	// Create workspaceRoot
 	workspaceRoot := t.TempDir()
-	fileSystem := service.NewOSFileSystem()
-	binaryDetector := &service.SystemBinaryDetector{}
-	checksumMgr := service.NewChecksumManager()
-	gitignoreSvc, _ := service.NewGitignoreService(workspaceRoot, fileSystem)
-
-	ctx := &model.WorkspaceContext{
-		FS:               fileSystem,
-		BinaryDetector:   binaryDetector,
-		ChecksumManager:  checksumMgr,
-		WorkspaceRoot:    workspaceRoot,
-		GitignoreService: gitignoreSvc,
-		CommandExecutor:  &service.OSCommandExecutor{},
-		DockerConfig: model.DockerConfig{
-			CheckCommand: []string{"docker", "info"},
-			StartCommand: []string{"docker", "desktop", "start"},
-		},
-	}
+	cfg := config.DefaultConfig()
 
 	// Initialize tools using helper
-	toolList := createTools(ctx)
+	toolList, err := createTools(cfg, workspaceRoot)
+	assert.NoError(t, err)
 
 	// All expected tools present
 	expectedTools := []string{
@@ -88,8 +72,6 @@ func TestMain_GoroutineCleanup(t *testing.T) {
 	appCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// Workspace context creation removed as it is now internal to runInteractive
-
 	// Create readiness signal
 	readyChan := make(chan struct{})
 
@@ -108,6 +90,7 @@ func TestMain_GoroutineCleanup(t *testing.T) {
 		UI:              mockUI,
 		ProviderFactory: providerFactory,
 		Tools:           nil, // Created in goroutine
+		Config:          config.DefaultConfig(),
 	}
 
 	// Run interactive mode in background
@@ -156,8 +139,6 @@ func TestMain_UIStartsInstantly(t *testing.T) {
 		t.Skip("Skipping UI startup timing test in short mode")
 	}
 
-	// Workspace context creation removed as it is now internal to runInteractive
-
 	// Track event order
 	events := []string{}
 	mu := sync.Mutex{}
@@ -188,6 +169,7 @@ func TestMain_UIStartsInstantly(t *testing.T) {
 		UI:              mockUI,
 		ProviderFactory: providerFactory,
 		Tools:           nil, // Created in runInteractive
+		Config:          config.DefaultConfig(),
 	}
 
 	// Run test

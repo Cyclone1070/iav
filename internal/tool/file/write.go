@@ -7,7 +7,8 @@ import (
 	"path/filepath"
 
 	"github.com/Cyclone1070/iav/internal/config"
-	"github.com/Cyclone1070/iav/internal/tool/pathutil"
+	"github.com/Cyclone1070/iav/internal/tool/helper/content"
+	"github.com/Cyclone1070/iav/internal/tool/service/path"
 )
 
 // fileWriter defines the minimal filesystem operations needed for writing files.
@@ -26,23 +27,20 @@ type checksumUpdater interface {
 // WriteFileTool handles file writing operations.
 type WriteFileTool struct {
 	fileOps         fileWriter
-	binaryDetector  binaryDetector
 	checksumManager checksumUpdater
 	config          *config.Config
-	pathResolver    *pathutil.Resolver
+	pathResolver    *path.Resolver
 }
 
 // NewWriteFileTool creates a new WriteFileTool with injected dependencies.
 func NewWriteFileTool(
 	fileOps fileWriter,
-	binaryDetector binaryDetector,
 	checksumManager checksumUpdater,
 	cfg *config.Config,
-	pathResolver *pathutil.Resolver,
+	pathResolver *path.Resolver,
 ) *WriteFileTool {
 	return &WriteFileTool{
 		fileOps:         fileOps,
-		binaryDetector:  binaryDetector,
 		checksumManager: checksumManager,
 		config:          cfg,
 		pathResolver:    pathResolver,
@@ -85,7 +83,8 @@ func (t *WriteFileTool) Run(ctx context.Context, req *WriteFileRequest) (*WriteF
 
 	contentBytes := []byte(req.Content)
 
-	if t.binaryDetector.IsBinaryContent(contentBytes) {
+	// Check for binary content
+	if content.IsBinaryContent(contentBytes) {
 		return nil, fmt.Errorf("%w: %s", ErrBinaryFile, abs)
 	}
 

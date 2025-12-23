@@ -1,21 +1,14 @@
-package contentutil
+package content
 
-// SystemBinaryDetector implements binary content detection using null byte detection.
-// It checks for null bytes in the first N bytes of content, with special handling for UTF BOMs.
-type SystemBinaryDetector struct {
-	sampleSize int // Number of bytes to sample for binary detection
-}
-
-// NewSystemBinaryDetector creates a new SystemBinaryDetector with the specified sample size.
-func NewSystemBinaryDetector(sampleSize int) *SystemBinaryDetector {
-	return &SystemBinaryDetector{
-		sampleSize: sampleSize,
-	}
-}
+// binarySampleSize defines the number of bytes to scan for null bytes when detecting binary content.
+// This matches Git's heuristic (8000 bytes since 2005) - a well-tested industry standard.
+// Hardcoding this value avoids unnecessary configuration while maintaining compatibility.
+const binarySampleSize = 8000
 
 // IsBinaryContent checks if content bytes contain binary data by looking for null bytes.
 // It handles UTF-16 and UTF-32 BOMs specially to avoid false positives.
-func (r *SystemBinaryDetector) IsBinaryContent(content []byte) bool {
+// This is a pure function with no state - import and use directly.
+func IsBinaryContent(content []byte) bool {
 	// Check for common text file BOMs (UTF-16, UTF-32)
 	if len(content) >= 2 {
 		if (content[0] == 0xFF && content[1] == 0xFE) ||
@@ -30,8 +23,8 @@ func (r *SystemBinaryDetector) IsBinaryContent(content []byte) bool {
 		}
 	}
 
-	// Check for null bytes in configured sample size
-	sampleSize := min(len(content), r.sampleSize)
+	// Check for null bytes in sample
+	sampleSize := min(len(content), binarySampleSize)
 	for i := range sampleSize {
 		if content[i] == 0 {
 			return true

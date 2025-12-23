@@ -1,4 +1,4 @@
-package paginationutil
+package pagination
 
 import (
 	"testing"
