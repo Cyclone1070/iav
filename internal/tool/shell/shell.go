@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/Cyclone1070/iav/internal/config"
-	"github.com/Cyclone1070/iav/internal/tool/executor"
+	"github.com/Cyclone1070/iav/internal/tool/service/executor"
 )
 
 // ShellTool executes commands on the local machine.

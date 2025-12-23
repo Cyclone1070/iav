@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Cyclone1070/iav/internal/tool/executor"
+	"github.com/Cyclone1070/iav/internal/tool/service/executor"
 )
 
 // mockCommandExecutorForDocker is a local mock for testing docker functions

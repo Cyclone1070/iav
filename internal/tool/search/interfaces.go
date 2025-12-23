@@ -4,7 +4,7 @@ import (
 	"context"
 	"os"
 
-	"github.com/Cyclone1070/iav/internal/tool/executor"
+	"github.com/Cyclone1070/iav/internal/tool/service/executor"
 )
 
 // pathResolver defines workspace path resolution operations.
