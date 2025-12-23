@@ -97,13 +97,10 @@ func (t *ReadFileTool) Run(ctx context.Context, req *ReadFileRequest) (*ReadFile
 		return nil, &ReadError{Path: abs, Cause: err}
 	}
 
-	// Check for binary using content we already read
-	// Check for binary content
 	if content.IsBinaryContent(contentBytes) {
 		return nil, fmt.Errorf("%w: %s", ErrBinaryFile, abs)
 	}
 
-	// Convert to string
 	content := string(contentBytes)
 
 	// Only cache checksum if we read the entire file
