@@ -6,8 +6,8 @@
     *   **Why**: Explicit dependencies make code testable and prevent hidden coupling.
 
 *   **Pure Helpers vs Dependencies**:
-    *   **Pure helpers** (stateless, no I/O, no side effects): These are static, repeating code extracted for DRY compliance. Import directly, including interfaces, structs and errors. No interface needed.
-    *   **Dependencies** (stateful, does I/O, has side effects): Define interface in consumer, inject via constructor.
+    *   **Pure helpers**: Simple, static functions. Import directly, including interfaces, structs and errors. No interface needed.
+    *   **Dependencies**: Complex logic. Define interface in consumer, inject via constructor. Wiring in main.
     *   **Why**: DI is for swappable/mockable behavior. Pure functions don't need mocking.
 
 *   **No Globals**: Never use global state for dependencies.
