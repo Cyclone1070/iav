@@ -6,12 +6,6 @@ import (
 	"github.com/Cyclone1070/iav/internal/config"
 )
 
-// pathResolver defines workspace path resolution operations.
-type pathResolver interface {
-	Abs(path string) (string, error)
-	Rel(path string) (string, error)
-}
-
 // -- Read File --
 
 type ReadFileRequest struct {

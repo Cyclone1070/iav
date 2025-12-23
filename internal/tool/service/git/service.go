@@ -20,9 +20,8 @@ func (e *GitignoreReadError) Error() string {
 }
 func (e *GitignoreReadError) Unwrap() error { return e.Cause }
 
-// FileSystem defines the minimal filesystem interface needed for gitignore service.
-// This is a consumer-defined interface per architecture guidelines §2.
-type FileSystem interface {
+// fileSystem defines the minimal filesystem interface needed for gitignore service.
+type fileSystem interface {
 	Stat(path string) (os.FileInfo, error)
 	ReadFileRange(path string, offset, limit int64) ([]byte, error)
 }
@@ -34,7 +33,7 @@ type Service struct {
 
 // NewService creates a new gitignore service by loading .gitignore from workspace root.
 // Returns a service that never ignores if .gitignore doesn't exist (no error).
-func NewService(workspaceRoot string, fs FileSystem) (*Service, error) {
+func NewService(workspaceRoot string, fs fileSystem) (*Service, error) {
 	gitignorePath := filepath.Join(workspaceRoot, ".gitignore")
 
 	// Check if .gitignore exists

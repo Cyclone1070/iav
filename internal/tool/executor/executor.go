@@ -3,7 +3,6 @@ package executor
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -13,9 +12,6 @@ import (
 	"github.com/Cyclone1070/iav/internal/config"
 )
 
-// ErrTimeout is returned when a command exceeds its timeout.
-var ErrTimeout = errors.New("command timeout")
-
 // Result represents the outcome of a command execution.
 type Result struct {
 	Stdout    string
@@ -23,18 +19,6 @@ type Result struct {
 	ExitCode  int
 	Truncated bool
 }
-
-// CommandError represents generic command execution failures (start, output, wait).
-type CommandError struct {
-	Cmd   string
-	Cause error
-	Stage string // "start", "read output", "execution"
-}
-
-func (e *CommandError) Error() string {
-	return fmt.Sprintf("command %s failed at %s: %v", e.Cmd, e.Stage, e.Cause)
-}
-func (e *CommandError) Unwrap() error { return e.Cause }
 
 // OSCommandExecutor implements command execution using os/exec for real system commands.
 type OSCommandExecutor struct {

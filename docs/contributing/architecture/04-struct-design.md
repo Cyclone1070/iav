@@ -14,6 +14,7 @@
 Use **private fields + constructor** when:
 
 - Fields must be valid together (invariants)
+- Fields should be validated at creation
 - Dependencies must not be nil
 - State should be immutable after creation
 

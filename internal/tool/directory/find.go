@@ -13,6 +13,18 @@ import (
 	"github.com/Cyclone1070/iav/internal/tool/helper/pagination"
 )
 
+// dirFinder defines the filesystem operations needed for finding files.
+// Note: Does NOT include ListDir - this tool uses the fd command instead.
+type dirFinder interface {
+	Stat(path string) (os.FileInfo, error)
+}
+
+// commandExecutor defines the interface for executing find commands.
+// This is a consumer-defined interface per architecture guidelines §3.
+type commandExecutor interface {
+	Run(ctx context.Context, cmd []string, dir string, env []string) (*executor.Result, error)
+}
+
 // FindFileTool handles file finding operations.
 type FindFileTool struct {
 	fs              dirFinder
