@@ -17,7 +17,7 @@
 >    └── errors.go   # Shared errors
 > ```
 
-*   **File Organization**: Do not create generic sub-directories like `model/`, `service/`, or `types/` inside your package.
+*   **File Organization**: Do not create generic sub-packages like `model/`, `service/`, or `types/` inside your package.
     *   **Correct**: `feature/types.go`, `feature/service.go`
     *   **Incorrect**: `feature/models/types.go`, `feature/services/service.go`
     *   **Why**: Generic layers group by what code IS, not what it DOES. This scatters related logic across directories.
@@ -66,35 +66,6 @@
 > ```
 >
 
-
-> [!CAUTION]
-> **ANTI-PATTERN**: Flatten and Bloat
->
-> When removing generic subdirectories, do NOT blindly flatten all files into the parent package.
->
-> ```text
-> # BEFORE: Internal layering (WRONG)
-> internal/feature/
->   ├── models/     (8 files)
->   ├── services/   (12 files)
->   └── handlers/   (5 files)
->
-> # WRONG FIX: Flatten everything (now 25 files!)
-> internal/feature/
->   ├── user.go
->   ├── order.go
->   └── ... (25 files)
->
-> # CORRECT FIX: Split by domain
-> internal/
->   ├── user/       (types.go, service.go, handler.go)
->   ├── order/      (types.go, service.go, handler.go)
->   └── payment/    (types.go, service.go, handler.go)
-> ```
->
-> *   **Why**: You've traded one anti-pattern for another. Both violate "small and focused."
-> *   **Rule**: If flattening exceeds 10-15 files, split into domain sub-packages.
-
 > [!NOTE]
 > **Single-File Directories Are Acceptable**
 >
@@ -108,9 +79,4 @@
 > *   **Solution**: Group by what it operates on:
 >     *   String helpers → `feature/text` or `internal/strutil`
 >     *   Time helpers → `feature/timeext`
->     *   Domain logic → `feature/auth/hashing` (NOT `feature/auth/utils`)
-
-*   **Naming Convention**: Use suffixes to signal package type at a glance.
-    *   `*serv` — Dependency with I/O (inject via interface): `fsserv`, `pathserv`, `gitserv`
-    *   `*util` — Pure stateless helper (import directly): `hashutil`, `contentutil`
-    *   No suffix — core feature: `file`, `shell`, `directory`
+>     *   Domain logic → `feature/auth/hashing`

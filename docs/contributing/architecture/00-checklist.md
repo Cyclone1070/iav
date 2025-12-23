@@ -10,7 +10,6 @@
 Before submitting code, verify **every** item.
 
 ### Package Design
-- [ ] No generic subdirectories (`model/`, `service/`, `utils/`, `types/`)
 - [ ] No package exceeds 10-15 files (excluding `*_test.go`)
 - [ ] Parent package does NOT import its sub-packages
 - [ ] Types and errors live with their implementation package
