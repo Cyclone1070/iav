@@ -9,28 +9,27 @@ import (
 
 	"github.com/Cyclone1070/iav/internal/config"
 	"github.com/Cyclone1070/iav/internal/tool/executor"
-	"github.com/Cyclone1070/iav/internal/tool/service/path"
 )
 
 // ShellTool executes commands on the local machine.
 type ShellTool struct {
-	fs              fileSystem
+	envFileOps      envFileReader
 	commandExecutor commandExecutor
 	config          *config.Config
 	dockerConfig    DockerConfig
-	pathResolver    *path.Resolver
+	pathResolver    pathResolver
 }
 
 // NewShellTool creates a new ShellTool with injected dependencies.
 func NewShellTool(
-	fs fileSystem,
+	envFileOps envFileReader,
 	commandExecutor commandExecutor,
 	cfg *config.Config,
 	dockerConfig DockerConfig,
-	pathResolver *path.Resolver,
+	pathResolver pathResolver,
 ) *ShellTool {
 	return &ShellTool{
-		fs:              fs,
+		envFileOps:      envFileOps,
 		commandExecutor: commandExecutor,
 		config:          cfg,
 		dockerConfig:    dockerConfig,
@@ -77,7 +76,7 @@ func (t *ShellTool) Run(ctx context.Context, req *ShellRequest) (*ShellResponse,
 			return nil, err
 		}
 
-		envVars, err := ParseEnvFile(t.fs, envFilePath)
+		envVars, err := ParseEnvFile(t.envFileOps, envFilePath)
 		if err != nil {
 			return nil, err
 		}

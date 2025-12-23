@@ -2,20 +2,20 @@ package shell
 
 import (
 	"context"
-	"os"
 	"time"
 
 	"github.com/Cyclone1070/iav/internal/tool/executor"
 )
 
-// fileSystem defines the minimal filesystem interface needed by shell tools.
-// This is a consumer-defined interface per architecture guidelines §2.
-type fileSystem interface {
-	Stat(path string) (os.FileInfo, error)
-	Lstat(path string) (os.FileInfo, error)
-	Readlink(path string) (string, error)
-	UserHomeDir() (string, error)
+// envFileReader defines the minimal filesystem interface needed for reading environment files.
+type envFileReader interface {
 	ReadFileRange(path string, offset, limit int64) ([]byte, error)
+}
+
+// pathResolver defines workspace path resolution operations.
+type pathResolver interface {
+	Abs(path string) (string, error)
+	Rel(path string) (string, error)
 }
 
 // commandExecutor defines the interface for executing shell commands.

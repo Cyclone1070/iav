@@ -29,7 +29,7 @@ type ListDirectoryTool struct {
 	fs               dirLister
 	gitignoreService gitignoreService
 	config           *config.Config
-	pathResolver     *path.Resolver
+	pathResolver     pathResolver
 }
 
 // NewListDirectoryTool creates a new ListDirectoryTool with injected dependencies.
@@ -37,7 +37,7 @@ func NewListDirectoryTool(
 	fs dirLister,
 	gitignoreService gitignoreService,
 	cfg *config.Config,
-	pathResolver *path.Resolver,
+	pathResolver pathResolver,
 ) *ListDirectoryTool {
 	return &ListDirectoryTool{
 		fs:               fs,

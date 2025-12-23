@@ -17,7 +17,7 @@ import (
 // - Multi-line values
 // - Variable expansion
 // - Complex shell escaping
-func ParseEnvFile(fs fileSystem, path string) (map[string]string, error) {
+func ParseEnvFile(fs envFileReader, path string) (map[string]string, error) {
 	content, err := fs.ReadFileRange(path, 0, 0)
 	if err != nil {
 		return nil, &EnvFileReadError{Path: path, Cause: err}

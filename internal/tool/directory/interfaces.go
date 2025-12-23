@@ -7,6 +7,12 @@ import (
 	"github.com/Cyclone1070/iav/internal/tool/executor"
 )
 
+// pathResolver defines workspace path resolution operations.
+type pathResolver interface {
+	Abs(path string) (string, error)
+	Rel(path string) (string, error)
+}
+
 // dirFinder defines the filesystem operations needed for finding files.
 // Note: Does NOT include ListDir - this tool uses the fd command instead.
 type dirFinder interface {

@@ -11,7 +11,6 @@ import (
 	"github.com/Cyclone1070/iav/internal/config"
 	"github.com/Cyclone1070/iav/internal/tool/executor"
 	"github.com/Cyclone1070/iav/internal/tool/helper/pagination"
-	"github.com/Cyclone1070/iav/internal/tool/service/path"
 )
 
 // FindFileTool handles file finding operations.
@@ -19,7 +18,7 @@ type FindFileTool struct {
 	fs              dirFinder
 	commandExecutor commandExecutor
 	config          *config.Config
-	pathResolver    *path.Resolver
+	pathResolver    pathResolver
 }
 
 // NewFindFileTool creates a new FindFileTool with injected dependencies.
@@ -27,7 +26,7 @@ func NewFindFileTool(
 	fs dirFinder,
 	commandExecutor commandExecutor,
 	cfg *config.Config,
-	pathResolver *path.Resolver,
+	pathResolver pathResolver,
 ) *FindFileTool {
 	return &FindFileTool{
 		fs:              fs,

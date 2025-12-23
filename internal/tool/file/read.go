@@ -7,7 +7,6 @@ import (
 
 	"github.com/Cyclone1070/iav/internal/config"
 	"github.com/Cyclone1070/iav/internal/tool/helper/content"
-	"github.com/Cyclone1070/iav/internal/tool/service/path"
 )
 
 // fileReader defines the minimal filesystem operations needed for reading files.
@@ -27,7 +26,7 @@ type ReadFileTool struct {
 	fileOps         fileReader
 	checksumManager checksumComputer
 	config          *config.Config
-	pathResolver    *path.Resolver
+	pathResolver    pathResolver
 }
 
 // NewReadFileTool creates a new ReadFileTool with injected dependencies.
@@ -35,7 +34,7 @@ func NewReadFileTool(
 	fileOps fileReader,
 	checksumManager checksumComputer,
 	cfg *config.Config,
-	pathResolver *path.Resolver,
+	pathResolver pathResolver,
 ) *ReadFileTool {
 	return &ReadFileTool{
 		fileOps:         fileOps,

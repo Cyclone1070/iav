@@ -8,7 +8,6 @@ import (
 
 	"github.com/Cyclone1070/iav/internal/config"
 	"github.com/Cyclone1070/iav/internal/tool/helper/content"
-	"github.com/Cyclone1070/iav/internal/tool/service/path"
 )
 
 // fileWriter defines the minimal filesystem operations needed for writing files.
@@ -29,7 +28,7 @@ type WriteFileTool struct {
 	fileOps         fileWriter
 	checksumManager checksumUpdater
 	config          *config.Config
-	pathResolver    *path.Resolver
+	pathResolver    pathResolver
 }
 
 // NewWriteFileTool creates a new WriteFileTool with injected dependencies.
@@ -37,7 +36,7 @@ func NewWriteFileTool(
 	fileOps fileWriter,
 	checksumManager checksumUpdater,
 	cfg *config.Config,
-	pathResolver *path.Resolver,
+	pathResolver pathResolver,
 ) *WriteFileTool {
 	return &WriteFileTool{
 		fileOps:         fileOps,

@@ -8,7 +8,6 @@ import (
 
 	"github.com/Cyclone1070/iav/internal/config"
 	"github.com/Cyclone1070/iav/internal/tool/helper/content"
-	"github.com/Cyclone1070/iav/internal/tool/service/path"
 )
 
 // fileEditor defines the minimal filesystem operations needed for editing files.
@@ -30,7 +29,7 @@ type EditFileTool struct {
 	fileOps         fileEditor
 	checksumManager checksumManager
 	config          *config.Config
-	pathResolver    *path.Resolver
+	pathResolver    pathResolver
 }
 
 // NewEditFileTool creates a new EditFileTool with injected dependencies.
@@ -38,7 +37,7 @@ func NewEditFileTool(
 	fileOps fileEditor,
 	checksumManager checksumManager,
 	cfg *config.Config,
-	pathResolver *path.Resolver,
+	pathResolver pathResolver,
 ) *EditFileTool {
 	return &EditFileTool{
 		fileOps:         fileOps,
