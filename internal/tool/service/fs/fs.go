@@ -16,18 +16,18 @@ func NewOSFileSystem() *OSFileSystem {
 }
 
 // Stat returns file info for a path (follows symlinks).
-func (r *OSFileSystem) Stat(path string) (os.FileInfo, error) {
+func (fs *OSFileSystem) Stat(path string) (os.FileInfo, error) {
 	return os.Stat(path)
 }
 
 // Lstat returns file info for a path without following symlinks.
-func (r *OSFileSystem) Lstat(path string) (os.FileInfo, error) {
+func (fs *OSFileSystem) Lstat(path string) (os.FileInfo, error) {
 	return os.Lstat(path)
 }
 
 // ReadFileRange reads a range of bytes from a file.
 // If offset and limit are both 0, reads the entire file.
-func (r *OSFileSystem) ReadFileRange(path string, offset, limit int64) ([]byte, error) {
+func (fs *OSFileSystem) ReadFileRange(path string, offset, limit int64) ([]byte, error) {
 	if offset < 0 {
 		return nil, fmt.Errorf("%w: %d", ErrInvalidOffset, offset)
 	}
@@ -86,7 +86,7 @@ func (r *OSFileSystem) ReadFileRange(path string, offset, limit int64) ([]byte, 
 // WriteFileAtomic writes content to a file atomically using temp file + rename pattern.
 // This ensures that if the process crashes mid-write, the original file remains intact.
 // The temp file is created in the same directory as the target to ensure atomic rename.
-func (r *OSFileSystem) WriteFileAtomic(path string, content []byte, perm os.FileMode) error {
+func (fs *OSFileSystem) WriteFileAtomic(path string, content []byte, perm os.FileMode) error {
 	dir := filepath.Dir(path)
 
 	tmpFile, err := os.CreateTemp(dir, ".tmp-*")
@@ -135,23 +135,23 @@ func (r *OSFileSystem) WriteFileAtomic(path string, content []byte, perm os.File
 }
 
 // EnsureDirs creates parent directories recursively if they don't exist.
-func (r *OSFileSystem) EnsureDirs(path string) error {
+func (fs *OSFileSystem) EnsureDirs(path string) error {
 	return os.MkdirAll(path, 0o755)
 }
 
 // Readlink reads the target of a symlink.
-func (r *OSFileSystem) Readlink(path string) (string, error) {
+func (fs *OSFileSystem) Readlink(path string) (string, error) {
 	return os.Readlink(path)
 }
 
 // UserHomeDir returns the current user's home directory.
-func (r *OSFileSystem) UserHomeDir() (string, error) {
+func (fs *OSFileSystem) UserHomeDir() (string, error) {
 	return os.UserHomeDir()
 }
 
 // ListDir lists the contents of a directory.
 // Returns a slice of FileInfo for each entry in the directory.
-func (r *OSFileSystem) ListDir(path string) ([]os.FileInfo, error) {
+func (fs *OSFileSystem) ListDir(path string) ([]os.FileInfo, error) {
 	entries, err := os.ReadDir(path)
 	if err != nil {
 		return nil, err
