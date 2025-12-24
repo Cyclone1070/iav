@@ -120,6 +120,5 @@ func (t *WriteFileTool) Run(ctx context.Context, req *WriteFileRequest) (*WriteF
 		AbsolutePath: abs,
 		RelativePath: rel,
 		BytesWritten: len(contentBytes),
-		FileMode:     uint32(perm),
 	}, nil
 }

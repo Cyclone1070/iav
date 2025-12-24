@@ -92,8 +92,8 @@ func TestEditFileRequest_Validation(t *testing.T) {
 		{"Valid", EditFileRequest{Path: "file.txt", Operations: []EditOperation{{Before: "old", After: "new"}}}, false},
 		{"EmptyPath", EditFileRequest{Path: "", Operations: []EditOperation{{Before: "old"}}}, true},
 		{"EmptyOperations", EditFileRequest{Path: "file.txt", Operations: []EditOperation{}}, true},
-		{"EmptyBefore", EditFileRequest{Path: "file.txt", Operations: []EditOperation{{Before: ""}}}, true},
-		{"NegativeReplacements", EditFileRequest{Path: "file.txt", Operations: []EditOperation{{Before: "old", ExpectedReplacements: -1}}}, true},
+		{"EmptyBeforeIsAppend", EditFileRequest{Path: "file.txt", Operations: []EditOperation{{Before: ""}}}, false},
+		{"NegativeReplacements", EditFileRequest{Path: "file.txt", Operations: []EditOperation{{Before: "old", ExpectedReplacements: -1}}}, false},
 	}
 
 	for _, tt := range tests {

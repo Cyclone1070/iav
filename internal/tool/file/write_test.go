@@ -354,7 +354,7 @@ func TestWriteFile(t *testing.T) {
 		expectedPerm := os.FileMode(0644)
 
 		req := &WriteFileRequest{Path: "default_perm.txt", Content: "content"}
-		resp, err := writeTool.Run(context.Background(), req)
+		_, err := writeTool.Run(context.Background(), req)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -368,9 +368,6 @@ func TestWriteFile(t *testing.T) {
 			t.Errorf("expected permissions %o, got %o", expectedPerm, info.Mode().Perm())
 		}
 
-		if resp.FileMode != uint32(expectedPerm) {
-			t.Errorf("expected FileMode %o, got %o", expectedPerm, resp.FileMode)
-		}
 	})
 
 	t.Run("nested directory creation", func(t *testing.T) {

@@ -118,20 +118,36 @@ func (t *EditFileTool) Run(ctx context.Context, req *EditFileRequest) (*EditFile
 	// Apply operations sequentially
 	operationsApplied := 0
 	for _, op := range req.Operations {
+		// Empty Before means append to end of file
+		if op.Before == "" {
+			// Append has exactly 1 logical "target" (end of file).
+			// If count > 1 is specified, it's a mismatch since there's only 1 place to append.
+			if op.ExpectedReplacements > 1 {
+				return nil, fmt.Errorf("%w: append has 1 target, got %d", ErrReplacementCountMismatch, op.ExpectedReplacements)
+			}
+			content += op.After
+			operationsApplied++
+			continue
+		}
+
 		count := strings.Count(content, op.Before)
 		if count == 0 {
 			return nil, fmt.Errorf("%w: %s in %s", ErrSnippetNotFound, op.Before, abs)
 		}
 
 		expected := op.ExpectedReplacements
-		replaceLimit := expected
-		if expected == 0 {
-			replaceLimit = -1
-		} else if count != expected {
-			return nil, fmt.Errorf("%w in %s: expected %d, found %d", ErrReplacementMismatch, abs, expected, count)
+		// Default to 1 if not specified or invalid.
+		// THERE IS NO VALUE that will lead to replace all counts.
+		// The count must be provided explicitly to ensure agent understands what they're writing.
+		if expected <= 0 {
+			expected = 1
 		}
 
-		content = strings.Replace(content, op.Before, op.After, replaceLimit)
+		if count != expected {
+			return nil, fmt.Errorf("%w in %s: expected %d, found %d", ErrReplacementCountMismatch, abs, expected, count)
+		}
+
+		content = strings.Replace(content, op.Before, op.After, expected)
 		operationsApplied++
 	}
 

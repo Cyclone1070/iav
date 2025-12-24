@@ -164,8 +164,8 @@ func TestEditFile(t *testing.T) {
 
 		editReq := &EditFileRequest{Path: "test.txt", Operations: ops}
 		_, err = editTool.Run(context.Background(), editReq)
-		if err == nil || !errors.Is(err, ErrReplacementMismatch) {
-			t.Errorf("expected ErrReplacementMismatch, got %v", err)
+		if err == nil || !errors.Is(err, ErrReplacementCountMismatch) {
+			t.Errorf("expected ErrReplacementCountMismatch, got %v", err)
 		}
 	})
 
@@ -209,7 +209,7 @@ func TestEditFile(t *testing.T) {
 		}
 	})
 
-	t.Run("zero expected replacements matches all", func(t *testing.T) {
+	t.Run("zero expected replacements defaults to 1", func(t *testing.T) {
 		fs := newMockFileSystemForWrite()
 		checksumManager := newMockChecksumManagerForWrite()
 		content := []byte("foo\nfoo\nbar")
@@ -228,24 +228,14 @@ func TestEditFile(t *testing.T) {
 			{
 				Before:               "foo",
 				After:                "baz",
-				ExpectedReplacements: 0, // matches all
+				ExpectedReplacements: 0, // Defaults to 1, but there are 2
 			},
 		}
 
 		editReq := &EditFileRequest{Path: "test.txt", Operations: ops}
-		resp, err := editTool.Run(context.Background(), editReq)
-		if err != nil {
-			t.Fatalf("Run failed: %v", err)
-		}
-
-		if resp.OperationsApplied != 1 {
-			t.Errorf("expected 1 operation applied, got %d", resp.OperationsApplied)
-		}
-
-		final, _ := fs.ReadFileRange("/workspace/test.txt", 0, 0)
-		expected := "baz\nbaz\nbar"
-		if string(final) != expected {
-			t.Errorf("expected %q, got %q", expected, string(final))
+		_, err := editTool.Run(context.Background(), editReq)
+		if err == nil || !errors.Is(err, ErrReplacementCountMismatch) {
+			t.Errorf("expected ErrReplacementCountMismatch, got %v", err)
 		}
 	})
 
@@ -273,6 +263,166 @@ func TestEditFile(t *testing.T) {
 		_, err := editTool.Run(context.Background(), editReq)
 		if err == nil || !errors.Is(err, ErrSnippetNotFound) {
 			t.Errorf("expected ErrSnippetNotFound, got %v", err)
+		}
+	})
+
+	t.Run("append to non-empty file", func(t *testing.T) {
+		fs := newMockFileSystemForWrite()
+		checksumManager := newMockChecksumManagerForWrite()
+		fs.createFile("/workspace/test.txt", []byte("existing"), 0644)
+
+		cfg := config.DefaultConfig()
+		editTool := NewEditFileTool(fs, checksumManager, cfg, path.NewResolver(workspaceRoot))
+
+		ops := []EditOperation{
+			{
+				Before: "",
+				After:  "\nnew line",
+			},
+		}
+
+		editReq := &EditFileRequest{Path: "test.txt", Operations: ops}
+		resp, err := editTool.Run(context.Background(), editReq)
+		if err != nil {
+			t.Fatalf("Run failed: %v", err)
+		}
+
+		if resp.OperationsApplied != 1 {
+			t.Errorf("expected 1 op applied, got %d", resp.OperationsApplied)
+		}
+
+		final, _ := fs.ReadFileRange("/workspace/test.txt", 0, 0)
+		expected := "existing\nnew line"
+		if string(final) != expected {
+			t.Errorf("expected content %q, got %q", expected, string(final))
+		}
+	})
+
+	t.Run("append to empty file", func(t *testing.T) {
+		fs := newMockFileSystemForWrite()
+		checksumManager := newMockChecksumManagerForWrite()
+		fs.createFile("/workspace/test.txt", []byte(""), 0644)
+
+		cfg := config.DefaultConfig()
+		editTool := NewEditFileTool(fs, checksumManager, cfg, path.NewResolver(workspaceRoot))
+
+		ops := []EditOperation{
+			{
+				Before: "",
+				After:  "first content",
+			},
+		}
+
+		editReq := &EditFileRequest{Path: "test.txt", Operations: ops}
+		resp, err := editTool.Run(context.Background(), editReq)
+		if err != nil {
+			t.Fatalf("Run failed: %v", err)
+		}
+
+		if resp.OperationsApplied != 1 {
+			t.Errorf("expected 1 op applied, got %d", resp.OperationsApplied)
+		}
+
+		final, _ := fs.ReadFileRange("/workspace/test.txt", 0, 0)
+		expected := "first content"
+		if string(final) != expected {
+			t.Errorf("expected content %q, got %q", expected, string(final))
+		}
+	})
+
+	t.Run("multiple appends in one request", func(t *testing.T) {
+		fs := newMockFileSystemForWrite()
+		checksumManager := newMockChecksumManagerForWrite()
+		fs.createFile("/workspace/test.txt", []byte("start"), 0644)
+
+		cfg := config.DefaultConfig()
+		editTool := NewEditFileTool(fs, checksumManager, cfg, path.NewResolver(workspaceRoot))
+
+		ops := []EditOperation{
+			{
+				Before: "",
+				After:  "1",
+			},
+			{
+				Before: "",
+				After:  "2",
+			},
+		}
+
+		editReq := &EditFileRequest{Path: "test.txt", Operations: ops}
+		resp, err := editTool.Run(context.Background(), editReq)
+		if err != nil {
+			t.Fatalf("Run failed: %v", err)
+		}
+
+		if resp.OperationsApplied != 2 {
+			t.Errorf("expected 2 ops applied, got %d", resp.OperationsApplied)
+		}
+
+		final, _ := fs.ReadFileRange("/workspace/test.txt", 0, 0)
+		expected := "start12"
+		if string(final) != expected {
+			t.Errorf("expected content %q, got %q", expected, string(final))
+		}
+	})
+
+	t.Run("mixed replace and append", func(t *testing.T) {
+		fs := newMockFileSystemForWrite()
+		checksumManager := newMockChecksumManagerForWrite()
+		fs.createFile("/workspace/test.txt", []byte("foo\nbar"), 0644)
+
+		cfg := config.DefaultConfig()
+		editTool := NewEditFileTool(fs, checksumManager, cfg, path.NewResolver(workspaceRoot))
+
+		ops := []EditOperation{
+			{
+				Before:               "foo",
+				After:                "baz",
+				ExpectedReplacements: 1,
+			},
+			{
+				Before: "",
+				After:  "\nend",
+			},
+		}
+
+		editReq := &EditFileRequest{Path: "test.txt", Operations: ops}
+		resp, err := editTool.Run(context.Background(), editReq)
+		if err != nil {
+			t.Fatalf("Run failed: %v", err)
+		}
+
+		if resp.OperationsApplied != 2 {
+			t.Errorf("expected 2 ops applied, got %d", resp.OperationsApplied)
+		}
+
+		final, _ := fs.ReadFileRange("/workspace/test.txt", 0, 0)
+		expected := "baz\nbar\nend"
+		if string(final) != expected {
+			t.Errorf("expected content %q, got %q", expected, string(final))
+		}
+	})
+
+	t.Run("append with count > 1 errors", func(t *testing.T) {
+		fs := newMockFileSystemForWrite()
+		checksumManager := newMockChecksumManagerForWrite()
+		fs.createFile("/workspace/test.txt", []byte("start"), 0644)
+
+		cfg := config.DefaultConfig()
+		editTool := NewEditFileTool(fs, checksumManager, cfg, path.NewResolver(workspaceRoot))
+
+		ops := []EditOperation{
+			{
+				Before:               "",
+				After:                "tail",
+				ExpectedReplacements: 2, // Should fail since only 1 place to append
+			},
+		}
+
+		editReq := &EditFileRequest{Path: "test.txt", Operations: ops}
+		_, err := editTool.Run(context.Background(), editReq)
+		if err == nil || !errors.Is(err, ErrReplacementCountMismatch) {
+			t.Errorf("expected ErrReplacementCountMismatch, got %v", err)
 		}
 	})
 }

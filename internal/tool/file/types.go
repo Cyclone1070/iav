@@ -56,7 +56,6 @@ type WriteFileResponse struct {
 	AbsolutePath string
 	RelativePath string
 	BytesWritten int
-	FileMode     uint32
 }
 
 // -- Edit File --
@@ -78,14 +77,6 @@ func (r *EditFileRequest) Validate(cfg *config.Config) error {
 	}
 	if len(r.Operations) == 0 {
 		return ErrOperationsRequired
-	}
-	for _, op := range r.Operations {
-		if op.Before == "" {
-			return ErrEmptyBefore
-		}
-		if op.ExpectedReplacements < 0 {
-			return ErrInvalidExpectedReplacements
-		}
 	}
 	return nil
 }
