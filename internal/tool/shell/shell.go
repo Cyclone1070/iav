@@ -102,9 +102,6 @@ func (t *ShellTool) Run(ctx context.Context, req *ShellRequest) (*ShellResponse,
 	}
 
 	timeout := time.Duration(req.TimeoutSeconds) * time.Second
-	if timeout == 0 {
-		timeout = time.Duration(t.config.Tools.DefaultShellTimeout) * time.Second
-	}
 
 	result, execErr := t.commandExecutor.RunWithTimeout(ctx, req.Command, wdAbs, env, timeout)
 	if result == nil {

@@ -22,6 +22,10 @@ func (r *ReadFileRequest) Validate(cfg *config.Config) error {
 	if r.Limit != nil && *r.Limit < 0 {
 		return ErrInvalidLimit
 	}
+	if r.Limit == nil || *r.Limit <= 0 {
+		limit := cfg.Tools.MaxFileSize
+		r.Limit = &limit
+	}
 	return nil
 }
 
@@ -77,6 +81,11 @@ func (r *EditFileRequest) Validate(cfg *config.Config) error {
 	}
 	if len(r.Operations) == 0 {
 		return ErrOperationsRequired
+	}
+	for i := range r.Operations {
+		if r.Operations[i].ExpectedReplacements <= 0 {
+			r.Operations[i].ExpectedReplacements = 1
+		}
 	}
 	return nil
 }

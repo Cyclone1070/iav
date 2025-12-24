@@ -76,11 +76,7 @@ func (t *ListDirectoryTool) Run(ctx context.Context, req *ListDirectoryRequest) 
 		return nil, err
 	}
 
-	// Use configured limits
-	limit := t.config.Tools.DefaultListDirectoryLimit
-	if req.Limit != 0 {
-		limit = req.Limit
-	}
+	limit := req.Limit
 
 	// Check if path exists and is a directory
 	info, err := t.fs.Stat(abs)
@@ -95,11 +91,7 @@ func (t *ListDirectoryTool) Run(ctx context.Context, req *ListDirectoryRequest) 
 		return nil, fmt.Errorf("%w: %s", ErrNotADirectory, abs)
 	}
 
-	// Set maxDepth: 0 = non-recursive (only immediate children), -1 or negative = unlimited
 	maxDepth := req.MaxDepth
-	if maxDepth < 0 {
-		maxDepth = -1 // unlimited
-	}
 
 	// Collect entries recursively
 	visited := make(map[string]bool)

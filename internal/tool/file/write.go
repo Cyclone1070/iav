@@ -99,14 +99,7 @@ func (t *WriteFileTool) Run(ctx context.Context, req *WriteFileRequest) (*WriteF
 		return nil, fmt.Errorf("%w: %s", ErrBinaryFile, abs)
 	}
 
-	// Runtime limit check (redundant but safe)
-	maxFileSize := t.config.Tools.MaxFileSize
-	if int64(len(contentBytes)) > maxFileSize {
-		return nil, fmt.Errorf("%w: %s (size %d, limit %d)", ErrFileTooLarge, abs, len(contentBytes), maxFileSize)
-	}
-
-	perm := os.FileMode(0644)
-
+	perm := os.FileMode(0o644)
 	// Write the file atomically
 	if err := t.fileOps.WriteFileAtomic(abs, contentBytes, perm); err != nil {
 		return nil, &WriteError{Path: abs, Cause: err}

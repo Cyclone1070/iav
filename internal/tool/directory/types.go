@@ -28,8 +28,14 @@ func (r *ListDirectoryRequest) Validate(cfg *config.Config) error {
 	if r.Limit < 0 {
 		return ErrInvalidLimit
 	}
-	if r.Limit > cfg.Tools.MaxListDirectoryLimit {
+	if r.Limit != 0 && r.Limit > cfg.Tools.MaxListDirectoryLimit {
 		return ErrLimitExceeded
+	}
+	if r.Limit == 0 {
+		r.Limit = cfg.Tools.DefaultListDirectoryLimit
+	}
+	if r.MaxDepth < 0 {
+		r.MaxDepth = -1 // unlimited
 	}
 	return nil
 }
@@ -65,8 +71,11 @@ func (r *FindFileRequest) Validate(cfg *config.Config) error {
 	if r.Limit < 0 {
 		return ErrInvalidLimit
 	}
-	if r.Limit > cfg.Tools.MaxFindFileLimit {
+	if r.Limit != 0 && r.Limit > cfg.Tools.MaxFindFileLimit {
 		return ErrLimitExceeded
+	}
+	if r.Limit == 0 {
+		r.Limit = cfg.Tools.DefaultFindFileLimit
 	}
 	return nil
 }

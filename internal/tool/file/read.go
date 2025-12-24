@@ -98,10 +98,7 @@ func (t *ReadFileTool) Run(ctx context.Context, req *ReadFileRequest) (*ReadFile
 		offset = *req.Offset
 	}
 
-	limit := maxFileSize
-	if req.Limit != nil && *req.Limit > 0 {
-		limit = *req.Limit
-	}
+	limit := *req.Limit
 
 	// Read the file range (single open+read syscall)
 	contentBytes, err := t.fileOps.ReadFileRange(abs, offset, limit)

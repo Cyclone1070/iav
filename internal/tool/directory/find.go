@@ -95,11 +95,7 @@ func (t *FindFileTool) Run(ctx context.Context, req *FindFileRequest) (*FindFile
 		return nil, fmt.Errorf("%w: %s", ErrNotADirectory, absSearchPath)
 	}
 
-	// Use configured limits
-	limit := t.config.Tools.DefaultFindFileLimit
-	if req.Limit != 0 {
-		limit = req.Limit
-	}
+	limit := req.Limit
 
 	// fd --glob "pattern" searchPath
 	cmd := []string{"fd", "--glob", req.Pattern, absSearchPath}
@@ -127,8 +123,8 @@ func (t *FindFileTool) Run(ctx context.Context, req *FindFileRequest) (*FindFile
 	maxResults := t.config.Tools.MaxFindFileResults
 
 	var matches []string
-	lines := strings.Split(res.Stdout, "\n")
-	for _, line := range lines {
+	lines := strings.SplitSeq(res.Stdout, "\n")
+	for line := range lines {
 		line = strings.TrimSpace(line)
 		if line == "" {
 			continue

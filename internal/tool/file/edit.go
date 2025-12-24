@@ -136,12 +136,6 @@ func (t *EditFileTool) Run(ctx context.Context, req *EditFileRequest) (*EditFile
 		}
 
 		expected := op.ExpectedReplacements
-		// Default to 1 if not specified or invalid.
-		// THERE IS NO VALUE that will lead to replace all counts.
-		// The count must be provided explicitly to ensure agent understands what they're writing.
-		if expected <= 0 {
-			expected = 1
-		}
 
 		if count != expected {
 			return nil, fmt.Errorf("%w in %s: expected %d, found %d", ErrReplacementCountMismatch, abs, expected, count)

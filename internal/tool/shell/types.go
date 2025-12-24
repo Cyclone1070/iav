@@ -28,6 +28,9 @@ func (r *ShellRequest) Validate(cfg *config.Config) error {
 	if r.TimeoutSeconds < 0 {
 		return fmt.Errorf("%w: %d", ErrInvalidTimeout, r.TimeoutSeconds)
 	}
+	if r.TimeoutSeconds == 0 {
+		r.TimeoutSeconds = cfg.Tools.DefaultShellTimeout
+	}
 	return nil
 }
 

@@ -80,11 +80,7 @@ func (t *SearchContentTool) Run(ctx context.Context, req *SearchContentRequest) 
 		return nil, fmt.Errorf("%w: %s", ErrNotADirectory, absSearchPath)
 	}
 
-	// Use configured limits
-	limit := t.config.Tools.DefaultSearchContentLimit
-	if req.Limit != 0 {
-		limit = req.Limit
-	}
+	limit := req.Limit
 
 	maxResults := t.config.Tools.MaxSearchContentResults
 

@@ -20,7 +20,7 @@ func TestEditFile(t *testing.T) {
 		fs := newMockFileSystemForWrite()
 		checksumManager := newMockChecksumManagerForWrite()
 		originalContent := []byte("original content")
-		fs.createFile("/workspace/test.txt", originalContent, 0644)
+		fs.createFile("/workspace/test.txt", originalContent, 0o644)
 
 		cfg := config.DefaultConfig()
 		cfg.Tools.MaxFileSize = maxFileSize
@@ -37,7 +37,7 @@ func TestEditFile(t *testing.T) {
 
 		// Modify file externally (simulate external change)
 		modifiedContent := []byte("modified externally")
-		fs.createFile("/workspace/test.txt", modifiedContent, 0644)
+		fs.createFile("/workspace/test.txt", modifiedContent, 0o644)
 
 		// Try to edit - should fail with conflict
 		ops := []EditOperation{
@@ -60,7 +60,7 @@ func TestEditFile(t *testing.T) {
 		checksumManager := newMockChecksumManagerForWrite()
 		// File content
 		content := []byte("some content")
-		fs.createFile("/workspace/test.txt", content, 0644)
+		fs.createFile("/workspace/test.txt", content, 0o644)
 
 		cfg := config.DefaultConfig()
 
@@ -89,7 +89,7 @@ func TestEditFile(t *testing.T) {
 		fs := newMockFileSystemForWrite()
 		checksumManager := newMockChecksumManagerForWrite()
 		content := []byte("line1\nline2\nline3")
-		fs.createFile("/workspace/test.txt", content, 0644)
+		fs.createFile("/workspace/test.txt", content, 0o644)
 
 		cfg := config.DefaultConfig()
 		cfg.Tools.MaxFileSize = maxFileSize
@@ -139,7 +139,7 @@ func TestEditFile(t *testing.T) {
 		fs := newMockFileSystemForWrite()
 		checksumManager := newMockChecksumManagerForWrite()
 		content := []byte("line1\nline1\nline3")
-		fs.createFile("/workspace/test.txt", content, 0644)
+		fs.createFile("/workspace/test.txt", content, 0o644)
 
 		cfg := config.DefaultConfig()
 		cfg.Tools.MaxFileSize = maxFileSize
@@ -173,7 +173,7 @@ func TestEditFile(t *testing.T) {
 		fs := newMockFileSystemForWrite()
 		checksumManager := newMockChecksumManagerForWrite()
 		content := []byte("foo\nfoo\nbar")
-		fs.createFile("/workspace/test.txt", content, 0644)
+		fs.createFile("/workspace/test.txt", content, 0o644)
 
 		cfg := config.DefaultConfig()
 
@@ -213,7 +213,7 @@ func TestEditFile(t *testing.T) {
 		fs := newMockFileSystemForWrite()
 		checksumManager := newMockChecksumManagerForWrite()
 		content := []byte("foo\nfoo\nbar")
-		fs.createFile("/workspace/test.txt", content, 0644)
+		fs.createFile("/workspace/test.txt", content, 0o644)
 
 		cfg := config.DefaultConfig()
 
@@ -242,7 +242,7 @@ func TestEditFile(t *testing.T) {
 	t.Run("snippet not found", func(t *testing.T) {
 		fs := newMockFileSystemForWrite()
 		checksumManager := newMockChecksumManagerForWrite()
-		fs.createFile("/workspace/test.txt", []byte("content"), 0644)
+		fs.createFile("/workspace/test.txt", []byte("content"), 0o644)
 
 		cfg := config.DefaultConfig()
 
@@ -269,7 +269,7 @@ func TestEditFile(t *testing.T) {
 	t.Run("append to non-empty file", func(t *testing.T) {
 		fs := newMockFileSystemForWrite()
 		checksumManager := newMockChecksumManagerForWrite()
-		fs.createFile("/workspace/test.txt", []byte("existing"), 0644)
+		fs.createFile("/workspace/test.txt", []byte("existing"), 0o644)
 
 		cfg := config.DefaultConfig()
 		editTool := NewEditFileTool(fs, checksumManager, cfg, path.NewResolver(workspaceRoot))
@@ -301,7 +301,7 @@ func TestEditFile(t *testing.T) {
 	t.Run("append to empty file", func(t *testing.T) {
 		fs := newMockFileSystemForWrite()
 		checksumManager := newMockChecksumManagerForWrite()
-		fs.createFile("/workspace/test.txt", []byte(""), 0644)
+		fs.createFile("/workspace/test.txt", []byte(""), 0o644)
 
 		cfg := config.DefaultConfig()
 		editTool := NewEditFileTool(fs, checksumManager, cfg, path.NewResolver(workspaceRoot))
@@ -333,7 +333,7 @@ func TestEditFile(t *testing.T) {
 	t.Run("multiple appends in one request", func(t *testing.T) {
 		fs := newMockFileSystemForWrite()
 		checksumManager := newMockChecksumManagerForWrite()
-		fs.createFile("/workspace/test.txt", []byte("start"), 0644)
+		fs.createFile("/workspace/test.txt", []byte("start"), 0o644)
 
 		cfg := config.DefaultConfig()
 		editTool := NewEditFileTool(fs, checksumManager, cfg, path.NewResolver(workspaceRoot))
@@ -369,7 +369,7 @@ func TestEditFile(t *testing.T) {
 	t.Run("mixed replace and append", func(t *testing.T) {
 		fs := newMockFileSystemForWrite()
 		checksumManager := newMockChecksumManagerForWrite()
-		fs.createFile("/workspace/test.txt", []byte("foo\nbar"), 0644)
+		fs.createFile("/workspace/test.txt", []byte("foo\nbar"), 0o644)
 
 		cfg := config.DefaultConfig()
 		editTool := NewEditFileTool(fs, checksumManager, cfg, path.NewResolver(workspaceRoot))
@@ -406,7 +406,7 @@ func TestEditFile(t *testing.T) {
 	t.Run("append with count > 1 errors", func(t *testing.T) {
 		fs := newMockFileSystemForWrite()
 		checksumManager := newMockChecksumManagerForWrite()
-		fs.createFile("/workspace/test.txt", []byte("start"), 0644)
+		fs.createFile("/workspace/test.txt", []byte("start"), 0o644)
 
 		cfg := config.DefaultConfig()
 		editTool := NewEditFileTool(fs, checksumManager, cfg, path.NewResolver(workspaceRoot))

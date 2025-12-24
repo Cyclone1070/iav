@@ -35,8 +35,11 @@ func (r *SearchContentRequest) Validate(cfg *config.Config) error {
 	if r.Limit < 0 {
 		return fmt.Errorf("%w: %d", ErrInvalidLimit, r.Limit)
 	}
-	if r.Limit > cfg.Tools.MaxSearchContentLimit {
+	if r.Limit != 0 && r.Limit > cfg.Tools.MaxSearchContentLimit {
 		return fmt.Errorf("%w: %d (max %d)", ErrLimitExceeded, r.Limit, cfg.Tools.MaxSearchContentLimit)
+	}
+	if r.Limit == 0 {
+		r.Limit = cfg.Tools.DefaultSearchContentLimit
 	}
 	return nil
 }
