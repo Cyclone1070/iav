@@ -87,13 +87,13 @@ func (t *EditFileTool) Run(ctx context.Context, req *EditFileRequest) (*EditFile
 		if os.IsNotExist(err) {
 			return nil, fmt.Errorf("%w: %s", ErrFileMissing, abs)
 		}
-		return nil, &StatError{Path: abs, Cause: err}
+		return nil, fmt.Errorf("failed to stat %s: %w", abs, err)
 	}
 
 	// Read full file (single open+read syscall)
 	contentBytes, err := t.fileOps.ReadFileRange(abs, 0, 0)
 	if err != nil {
-		return nil, &ReadError{Path: abs, Cause: err}
+		return nil, fmt.Errorf("failed to read file %s: %w", abs, err)
 	}
 
 	// Check for binary content
@@ -153,22 +153,9 @@ func (t *EditFileTool) Run(ctx context.Context, req *EditFileRequest) (*EditFile
 		return nil, fmt.Errorf("%w: %s (size %d, limit %d)", ErrFileTooLarge, abs, len(newContentBytes), maxFileSize)
 	}
 
-	// Only revalidate if we had a cached checksum to check against
-	// This optimizes the common case where files are edited without being read first
-	if ok {
-		revalidationBytes, err := t.fileOps.ReadFileRange(abs, 0, 0)
-		if err != nil {
-			return nil, &RevalidateError{Path: abs, Cause: err}
-		}
-		revalidationChecksum := t.checksumManager.Compute(revalidationBytes)
-		if revalidationChecksum != currentChecksum {
-			return nil, fmt.Errorf("%w during revalidation: %s", ErrEditConflict, abs)
-		}
-	}
-
 	// Write the modified content atomically
 	if err := t.fileOps.WriteFileAtomic(abs, newContentBytes, originalPerm); err != nil {
-		return nil, &WriteError{Path: abs, Cause: err}
+		return nil, fmt.Errorf("failed to write file %s: %w", abs, err)
 	}
 
 	// Compute new checksum and update cache

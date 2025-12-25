@@ -41,8 +41,8 @@ func TestRun(t *testing.T) {
 			cmd = []string{"cmd", "/c", "exit 1"}
 		}
 		res, err := exec.Run(context.Background(), cmd, "", nil)
-		if err == nil {
-			t.Error("expected error for non-zero exit")
+		if err != nil {
+			t.Errorf("unexpected error for non-zero exit: %v", err)
 		}
 		if res.ExitCode != 1 {
 			t.Errorf("expected exit code 1, got %d", res.ExitCode)

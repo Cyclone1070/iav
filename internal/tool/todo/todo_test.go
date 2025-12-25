@@ -286,9 +286,5 @@ func TestTodoStoreErrors(t *testing.T) {
 		if err == nil {
 			t.Error("expected error for store write failure")
 		}
-		var storeErr *StoreWriteError
-		if !errors.As(err, &storeErr) {
-			t.Errorf("expected StoreWriteError, got %T: %v", err, err)
-		}
 	})
 }

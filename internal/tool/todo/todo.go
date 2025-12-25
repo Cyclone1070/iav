@@ -2,6 +2,7 @@ package todo
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/Cyclone1070/iav/internal/config"
 )
@@ -82,7 +83,7 @@ func (t *WriteTodosTool) Run(ctx context.Context, req *WriteTodosRequest) (*Writ
 
 	todos := req.Todos
 	if err := t.store.Write(todos); err != nil {
-		return nil, &StoreWriteError{Cause: err}
+		return nil, fmt.Errorf("failed to write store: %w", err)
 	}
 
 	return &WriteTodosResponse{

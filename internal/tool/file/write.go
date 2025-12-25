@@ -84,12 +84,12 @@ func (t *WriteFileTool) Run(ctx context.Context, req *WriteFileRequest) (*WriteF
 		return nil, fmt.Errorf("%w: %s", ErrFileExists, abs)
 	}
 	if !os.IsNotExist(err) {
-		return nil, &StatError{Path: abs, Cause: err}
+		return nil, fmt.Errorf("failed to stat %s: %w", abs, err)
 	}
 
 	parentDir := filepath.Dir(abs)
 	if err := t.fileOps.EnsureDirs(parentDir); err != nil {
-		return nil, &EnsureDirsError{Path: parentDir, Cause: err}
+		return nil, fmt.Errorf("failed to create directories for %s: %w", parentDir, err)
 	}
 
 	contentBytes := []byte(req.Content)
@@ -102,7 +102,7 @@ func (t *WriteFileTool) Run(ctx context.Context, req *WriteFileRequest) (*WriteF
 	perm := os.FileMode(0o644)
 	// Write the file atomically
 	if err := t.fileOps.WriteFileAtomic(abs, contentBytes, perm); err != nil {
-		return nil, &WriteError{Path: abs, Cause: err}
+		return nil, fmt.Errorf("failed to write file %s: %w", abs, err)
 	}
 
 	// Compute checksum and update cache

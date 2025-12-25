@@ -19,7 +19,7 @@ import (
 func ParseEnvFile(fs envFileReader, path string) (map[string]string, error) {
 	content, err := fs.ReadFileRange(path, 0, 0)
 	if err != nil {
-		return nil, &EnvFileReadError{Path: path, Cause: err}
+		return nil, fmt.Errorf("failed to read env file %s: %w", path, err)
 	}
 
 	env := make(map[string]string)

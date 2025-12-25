@@ -11,7 +11,6 @@ import (
 
 	"github.com/Cyclone1070/iav/internal/config"
 	"github.com/Cyclone1070/iav/internal/tool/helper/pagination"
-	"github.com/Cyclone1070/iav/internal/tool/service/executor"
 )
 
 // SearchContentTool handles content searching operations.
@@ -73,7 +72,7 @@ func (t *SearchContentTool) Run(ctx context.Context, req *SearchContentRequest) 
 		if os.IsNotExist(err) {
 			return nil, fmt.Errorf("%w: %s", ErrFileMissing, absSearchPath)
 		}
-		return nil, &StatError{Path: absSearchPath, Cause: err}
+		return nil, fmt.Errorf("failed to stat %s: %w", absSearchPath, err)
 	}
 
 	if !info.IsDir() {
@@ -100,21 +99,17 @@ func (t *SearchContentTool) Run(ctx context.Context, req *SearchContentRequest) 
 
 	// Execute command
 	res, err := t.commandExecutor.Run(ctx, cmd, absSearchPath, nil)
-	if err != nil && (res == nil || res.ExitCode != 1) { // rg returns 1 for no matches
-		return nil, &executor.CommandError{Cmd: "rg", Cause: err, Stage: "execution"}
+	if err != nil {
+		return nil, fmt.Errorf("rg failed to start: %w", err)
+	}
+
+	// rg returns 1 if no matches are found (not an error for us).
+	if res.ExitCode != 0 && res.ExitCode != 1 {
+		return nil, fmt.Errorf("rg failed with exit code %d: %s", res.ExitCode, res.Stderr)
 	}
 
 	// Process output
 	var matches []SearchContentMatch
-	if res == nil {
-		return &SearchContentResponse{
-			Matches:    nil,
-			Offset:     req.Offset,
-			Limit:      limit,
-			TotalCount: 0,
-			Truncated:  false,
-		}, nil
-	}
 	lines := strings.Split(res.Stdout, "\n")
 
 	for _, line := range lines {

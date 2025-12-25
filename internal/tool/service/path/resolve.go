@@ -27,21 +27,21 @@ func NewResolver(workspaceRoot string) *Resolver {
 func CanonicaliseRoot(root string) (string, error) {
 	absRoot, err := filepath.Abs(root)
 	if err != nil {
-		return "", &WorkspaceRootError{Root: absRoot, Cause: err}
+		return "", fmt.Errorf("invalid workspace root %s: %w", absRoot, err)
 	}
 
 	// Resolve symlinks in the workspace root to get canonical path
 	resolved, err := filepath.EvalSymlinks(absRoot)
 	if err != nil {
-		return "", &WorkspaceRootError{Root: resolved, Cause: err}
+		return "", fmt.Errorf("invalid workspace root %s: %w", absRoot, err)
 	}
 
 	info, err := os.Stat(resolved)
 	if err != nil {
-		return "", &WorkspaceRootError{Root: resolved, Cause: err}
+		return "", fmt.Errorf("invalid workspace root %s: %w", resolved, err)
 	}
 	if !info.IsDir() {
-		return "", &WorkspaceRootError{Root: resolved, Cause: fmt.Errorf("%w: %s", ErrNotADirectory, resolved)}
+		return "", fmt.Errorf("invalid workspace root %s: %w", resolved, ErrNotADirectory)
 	}
 	return resolved, nil
 }

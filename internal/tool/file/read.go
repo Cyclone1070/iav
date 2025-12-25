@@ -79,7 +79,7 @@ func (t *ReadFileTool) Run(ctx context.Context, req *ReadFileRequest) (*ReadFile
 	// Get file info (single stat syscall)
 	info, err := t.fileOps.Stat(abs)
 	if err != nil {
-		return nil, &StatError{Path: abs, Cause: err}
+		return nil, fmt.Errorf("failed to stat %s: %w", abs, err)
 	}
 
 	// Check if it's a directory using info we already have
@@ -103,7 +103,7 @@ func (t *ReadFileTool) Run(ctx context.Context, req *ReadFileRequest) (*ReadFile
 	// Read the file range (single open+read syscall)
 	contentBytes, err := t.fileOps.ReadFileRange(abs, offset, limit)
 	if err != nil {
-		return nil, &ReadError{Path: abs, Cause: err}
+		return nil, fmt.Errorf("failed to read file %s: %w", abs, err)
 	}
 
 	if content.IsBinaryContent(contentBytes) {

@@ -287,9 +287,8 @@ func TestReadFile(t *testing.T) {
 
 		readReq := &ReadFileRequest{Path: "nonexistent.txt"}
 		_, err := readTool.Run(context.Background(), readReq)
-		var statErr *StatError
-		if err == nil || !errors.As(err, &statErr) {
-			t.Errorf("expected StatError for nonexistent file, got %v", err)
+		if err == nil {
+			t.Errorf("expected error for nonexistent file, got nil")
 		}
 	})
 

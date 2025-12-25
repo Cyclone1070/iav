@@ -3,6 +3,7 @@ package executor
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -46,15 +47,15 @@ func (f *OSCommandExecutor) Run(ctx context.Context, command []string, dir strin
 
 	stdoutPipe, err := cmd.StdoutPipe()
 	if err != nil {
-		return nil, &CommandError{Cmd: command[0], Cause: err, Stage: "start"}
+		return nil, fmt.Errorf("command %s failed to start: %w", command[0], err)
 	}
 	stderrPipe, err := cmd.StderrPipe()
 	if err != nil {
-		return nil, &CommandError{Cmd: command[0], Cause: err, Stage: "start"}
+		return nil, fmt.Errorf("command %s failed to start: %w", command[0], err)
 	}
 
 	if err := cmd.Start(); err != nil {
-		return nil, &CommandError{Cmd: command[0], Cause: err, Stage: "start"}
+		return nil, fmt.Errorf("command %s failed to start: %w", command[0], err)
 	}
 
 	stdoutStr, stderrStr, truncated := f.collectOutput(stdoutPipe, stderrPipe)
@@ -70,7 +71,7 @@ func (f *OSCommandExecutor) Run(ctx context.Context, command []string, dir strin
 		Stderr:    stderrStr,
 		ExitCode:  exitCode,
 		Truncated: truncated,
-	}, err
+	}, nil
 }
 
 // RunWithTimeout executes a command with a timeout and graceful shutdown.
@@ -87,15 +88,15 @@ func (f *OSCommandExecutor) RunWithTimeout(ctx context.Context, command []string
 
 	stdoutPipe, err := cmd.StdoutPipe()
 	if err != nil {
-		return nil, &CommandError{Cmd: command[0], Cause: err, Stage: "start"}
+		return nil, fmt.Errorf("command %s failed to start: %w", command[0], err)
 	}
 	stderrPipe, err := cmd.StderrPipe()
 	if err != nil {
-		return nil, &CommandError{Cmd: command[0], Cause: err, Stage: "start"}
+		return nil, fmt.Errorf("command %s failed to start: %w", command[0], err)
 	}
 
 	if err := cmd.Start(); err != nil {
-		return nil, &CommandError{Cmd: command[0], Cause: err, Stage: "start"}
+		return nil, fmt.Errorf("command %s failed to start: %w", command[0], err)
 	}
 
 	// Start output collection concurrently so it doesn't block the timeout select
@@ -142,12 +143,22 @@ func (f *OSCommandExecutor) RunWithTimeout(ctx context.Context, command []string
 		}
 	}
 
-	return &Result{
+	res := &Result{
 		Stdout:    stdoutStr,
 		Stderr:    stderrStr,
 		ExitCode:  exitCode,
 		Truncated: truncated,
-	}, execErr
+	}
+
+	// Only return error for infrastructure failures (timeout or context cancelled)
+	// Exit code failures are handled within the Result.
+	if errors.Is(execErr, ErrTimeout) ||
+		errors.Is(execErr, context.Canceled) ||
+		errors.Is(execErr, context.DeadlineExceeded) {
+		return res, execErr
+	}
+
+	return res, nil
 }
 
 func (f *OSCommandExecutor) collectOutput(stdout, stderr io.Reader) (string, string, bool) {

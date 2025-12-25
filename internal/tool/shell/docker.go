@@ -87,7 +87,7 @@ func EnsureDockerReady(ctx context.Context, runner commandExecutor, config Docke
 		return err
 	}
 	if res.ExitCode != 0 {
-		return fmt.Errorf("docker not ready: exit code %d", res.ExitCode)
+		return fmt.Errorf("docker failed to start after retries: exit code %d", res.ExitCode)
 	}
 	return nil
 }

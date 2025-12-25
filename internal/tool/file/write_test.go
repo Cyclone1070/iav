@@ -406,10 +406,6 @@ func TestWriteFile(t *testing.T) {
 		if err == nil {
 			t.Error("expected error when EnsureDirs fails")
 		}
-		var ensureErr *EnsureDirsError
-		if !errors.As(err, &ensureErr) {
-			t.Errorf("expected EnsureDirsError, got %T: %v", err, err)
-		}
 	})
 
 }

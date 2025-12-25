@@ -132,7 +132,7 @@ func TestSearchContent_CaseInsensitive(t *testing.T) {
 	mockRunner := &mockCommandExecutorForSearch{}
 	mockRunner.runFunc = func(ctx context.Context, cmd []string, dir string, env []string) (*executor.Result, error) {
 		capturedCmd = cmd
-		return &executor.Result{Stdout: "", ExitCode: 1}, newMockExitErrorForSearch(1)
+		return &executor.Result{Stdout: "", ExitCode: 1}, nil
 	}
 
 	searchTool := NewSearchContentTool(fs, mockRunner, cfg, path.NewResolver(workspaceRoot))
@@ -207,7 +207,7 @@ func TestSearchContent_CommandInjection(t *testing.T) {
 	mockRunner := &mockCommandExecutorForSearch{}
 	mockRunner.runFunc = func(ctx context.Context, cmd []string, dir string, env []string) (*executor.Result, error) {
 		capturedCmd = cmd
-		return &executor.Result{Stdout: "", ExitCode: 1}, newMockExitErrorForSearch(1)
+		return &executor.Result{Stdout: "", ExitCode: 1}, nil
 	}
 
 	searchTool := NewSearchContentTool(fs, mockRunner, cfg, path.NewResolver(workspaceRoot))
@@ -230,7 +230,7 @@ func TestSearchContent_NoMatches(t *testing.T) {
 
 	mockRunner := &mockCommandExecutorForSearch{}
 	mockRunner.runFunc = func(ctx context.Context, cmd []string, dir string, env []string) (*executor.Result, error) {
-		return &executor.Result{Stdout: "", ExitCode: 1}, newMockExitErrorForSearch(1)
+		return &executor.Result{Stdout: "", ExitCode: 1}, nil
 	}
 
 	searchTool := NewSearchContentTool(fs, mockRunner, cfg, path.NewResolver(workspaceRoot))
@@ -367,7 +367,7 @@ func TestSearchContent_CommandFailure(t *testing.T) {
 
 	mockRunner := &mockCommandExecutorForSearch{}
 	mockRunner.runFunc = func(ctx context.Context, cmd []string, dir string, env []string) (*executor.Result, error) {
-		return &executor.Result{Stdout: "", ExitCode: 2}, newMockExitErrorForSearch(2)
+		return &executor.Result{Stdout: "", ExitCode: 2}, nil
 	}
 
 	searchTool := NewSearchContentTool(fs, mockRunner, cfg, path.NewResolver(workspaceRoot))

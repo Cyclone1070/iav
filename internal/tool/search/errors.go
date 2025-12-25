@@ -2,18 +2,7 @@ package search
 
 import (
 	"errors"
-	"fmt"
 )
-
-// -- Errors --
-
-type StatError struct {
-	Path  string
-	Cause error
-}
-
-func (e *StatError) Error() string { return fmt.Sprintf("failed to stat %s: %v", e.Path, e.Cause) }
-func (e *StatError) Unwrap() error { return e.Cause }
 
 // -- Sentinels --
 

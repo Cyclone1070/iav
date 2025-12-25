@@ -88,7 +88,7 @@ func (t *FindFileTool) Run(ctx context.Context, req *FindFileRequest) (*FindFile
 		if os.IsNotExist(err) {
 			return nil, fmt.Errorf("%w: %s", ErrFileMissing, absSearchPath)
 		}
-		return nil, &StatError{Path: absSearchPath, Cause: err}
+		return nil, fmt.Errorf("failed to stat %s: %w", absSearchPath, err)
 	}
 
 	if !info.IsDir() {
@@ -113,10 +113,13 @@ func (t *FindFileTool) Run(ctx context.Context, req *FindFileRequest) (*FindFile
 	// Execute command
 	res, err := t.commandExecutor.Run(ctx, cmd, absSearchPath, nil)
 	if err != nil {
-		return nil, &executor.CommandError{Cmd: "fd", Cause: err, Stage: "execution"}
+		return nil, fmt.Errorf("fd failed to start: %w", err)
 	}
-	if res == nil {
-		return nil, &executor.CommandError{Cmd: "fd", Cause: fmt.Errorf("no result"), Stage: "execution"}
+
+	// res is guaranteed non-nil if err is nil.
+	// fd returns exit 1 if no files are found (not an error for us).
+	if res.ExitCode != 0 && res.ExitCode != 1 {
+		return nil, fmt.Errorf("fd failed with exit code %d: %s", res.ExitCode, res.Stderr)
 	}
 
 	// Capture all output

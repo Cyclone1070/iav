@@ -84,7 +84,7 @@ func (t *ListDirectoryTool) Run(ctx context.Context, req *ListDirectoryRequest) 
 		if os.IsNotExist(err) {
 			return nil, fmt.Errorf("%w: %s", ErrFileMissing, abs)
 		}
-		return nil, &StatError{Path: abs, Cause: err}
+		return nil, fmt.Errorf("failed to stat %s: %w", abs, err)
 	}
 
 	if !info.IsDir() {
@@ -176,7 +176,7 @@ func (t *ListDirectoryTool) listRecursive(ctx context.Context, abs string, curre
 		}
 
 		// Wrap other errors for context
-		return nil, false, &ListDirError{Path: abs, Cause: err}
+		return nil, false, fmt.Errorf("failed to list directory %s: %w", abs, err)
 	}
 
 	var directoryEntries []DirectoryEntry
