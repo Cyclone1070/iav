@@ -5,26 +5,55 @@
 > 
 > Every returned error forces the caller to handle it, adding complexity. Before returning an error, ask:
 > * Can this be handled internally (clamp, default, fallback)?
-> * Can the caller actually do anything different?
+> * Will my caller actually check this with `errors.Is` and handle it differently?
 > * Is this truly exceptional, or just an edge case we can normalize?
-> 
-> Only return errors that the caller can meaningfully act upon. Some errors provide critical information to the caller and must be returned.
 
 **Goal**: Errors live with the code that returns them.
 
 ## Choosing Error Types
 
-*   **Sentinel**: Error provides distinctly actionable information—caller takes a different action based on this specific error.
-    *   `var ErrNotFound = errors.New("not found")`
+**Decision rule**: Does the caller programmatically check this error with `errors.Is`/`errors.As` and take a different action?
 
-*   **Struct**: Error is complex and caller needs to extract context fields (path, value) for handling.
-    *   `type PathError struct { Path string; Cause error }`
+*   **YES → Sentinel or Struct**
 
-*   **`fmt.Errorf`**: Errors we can't handle internally and caller also has no choice on how to handle and have to pass it up, or can only proceed in one way regardless of details (e.g., I/O failures, permission errors, unexpected errors — user fixes externally).
-    *   `fmt.Errorf("stat %s: %w", path, err)`
+    Use when the caller will branch on this error to do something different (retry, fallback, convert to different response, etc.).
+
+    *   **Sentinel**: A named error value the caller checks with `errors.Is`. Used for simple errors.
+        ```go
+        var ErrNotFound = errors.New("not found")
+        ```
+    *   **Struct**: When the error is more complex and callers also need to extract context fields (path, code, etc.) using `errors.As`.
+        ```go
+        type PathError struct { Path string; Cause error }
+        ```
+
+*   **NO → `fmt.Errorf`**
+
+    Use when the caller cannot programmatically handle this error — it just passes the error up to the user. The user (human or AI agent) sees the error message and fixes the issue externally.
+
+    ```go
+    return fmt.Errorf("stat %s: %w", path, err)
+    ```
+
+    This covers most errors: I/O failures, permission errors, network issues, unexpected errors.
+
+> [!CAUTION]
+> **FORBIDDEN PATTERNS**
+>
+> | Pattern | Why Bad |
+> |---------|---------|
+> | **Behavioral Interfaces** | `interface { NotFound() bool }` leads to boilerplate explosion. |
+> | **Raw errors.New** | `return errors.New("fail")` is untestable. |
+> | **Sentinel never checked** | If no caller uses `errors.Is`, use `fmt.Errorf` instead. |
+
+
+> [!WARNING]
+> **Sentinel Overuse is an Anti-Pattern**
+> 
+> Sentinels create coupling and become part of your public API. Use them sparingly — only when callers actually check with `errors.Is` and branch.
 
 > [!TIP]
-> **Merging Errors**: If multiple distinct errors lead to the same handling sequence, merge them into one sentinel or use `fmt.Errorf` wrapping. Don't create separate error types unless they drive different caller behavior.
+> **Merging Errors**: If multiple distinct errors lead to the same handling sequence, merge them into a single sentinel or use `fmt.Errorf` wrapping. Don't create separate error types just because the causes are different. Handling paths are what defines the error type.
 
 ## Error Wrapping
 
@@ -38,35 +67,26 @@ Checking wrapped errors:
 > [!NOTE]
 > **Multiple Implementations**: If there are multiple implementations (e.g., different storage backends), define errors in the parent package and all implementations import.
 
-> [!CAUTION]
-> **FORBIDDEN ERROR PATTERNS**
->
-> | Pattern | Why Bad |
-> |---------|---------|
-> | **Behavioral Interfaces** | Using `interface { NotFound() bool }` leads to boilerplate explosion. |
-> | **Raw errors.New output** | `return errors.New("fail")`. Untestable. Use a sentinel instead. |
-
 
 
 **Example**:
 
 ```go
-// package file - errors live with the implementation
 package file
 
+// Sentinel - caller WILL check with errors.Is
 var ErrNotFound = errors.New("file not found")
 
 func (t *ReadTool) Run() error {
-    return fmt.Errorf("read: %w", ErrNotFound)
-}
-
-// Consumer imports the implementation package
-import "iav/internal/tool/file"
-
-func handle(err error) {
-    if errors.Is(err, file.ErrNotFound) {
-        // Handle
+    // ...
+    if !exists {
+        return fmt.Errorf("%w: %s", ErrNotFound, path)
+    }
+    
+    // OS error - caller WON'T check, just passes up
+    content, err := os.ReadFile(path)
+    if err != nil {
+        return fmt.Errorf("read %s: %w", path, err)
     }
 }
 ```
-
