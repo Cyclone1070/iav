@@ -225,9 +225,6 @@ func TestTodoValidation(t *testing.T) {
 		if err == nil {
 			t.Error("expected error for invalid status")
 		}
-		if !errors.Is(err, ErrInvalidStatus) {
-			t.Errorf("expected ErrInvalidStatus, got %v", err)
-		}
 	})
 
 	t.Run("EmptyDescription", func(t *testing.T) {
@@ -237,9 +234,6 @@ func TestTodoValidation(t *testing.T) {
 		_, err := writeTool.Run(context.Background(), req)
 		if err == nil {
 			t.Error("expected error for empty description")
-		}
-		if !errors.Is(err, ErrEmptyDescription) {
-			t.Errorf("expected ErrEmptyDescription, got %v", err)
 		}
 	})
 

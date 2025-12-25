@@ -23,12 +23,9 @@ type ShellRequest struct {
 
 func (r *ShellRequest) Validate(cfg *config.Config) error {
 	if len(r.Command) == 0 {
-		return ErrCommandRequired
+		return fmt.Errorf("command is required")
 	}
-	if r.TimeoutSeconds < 0 {
-		return fmt.Errorf("%w: %d", ErrInvalidTimeout, r.TimeoutSeconds)
-	}
-	if r.TimeoutSeconds == 0 {
+	if r.TimeoutSeconds <= 0 {
 		r.TimeoutSeconds = cfg.Tools.DefaultShellTimeout
 	}
 	return nil

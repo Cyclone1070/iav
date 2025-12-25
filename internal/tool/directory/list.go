@@ -82,13 +82,13 @@ func (t *ListDirectoryTool) Run(ctx context.Context, req *ListDirectoryRequest) 
 	info, err := t.fs.Stat(abs)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("%w: %s", ErrFileMissing, abs)
+			return nil, fmt.Errorf("path does not exist: %s", abs)
 		}
 		return nil, fmt.Errorf("failed to stat %s: %w", abs, err)
 	}
 
 	if !info.IsDir() {
-		return nil, fmt.Errorf("%w: %s", ErrNotADirectory, abs)
+		return nil, fmt.Errorf("not a directory: %s", abs)
 	}
 
 	maxDepth := req.MaxDepth

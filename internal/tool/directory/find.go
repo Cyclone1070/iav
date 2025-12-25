@@ -79,20 +79,20 @@ func (t *FindFileTool) Run(ctx context.Context, req *FindFileRequest) (*FindFile
 
 	// Validate pattern syntax
 	if _, err := filepath.Match(req.Pattern, ""); err != nil {
-		return nil, fmt.Errorf("%w %s: %v", ErrInvalidPattern, req.Pattern, err)
+		return nil, fmt.Errorf("invalid pattern %s: %v", req.Pattern, err)
 	}
 
 	// Verify search path exists and is a directory
 	info, err := t.fs.Stat(absSearchPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("%w: %s", ErrFileMissing, absSearchPath)
+			return nil, fmt.Errorf("path does not exist: %s", absSearchPath)
 		}
 		return nil, fmt.Errorf("failed to stat %s: %w", absSearchPath, err)
 	}
 
 	if !info.IsDir() {
-		return nil, fmt.Errorf("%w: %s", ErrNotADirectory, absSearchPath)
+		return nil, fmt.Errorf("not a directory: %s", absSearchPath)
 	}
 
 	limit := req.Limit

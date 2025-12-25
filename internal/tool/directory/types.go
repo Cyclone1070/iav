@@ -1,6 +1,8 @@
 package directory
 
 import (
+	"fmt"
+
 	"github.com/Cyclone1070/iav/internal/config"
 )
 
@@ -60,7 +62,7 @@ type FindFileRequest struct {
 
 func (r *FindFileRequest) Validate(cfg *config.Config) error {
 	if r.Pattern == "" {
-		return ErrPatternRequired
+		return fmt.Errorf("pattern is required")
 	}
 	if r.Offset < 0 {
 		r.Offset = 0

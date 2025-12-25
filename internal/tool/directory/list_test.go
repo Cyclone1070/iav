@@ -329,8 +329,8 @@ func TestListDirectory(t *testing.T) {
 		listTool := NewListDirectoryTool(fs, nil, cfg, path.NewResolver(workspaceRoot))
 		_, err := listTool.Run(context.Background(), req)
 
-		if err == nil || !errors.Is(err, ErrNotADirectory) {
-			t.Fatalf("expected ErrNotADirectory, got %v", err)
+		if err == nil {
+			t.Fatalf("expected error for file instead of directory, got nil")
 		}
 	})
 
@@ -362,8 +362,8 @@ func TestListDirectory(t *testing.T) {
 		req := &ListDirectoryRequest{Path: "nonexistent", MaxDepth: -1, Offset: 0, Limit: 1000}
 		listTool := NewListDirectoryTool(fs, nil, cfg, path.NewResolver(workspaceRoot))
 		_, err := listTool.Run(context.Background(), req)
-		if err == nil || !errors.Is(err, ErrFileMissing) {
-			t.Errorf("expected ErrFileMissing, got %v", err)
+		if err == nil {
+			t.Errorf("expected error for non-existent directory, got nil")
 		}
 	})
 

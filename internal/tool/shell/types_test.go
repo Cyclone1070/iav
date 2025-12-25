@@ -16,7 +16,7 @@ func TestShellRequest_Validation(t *testing.T) {
 	}{
 		{"Valid", ShellRequest{Command: []string{"echo", "hello"}}, false},
 		{"EmptyCommand", ShellRequest{Command: []string{}}, true},
-		{"NegativeTimeout", ShellRequest{Command: []string{"echo"}, TimeoutSeconds: -1}, true},
+		{"NegativeTimeout_Defaults", ShellRequest{Command: []string{"echo"}, TimeoutSeconds: -1}, false},
 	}
 
 	for _, tt := range tests {
@@ -24,6 +24,11 @@ func TestShellRequest_Validation(t *testing.T) {
 			err := tt.req.Validate(cfg)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if err == nil && tt.name == "NegativeTimeout_Defaults" {
+				if tt.req.TimeoutSeconds != cfg.Tools.DefaultShellTimeout {
+					t.Errorf("expected default timeout %d, got %d", cfg.Tools.DefaultShellTimeout, tt.req.TimeoutSeconds)
+				}
 			}
 		})
 	}

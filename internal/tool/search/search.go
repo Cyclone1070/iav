@@ -70,13 +70,13 @@ func (t *SearchContentTool) Run(ctx context.Context, req *SearchContentRequest) 
 	info, err := t.fs.Stat(absSearchPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("%w: %s", ErrFileMissing, absSearchPath)
+			return nil, fmt.Errorf("path does not exist: %s", absSearchPath)
 		}
 		return nil, fmt.Errorf("failed to stat %s: %w", absSearchPath, err)
 	}
 
 	if !info.IsDir() {
-		return nil, fmt.Errorf("%w: %s", ErrNotADirectory, absSearchPath)
+		return nil, fmt.Errorf("not a directory: %s", absSearchPath)
 	}
 
 	limit := req.Limit

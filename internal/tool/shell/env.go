@@ -37,7 +37,7 @@ func ParseEnvFile(fs envFileReader, path string) (map[string]string, error) {
 		// Split on first =
 		parts := strings.SplitN(line, "=", 2)
 		if len(parts) != 2 {
-			return nil, fmt.Errorf("%w: %s:%d: %s", ErrEnvFileParse, path, lineNum, line)
+			return nil, fmt.Errorf("invalid line in env file %s:%d: %s", path, lineNum, line)
 		}
 
 		key := strings.TrimSpace(parts[0])

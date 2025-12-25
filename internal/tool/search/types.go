@@ -1,6 +1,8 @@
 package search
 
 import (
+	"fmt"
+
 	"github.com/Cyclone1070/iav/internal/config"
 )
 
@@ -25,7 +27,7 @@ type SearchContentRequest struct {
 
 func (r *SearchContentRequest) Validate(cfg *config.Config) error {
 	if r.Query == "" {
-		return ErrQueryRequired
+		return fmt.Errorf("query is required")
 	}
 	if r.Offset < 0 {
 		r.Offset = 0

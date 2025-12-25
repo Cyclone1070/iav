@@ -82,7 +82,7 @@ func (r *EditFileRequest) Validate(cfg *config.Config) error {
 		return fmt.Errorf("path is required")
 	}
 	if len(r.Operations) == 0 {
-		return fmt.Errorf("operations cannot be empty")
+		return fmt.Errorf("operations are required")
 	}
 	for i := range r.Operations {
 		if r.Operations[i].ExpectedReplacements <= 0 {

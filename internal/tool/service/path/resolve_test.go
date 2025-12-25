@@ -164,8 +164,8 @@ func TestCanonicaliseRoot(t *testing.T) {
 			t.Fatalf("failed to create tmp file: %v", err)
 		}
 		_, err := CanonicaliseRoot(tmpFile)
-		if !errors.Is(err, ErrNotADirectory) {
-			t.Fatalf("expected ErrNotADirectory, got %v", err)
+		if err == nil {
+			t.Fatal("expected error for file instead of directory")
 		}
 	})
 }

@@ -48,12 +48,12 @@ func (r *WriteTodosRequest) Validate(cfg *config.Config) error {
 		case TodoStatusPending, TodoStatusInProgress, TodoStatusCompleted, TodoStatusCancelled:
 			// Valid
 		default:
-			return fmt.Errorf("todo[%d]: %w %q", i, ErrInvalidStatus, t.Status)
+			return fmt.Errorf("todo[%d]: invalid status %q", i, t.Status)
 		}
 
 		// Validate description is not empty
 		if t.Description == "" {
-			return fmt.Errorf("todo[%d]: %w", i, ErrEmptyDescription)
+			return fmt.Errorf("todo[%d]: description is required", i)
 		}
 	}
 	return nil

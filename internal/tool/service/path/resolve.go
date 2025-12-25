@@ -41,7 +41,7 @@ func CanonicaliseRoot(root string) (string, error) {
 		return "", fmt.Errorf("invalid workspace root %s: %w", resolved, err)
 	}
 	if !info.IsDir() {
-		return "", fmt.Errorf("invalid workspace root %s: %w", resolved, ErrNotADirectory)
+		return "", fmt.Errorf("workspace root is not a directory: %s", resolved)
 	}
 	return resolved, nil
 }
@@ -50,7 +50,7 @@ func CanonicaliseRoot(root string) (string, error) {
 // It cleans the path and ensures it does not escape the workspace root.
 func (r *Resolver) Abs(path string) (string, error) {
 	if r.workspaceRoot == "" {
-		return "", ErrWorkspaceRootNotSet
+		return "", fmt.Errorf("workspace root not set")
 	}
 
 	var abs string
