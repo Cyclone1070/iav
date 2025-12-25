@@ -12,11 +12,28 @@
 
 **Goal**: Errors live with the code that returns them.
 
-*   **Sentinel Errors**: Use sentinels for standard domain conditions ("Not Found", "Invalid Input").
-    *   **Mechanism**: `var ErrNotFound = errors.New("not found")` in the same package as the code.
+## Choosing Error Types
 
-*   **Error Structs**: Use structs only when context (paths, values) is required for error handling logic.
-    *   **Mechanism**: `type PathError struct { Path string }` in the same package.
+*   **Sentinel**: Error provides distinctly actionable information—caller takes a different action based on this specific error.
+    *   `var ErrNotFound = errors.New("not found")`
+
+*   **Struct**: Error is complex and caller needs to extract context fields (path, value) for handling.
+    *   `type PathError struct { Path string; Cause error }`
+
+*   **`fmt.Errorf`**: Caller has no choice on how to handle, or can only proceed in one way regardless of details.
+    *   `fmt.Errorf("operation: %w", err)`
+
+> [!TIP]
+> **Merging Errors**: If multiple distinct errors lead to the same handling sequence, merge them into one sentinel or use `fmt.Errorf` wrapping. Don't create separate error types unless they drive different caller behavior.
+
+## Error Wrapping
+
+Always wrap errors with context using `%w`:
+*   `fmt.Errorf("read file: %w", err)`
+
+Checking wrapped errors:
+*   **Sentinel**: `errors.Is(err, pkg.ErrNotFound)`
+*   **Struct**: `errors.As(err, &pathErr)`
 
 > [!NOTE]
 > **Multiple Implementations**: If there are multiple implementations (e.g., different storage backends), define errors in the parent package and all implementations import.
@@ -29,9 +46,6 @@
 > | **Behavioral Interfaces** | Using `interface { NotFound() bool }` leads to boilerplate explosion. |
 > | **Raw errors.New output** | `return errors.New("fail")`. Untestable. Use a sentinel instead. |
 
-*   **Error Wrapping**: Always wrap errors to add context.
-    *   **How**: `fmt.Errorf("operation failed: %w", err)`
-    *   **Checking**: Use `errors.Is(err, pkg.ErrX)` for sentinels. Use `errors.As(err, &target)` for structs.
 
 **Example**:
 
