@@ -19,15 +19,15 @@ type dirLister interface {
 	ListDir(path string) ([]os.FileInfo, error)
 }
 
-// IgnoreMatcher defines the interface for gitignore pattern matching.
-type IgnoreMatcher interface {
+// ignoreMatcher defines the interface for gitignore pattern matching.
+type ignoreMatcher interface {
 	ShouldIgnore(relativePath string) bool
 }
 
 // ListDirectoryTool handles directory listing operations.
 type ListDirectoryTool struct {
 	fs            dirLister
-	ignoreMatcher IgnoreMatcher
+	ignoreMatcher ignoreMatcher
 	config        *config.Config
 	pathResolver  pathResolver
 }
@@ -35,7 +35,7 @@ type ListDirectoryTool struct {
 // NewListDirectoryTool creates a new ListDirectoryTool with injected dependencies.
 func NewListDirectoryTool(
 	fs dirLister,
-	ignoreMatcher IgnoreMatcher,
+	ignoreMatcher ignoreMatcher,
 	cfg *config.Config,
 	pathResolver pathResolver,
 ) *ListDirectoryTool {
