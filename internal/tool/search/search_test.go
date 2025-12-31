@@ -49,18 +49,6 @@ func (m *mockFileSystemForSearch) Stat(path string) (os.FileInfo, error) {
 	return nil, os.ErrNotExist
 }
 
-func (m *mockFileSystemForSearch) Lstat(path string) (os.FileInfo, error) {
-	return m.Stat(path)
-}
-
-func (m *mockFileSystemForSearch) Readlink(path string) (string, error) {
-	return "", os.ErrInvalid
-}
-
-func (m *mockFileSystemForSearch) UserHomeDir() (string, error) {
-	return "/home/user", nil
-}
-
 type mockCommandExecutorForSearch struct {
 	runFunc func(ctx context.Context, cmd []string, dir string, env []string) (*executor.Result, error)
 }
@@ -231,10 +219,6 @@ func TestSearchContent_NoMatches(t *testing.T) {
 	if resp.FormattedMatches != "No matches found." {
 		t.Errorf("expected 'No matches found.', got %q", resp.FormattedMatches)
 	}
-
-	if resp.Truncated {
-		t.Error("expected Truncated=false for no matches")
-	}
 }
 
 func TestSearchContent_Pagination(t *testing.T) {
@@ -264,10 +248,6 @@ func TestSearchContent_Pagination(t *testing.T) {
 
 	if resp.TotalCount != 10 {
 		t.Errorf("expected TotalCount 10, got %d", resp.TotalCount)
-	}
-
-	if !resp.Truncated {
-		t.Error("expected Truncated=true")
 	}
 
 	if !strings.Contains(resp.FormattedMatches, "Line 3") {

@@ -1,9 +1,12 @@
 package file
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -11,6 +14,7 @@ import (
 	"time"
 
 	"github.com/Cyclone1070/iav/internal/config"
+	"github.com/Cyclone1070/iav/internal/tool/service/fs"
 	"github.com/Cyclone1070/iav/internal/tool/service/path"
 )
 
@@ -45,17 +49,17 @@ type mockFileSystemForWrite struct {
 	files           map[string]fileEntry
 	dirs            map[string]bool
 	symlinks        map[string]symlinkEntry
-	tempFiles       []string
 	operationErrors map[string]error
+	config          *config.Config
 }
 
-func newMockFileSystemForWrite() *mockFileSystemForWrite {
+func newMockFileSystemForWrite(cfg *config.Config) *mockFileSystemForWrite {
 	return &mockFileSystemForWrite{
 		files:           make(map[string]fileEntry),
 		dirs:            make(map[string]bool),
 		symlinks:        make(map[string]symlinkEntry),
-		tempFiles:       []string{},
 		operationErrors: make(map[string]error),
+		config:          cfg,
 	}
 }
 
@@ -75,10 +79,6 @@ func (m *mockFileSystemForWrite) setOperationError(operation string, err error) 
 	m.operationErrors[operation] = err
 }
 
-func (m *mockFileSystemForWrite) getTempFiles() []string {
-	return m.tempFiles
-}
-
 func (m *mockFileSystemForWrite) Stat(path string) (os.FileInfo, error) {
 	// Check symlinks first
 	if link, ok := m.symlinks[path]; ok {
@@ -95,50 +95,78 @@ func (m *mockFileSystemForWrite) Stat(path string) (os.FileInfo, error) {
 	return nil, os.ErrNotExist
 }
 
-func (m *mockFileSystemForWrite) Lstat(path string) (os.FileInfo, error) {
-	// Lstat doesn't follow symlinks
-	if _, ok := m.symlinks[path]; ok {
-		return &mockFileInfoForWrite{name: filepath.Base(path), mode: os.ModeSymlink | 0777}, nil
-	}
-
-	if m.dirs[path] {
-		return &mockFileInfoForWrite{name: filepath.Base(path), isDir: true, mode: 0755}, nil
-	}
-	if entry, ok := m.files[path]; ok {
-		return &mockFileInfoForWrite{name: filepath.Base(path), size: int64(len(entry.content)), mode: entry.mode}, nil
-	}
-	return nil, os.ErrNotExist
-}
-
-func (m *mockFileSystemForWrite) Readlink(path string) (string, error) {
-	if link, ok := m.symlinks[path]; ok {
-		return link.target, nil
-	}
-	return "", os.ErrInvalid
-}
-
-func (m *mockFileSystemForWrite) UserHomeDir() (string, error) {
-	return "/home/user", nil
-}
-
-func (m *mockFileSystemForWrite) ReadFileRange(path string, offset, limit int64) ([]byte, error) {
-	// Fall back to mock data
+func (m *mockFileSystemForWrite) ReadFileLines(path string, startLine, endLine int) (*fs.ReadFileLinesResult, error) {
 	entry, ok := m.files[path]
 	if !ok {
 		return nil, os.ErrNotExist
 	}
 
+	if m.config != nil && m.config.Tools.MaxFileSize > 0 && int64(len(entry.content)) > m.config.Tools.MaxFileSize {
+		return nil, fmt.Errorf("file too large: %d bytes exceeds limit %d", len(entry.content), m.config.Tools.MaxFileSize)
+	}
+
 	content := entry.content
-	if offset >= int64(len(content)) {
-		return []byte{}, nil
+
+	// Count lines using same logic as fs.go
+	totalLines := 0
+	if len(content) > 0 {
+		for _, b := range content {
+			if b == '\n' {
+				totalLines++
+			}
+		}
+		if content[len(content)-1] != '\n' {
+			totalLines++
+		}
 	}
 
-	end := int64(len(content))
-	if limit > 0 && offset+limit < end {
-		end = offset + limit
+	if startLine <= 0 {
+		startLine = 1
 	}
 
-	return content[offset:end], nil
+	if startLine > totalLines {
+		return &fs.ReadFileLinesResult{
+			Content:    "",
+			TotalLines: totalLines,
+			StartLine:  startLine,
+			EndLine:    0,
+		}, nil
+	}
+
+	// Read content using same logic as fs.go (preserving newlines)
+	actualEndLine := 0
+	var buffer bytes.Buffer
+	currentLine := 1
+
+	reader := bufio.NewReader(bytes.NewReader(content))
+	for {
+		line, err := reader.ReadString('\n')
+		if err != nil && err != io.EOF {
+			return nil, err
+		}
+
+		if currentLine >= startLine {
+			if endLine == 0 || currentLine <= endLine {
+				buffer.WriteString(line)
+				actualEndLine = currentLine
+			}
+		}
+
+		if endLine > 0 && currentLine >= endLine {
+			break
+		}
+		if err == io.EOF {
+			break
+		}
+		currentLine++
+	}
+
+	return &fs.ReadFileLinesResult{
+		Content:    buffer.String(),
+		TotalLines: totalLines,
+		StartLine:  startLine,
+		EndLine:    actualEndLine,
+	}, nil
 }
 
 func (m *mockFileSystemForWrite) EnsureDirs(path string) error {
@@ -170,56 +198,6 @@ func (m *mockFileSystemForWrite) WriteFileAtomic(path string, content []byte, pe
 		content: content,
 		mode:    perm,
 	}
-	return nil
-}
-
-func (m *mockFileSystemForWrite) Remove(name string) error {
-	// Remove from temp files list
-	for i, tf := range m.tempFiles {
-		if tf == name {
-			m.tempFiles = append(m.tempFiles[:i], m.tempFiles[i+1:]...)
-			break
-		}
-	}
-
-	delete(m.files, name)
-	delete(m.dirs, name)
-	delete(m.symlinks, name)
-	return nil
-}
-
-func (m *mockFileSystemForWrite) Rename(oldpath, newpath string) error {
-	if m.operationErrors["Rename"] != nil {
-		return m.operationErrors["Rename"]
-	}
-
-	// Store the content in our mock filesystem at the new path
-	if entry, ok := m.files[oldpath]; ok {
-		m.files[newpath] = entry
-		delete(m.files, oldpath)
-	}
-
-	// Remove from temp files
-	for i, tf := range m.tempFiles {
-		if tf == oldpath {
-			m.tempFiles = append(m.tempFiles[:i], m.tempFiles[i+1:]...)
-			break
-		}
-	}
-
-	return nil
-}
-
-func (m *mockFileSystemForWrite) Chmod(name string, mode os.FileMode) error {
-	if m.operationErrors["Chmod"] != nil {
-		return m.operationErrors["Chmod"]
-	}
-
-	if entry, ok := m.files[name]; ok {
-		entry.mode = mode
-		m.files[name] = entry
-	}
-
 	return nil
 }
 
@@ -257,10 +235,10 @@ func TestWriteFile(t *testing.T) {
 	maxFileSize := int64(1024 * 1024) // 1MB
 
 	t.Run("create new file succeeds and updates cache", func(t *testing.T) {
-		fs := newMockFileSystemForWrite()
-		checksumManager := newMockChecksumManagerForWrite()
 		cfg := config.DefaultConfig()
 		cfg.Tools.MaxFileSize = maxFileSize
+		fs := newMockFileSystemForWrite(cfg)
+		checksumManager := newMockChecksumManagerForWrite()
 
 		writeTool := NewWriteFileTool(fs, checksumManager, cfg, path.NewResolver(workspaceRoot))
 		content := "test content"
@@ -276,12 +254,12 @@ func TestWriteFile(t *testing.T) {
 		}
 
 		// Verify file was created
-		fileContent, err := fs.ReadFileRange("/workspace/new.txt", 0, 0)
+		result, err := fs.ReadFileLines("/workspace/new.txt", 1, 0)
 		if err != nil {
 			t.Fatalf("failed to read created file: %v", err)
 		}
-		if string(fileContent) != content {
-			t.Errorf("expected content %q, got %q", content, string(fileContent))
+		if result.Content != content {
+			t.Errorf("expected content %q, got %q", content, result.Content)
 		}
 
 		// Verify cache was updated
@@ -295,7 +273,8 @@ func TestWriteFile(t *testing.T) {
 	})
 
 	t.Run("existing file rejection", func(t *testing.T) {
-		fs := newMockFileSystemForWrite()
+		cfg := config.DefaultConfig()
+		fs := newMockFileSystemForWrite(cfg)
 		checksumManager := newMockChecksumManagerForWrite()
 		fs.createFile("/workspace/existing.txt", []byte("existing"), 0o644)
 
@@ -309,10 +288,10 @@ func TestWriteFile(t *testing.T) {
 	})
 
 	t.Run("large content rejection", func(t *testing.T) {
-		fs := newMockFileSystemForWrite()
-		checksumManager := newMockChecksumManagerForWrite()
 		cfg := config.DefaultConfig()
 		cfg.Tools.MaxFileSize = maxFileSize
+		fs := newMockFileSystemForWrite(cfg)
+		checksumManager := newMockChecksumManagerForWrite()
 
 		// Create content larger than limit
 		largeContent := make([]byte, maxFileSize+1)
@@ -330,7 +309,8 @@ func TestWriteFile(t *testing.T) {
 	})
 
 	t.Run("binary content rejection", func(t *testing.T) {
-		fs := newMockFileSystemForWrite()
+		cfg := config.DefaultConfig()
+		fs := newMockFileSystemForWrite(cfg)
 		checksumManager := newMockChecksumManagerForWrite()
 
 		writeTool := NewWriteFileTool(fs, checksumManager, config.DefaultConfig(), path.NewResolver(workspaceRoot))
@@ -345,10 +325,9 @@ func TestWriteFile(t *testing.T) {
 	})
 
 	t.Run("verify default permissions 0o644", func(t *testing.T) {
-		fs := newMockFileSystemForWrite()
-		checksumManager := newMockChecksumManagerForWrite()
-
 		cfg := config.DefaultConfig()
+		fs := newMockFileSystemForWrite(cfg)
+		checksumManager := newMockChecksumManagerForWrite()
 		writeTool := NewWriteFileTool(fs, checksumManager, cfg, path.NewResolver(workspaceRoot))
 
 		expectedPerm := os.FileMode(0o644)
@@ -367,14 +346,12 @@ func TestWriteFile(t *testing.T) {
 		if info.Mode().Perm() != expectedPerm {
 			t.Errorf("expected permissions %o, got %o", expectedPerm, info.Mode().Perm())
 		}
-
 	})
 
 	t.Run("nested directory creation", func(t *testing.T) {
-		fs := newMockFileSystemForWrite()
-		checksumManager := newMockChecksumManagerForWrite()
-
 		cfg := config.DefaultConfig()
+		fs := newMockFileSystemForWrite(cfg)
+		checksumManager := newMockChecksumManagerForWrite()
 		writeTool := NewWriteFileTool(fs, checksumManager, cfg, path.NewResolver(workspaceRoot))
 
 		req := &WriteFileRequest{Path: "nested/deep/file.txt", Content: "content"}
@@ -384,21 +361,21 @@ func TestWriteFile(t *testing.T) {
 		}
 
 		// Verify file was created
-		fileContent, err := fs.ReadFileRange("/workspace/nested/deep/file.txt", 0, 0)
+		result, err := fs.ReadFileLines("/workspace/nested/deep/file.txt", 1, 0)
 		if err != nil {
 			t.Fatalf("failed to read created file: %v", err)
 		}
-		if string(fileContent) != "content" {
-			t.Errorf("expected content %q, got %q", "content", string(fileContent))
+		if result.Content != "content" {
+			t.Errorf("expected content %q, got %q", "content", result.Content)
 		}
 	})
 
 	t.Run("ensure dirs failure", func(t *testing.T) {
-		fs := newMockFileSystemForWrite()
+		cfg := config.DefaultConfig()
+		fs := newMockFileSystemForWrite(cfg)
 		checksumManager := newMockChecksumManagerForWrite()
 		fs.setOperationError("EnsureDirs", errors.New("failed to mkdir"))
 
-		cfg := config.DefaultConfig()
 		writeTool := NewWriteFileTool(fs, checksumManager, cfg, path.NewResolver(workspaceRoot))
 
 		req := &WriteFileRequest{Path: "nested/deep/file.txt", Content: "content"}
@@ -407,5 +384,4 @@ func TestWriteFile(t *testing.T) {
 			t.Error("expected error when EnsureDirs fails")
 		}
 	})
-
 }

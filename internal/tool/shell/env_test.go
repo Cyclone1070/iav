@@ -2,7 +2,10 @@ package shell
 
 import (
 	"os"
+	"strings"
 	"testing"
+
+	"github.com/Cyclone1070/iav/internal/tool/service/fs"
 )
 
 // mockFileSystem is a local mock implementing shell.fileSystem for testing
@@ -39,12 +42,39 @@ func (m *mockFileSystemForEnv) UserHomeDir() (string, error) {
 	return "/home/user", nil
 }
 
-func (m *mockFileSystemForEnv) ReadFileRange(path string, offset, limit int64) ([]byte, error) {
+func (m *mockFileSystemForEnv) ReadFileLines(path string, startLine, endLine int) (*fs.ReadFileLinesResult, error) {
 	content, ok := m.files[path]
 	if !ok {
 		return nil, os.ErrNotExist
 	}
-	return content, nil
+
+	lines := strings.Split(string(content), "\n")
+	totalLines := len(lines)
+
+	if startLine <= 0 {
+		startLine = 1
+	}
+
+	if startLine > totalLines {
+		return &fs.ReadFileLinesResult{
+			Content:    "",
+			TotalLines: totalLines,
+			StartLine:  startLine,
+			EndLine:    0,
+		}, nil
+	}
+
+	if endLine == 0 || endLine > totalLines {
+		endLine = totalLines
+	}
+
+	selected := lines[startLine-1 : endLine]
+	return &fs.ReadFileLinesResult{
+		Content:    strings.Join(selected, "\n"),
+		TotalLines: totalLines,
+		StartLine:  startLine,
+		EndLine:    endLine,
+	}, nil
 }
 
 func TestParseEnvFile(t *testing.T) {

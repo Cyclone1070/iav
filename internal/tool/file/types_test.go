@@ -7,7 +7,6 @@ import (
 )
 
 func TestReadFileRequest_Validation(t *testing.T) {
-	cfg := config.DefaultConfig()
 
 	tests := []struct {
 		name         string
@@ -17,26 +16,26 @@ func TestReadFileRequest_Validation(t *testing.T) {
 	}{
 		{"Valid", ReadFileRequest{Path: "file.txt"}, false, nil},
 		{"EmptyPath", ReadFileRequest{Path: ""}, true, nil},
-		{"NegativeOffset_Clamps", ReadFileRequest{Path: "file.txt", Offset: ptr(int64(-1))}, false, func(t *testing.T, req ReadFileRequest) {
-			if *req.Offset != 0 {
-				t.Errorf("expected offset 0, got %d", *req.Offset)
+		{"NegativeStartLine_Clamps", ReadFileRequest{Path: "file.txt", StartLine: -1}, false, func(t *testing.T, req ReadFileRequest) {
+			if req.StartLine != 1 {
+				t.Errorf("expected StartLine 1, got %d", req.StartLine)
 			}
 		}},
-		{"NegativeLimit_Defaults", ReadFileRequest{Path: "file.txt", Limit: ptr(int64(-1))}, false, func(t *testing.T, req ReadFileRequest) {
-			if *req.Limit != cfg.Tools.MaxFileSize {
-				t.Errorf("expected limit %d, got %d", cfg.Tools.MaxFileSize, *req.Limit)
+		{"ZeroStartLine_Clamps", ReadFileRequest{Path: "file.txt", StartLine: 0}, false, func(t *testing.T, req ReadFileRequest) {
+			if req.StartLine != 1 {
+				t.Errorf("expected StartLine 1, got %d", req.StartLine)
 			}
 		}},
-		{"NilLimit_Defaults", ReadFileRequest{Path: "file.txt", Limit: nil}, false, func(t *testing.T, req ReadFileRequest) {
-			if *req.Limit != cfg.Tools.MaxFileSize {
-				t.Errorf("expected limit %d, got %d", cfg.Tools.MaxFileSize, *req.Limit)
+		{"NegativeEndLine_Clamps", ReadFileRequest{Path: "file.txt", EndLine: -1}, false, func(t *testing.T, req ReadFileRequest) {
+			if req.EndLine != 0 {
+				t.Errorf("expected EndLine 0, got %d", req.EndLine)
 			}
 		}},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := tt.req.Validate(cfg)
+			err := tt.req.Validate()
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -71,7 +70,6 @@ func TestWriteFileRequest_Validation(t *testing.T) {
 }
 
 func TestEditFileRequest_Validation(t *testing.T) {
-	cfg := config.DefaultConfig()
 
 	tests := []struct {
 		name         string
@@ -92,7 +90,7 @@ func TestEditFileRequest_Validation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := tt.req.Validate(cfg)
+			err := tt.req.Validate()
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}

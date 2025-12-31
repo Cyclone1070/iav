@@ -12,23 +12,11 @@ import (
 
 	"github.com/Cyclone1070/iav/internal/config"
 	"github.com/Cyclone1070/iav/internal/tool/service/executor"
+	"github.com/Cyclone1070/iav/internal/tool/service/fs"
 	"github.com/Cyclone1070/iav/internal/tool/service/path"
 )
 
 // Local mocks for shell tests
-
-// mockFileInfo implements os.FileInfo for testing
-type mockFileInfo struct {
-	name  string
-	isDir bool
-}
-
-func (m *mockFileInfo) Name() string       { return m.name }
-func (m *mockFileInfo) Size() int64        { return 0 }
-func (m *mockFileInfo) Mode() os.FileMode  { return 0o644 }
-func (m *mockFileInfo) ModTime() time.Time { return time.Time{} }
-func (m *mockFileInfo) IsDir() bool        { return m.isDir }
-func (m *mockFileInfo) Sys() any           { return nil }
 
 type mockFileSystemForShell struct {
 	files map[string][]byte
@@ -50,34 +38,39 @@ func (m *mockFileSystemForShell) createFile(path string, content []byte) {
 	m.files[path] = content
 }
 
-func (m *mockFileSystemForShell) Stat(path string) (os.FileInfo, error) {
-	if m.dirs[path] {
-		return &mockFileInfo{name: path, isDir: true}, nil
-	}
-	if _, ok := m.files[path]; ok {
-		return &mockFileInfo{name: path, isDir: false}, nil
-	}
-	return nil, os.ErrNotExist
-}
-
-func (m *mockFileSystemForShell) Lstat(path string) (os.FileInfo, error) {
-	return m.Stat(path)
-}
-
-func (m *mockFileSystemForShell) Readlink(path string) (string, error) {
-	return "", os.ErrInvalid
-}
-
-func (m *mockFileSystemForShell) UserHomeDir() (string, error) {
-	return "/home/user", nil
-}
-
-func (m *mockFileSystemForShell) ReadFileRange(path string, offset, limit int64) ([]byte, error) {
+func (m *mockFileSystemForShell) ReadFileLines(path string, startLine, endLine int) (*fs.ReadFileLinesResult, error) {
 	content, ok := m.files[path]
 	if !ok {
 		return nil, os.ErrNotExist
 	}
-	return content, nil
+
+	lines := strings.Split(string(content), "\n")
+	totalLines := len(lines)
+
+	if startLine <= 0 {
+		startLine = 1
+	}
+
+	if startLine > totalLines {
+		return &fs.ReadFileLinesResult{
+			Content:    "",
+			TotalLines: totalLines,
+			StartLine:  startLine,
+			EndLine:    0,
+		}, nil
+	}
+
+	if endLine == 0 || endLine > totalLines {
+		endLine = totalLines
+	}
+
+	selected := lines[startLine-1 : endLine]
+	return &fs.ReadFileLinesResult{
+		Content:    strings.Join(selected, "\n"),
+		TotalLines: totalLines,
+		StartLine:  startLine,
+		EndLine:    endLine,
+	}, nil
 }
 
 type mockCommandExecutorForShell struct {

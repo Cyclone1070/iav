@@ -5,11 +5,12 @@ import (
 	"time"
 
 	"github.com/Cyclone1070/iav/internal/tool/service/executor"
+	"github.com/Cyclone1070/iav/internal/tool/service/fs"
 )
 
-// envFileReader defines the minimal filesystem interface needed for reading environment files.
-type envFileReader interface {
-	ReadFileRange(path string, offset, limit int64) ([]byte, error)
+// envFileOps defines the minimal filesystem interface needed for reading environment files.
+type envFileOps interface {
+	ReadFileLines(path string, startLine, endLine int) (*fs.ReadFileLinesResult, error)
 }
 
 // pathResolver defines workspace path resolution operations.

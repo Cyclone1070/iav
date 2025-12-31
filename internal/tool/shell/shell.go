@@ -13,7 +13,7 @@ import (
 
 // ShellTool executes commands on the local machine.
 type ShellTool struct {
-	envFileOps      envFileReader
+	envFileOps      envFileOps
 	commandExecutor commandExecutor
 	config          *config.Config
 	dockerConfig    DockerConfig
@@ -22,7 +22,7 @@ type ShellTool struct {
 
 // NewShellTool creates a new ShellTool with injected dependencies.
 func NewShellTool(
-	envFileOps envFileReader,
+	envFileOps envFileOps,
 	commandExecutor commandExecutor,
 	cfg *config.Config,
 	dockerConfig DockerConfig,

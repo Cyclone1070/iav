@@ -40,7 +40,6 @@ type ListDirectoryResponse struct {
 	Offset           int
 	Limit            int
 	TotalCount       int
-	Truncated        bool
 	HitMaxResults    bool
 }
 
@@ -76,6 +75,5 @@ type FindFileResponse struct {
 	Offset           int
 	Limit            int
 	TotalCount       int
-	Truncated        bool
 	HitMaxResults    bool
 }

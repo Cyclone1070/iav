@@ -7,13 +7,13 @@ import (
 	"strings"
 
 	"github.com/Cyclone1070/iav/internal/config"
-	"github.com/Cyclone1070/iav/internal/tool/helper/content"
+	"github.com/Cyclone1070/iav/internal/tool/service/fs"
 )
 
 // fileEditor defines the minimal filesystem operations needed for editing files.
 type fileEditor interface {
 	Stat(path string) (os.FileInfo, error)
-	ReadFileRange(path string, offset, limit int64) ([]byte, error)
+	ReadFileLines(path string, startLine, endLine int) (*fs.ReadFileLinesResult, error)
 	WriteFileAtomic(path string, content []byte, perm os.FileMode) error
 }
 
@@ -68,7 +68,7 @@ func NewEditFileTool(
 //
 // Note: ctx is accepted for API consistency but not used - file I/O is synchronous.
 func (t *EditFileTool) Run(ctx context.Context, req *EditFileRequest) (*EditFileResponse, error) {
-	if err := req.Validate(t.config); err != nil {
+	if err := req.Validate(); err != nil {
 		return nil, err
 	}
 
@@ -90,18 +90,14 @@ func (t *EditFileTool) Run(ctx context.Context, req *EditFileRequest) (*EditFile
 		return nil, fmt.Errorf("failed to stat %s: %w", abs, err)
 	}
 
-	// Read full file (single open+read syscall)
-	contentBytes, err := t.fileOps.ReadFileRange(abs, 0, 0)
+	// Read full file (binary check and size check are done inside ReadFileLines)
+	result, err := t.fileOps.ReadFileLines(abs, 1, 0)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read file %s: %w", abs, err)
+		return nil, err // propagates "binary file", "file exceeds max size", and "failed to stat" errors
 	}
 
-	// Check for binary content
-	if content.IsBinaryContent(contentBytes) {
-		return nil, fmt.Errorf("file is binary: %s", abs)
-	}
-
-	content := string(contentBytes)
+	content := result.Content
+	contentBytes := []byte(content)
 
 	// Compute current checksum
 	currentChecksum := t.checksumManager.Compute(contentBytes)

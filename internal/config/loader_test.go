@@ -58,7 +58,7 @@ func TestLoad_NoConfigFile_ReturnsDefaults(t *testing.T) {
 	cfg, err := loader.Load()
 
 	require.NoError(t, err)
-	assert.Equal(t, int64(5*1024*1024), cfg.Tools.MaxFileSize)
+	assert.Equal(t, int64(20*1024*1024), cfg.Tools.MaxFileSize)
 }
 
 func TestLoad_FullOverride_AllValuesReplaced(t *testing.T) {
@@ -89,8 +89,8 @@ func TestLoad_PartialOverride_MergesWithDefaults(t *testing.T) {
 	cfg, err := loader.Load()
 
 	require.NoError(t, err)
-	assert.Equal(t, 1200, cfg.Tools.DefaultShellTimeout)       // Overridden
-	assert.Equal(t, int64(5*1024*1024), cfg.Tools.MaxFileSize) // Default
+	assert.Equal(t, 1200, cfg.Tools.DefaultShellTimeout)        // Overridden
+	assert.Equal(t, int64(20*1024*1024), cfg.Tools.MaxFileSize) // Default
 }
 
 func TestLoad_EmptyConfigFile_ReturnsDefaults(t *testing.T) {
@@ -103,7 +103,7 @@ func TestLoad_EmptyConfigFile_ReturnsDefaults(t *testing.T) {
 	cfg, err := loader.Load()
 
 	require.NoError(t, err)
-	assert.Equal(t, int64(5*1024*1024), cfg.Tools.MaxFileSize)
+	assert.Equal(t, int64(20*1024*1024), cfg.Tools.MaxFileSize)
 }
 
 // --- UNHAPPY PATH TESTS ---
@@ -144,7 +144,7 @@ func TestLoad_HomeDirError_ReturnsDefaults(t *testing.T) {
 	cfg, err := loader.Load()
 
 	require.NoError(t, err)
-	assert.Equal(t, int64(5*1024*1024), cfg.Tools.MaxFileSize) // Default
+	assert.Equal(t, int64(20*1024*1024), cfg.Tools.MaxFileSize) // Default
 }
 
 func TestLoad_WrongJSONType_ReturnsError(t *testing.T) {

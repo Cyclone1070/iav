@@ -145,7 +145,6 @@ func (t *ListDirectoryTool) Run(ctx context.Context, req *ListDirectoryRequest) 
 		Offset:           req.Offset,
 		Limit:            limit,
 		TotalCount:       paginationResult.TotalCount,
-		Truncated:        paginationResult.Truncated,
 		HitMaxResults:    capHit,
 	}, nil
 }

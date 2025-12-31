@@ -47,6 +47,5 @@ type SearchContentResponse struct {
 	Offset           int    `json:"offset"`
 	Limit            int    `json:"limit"`
 	TotalCount       int    `json:"total_count"` // Total matches found (may be capped for performance)
-	Truncated        bool   `json:"truncated"`   // True if more matches exist
 	HitMaxResults    bool   `json:"hit_max_results"`
 }

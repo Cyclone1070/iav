@@ -9,21 +9,23 @@ import (
 // -- Read File --
 
 type ReadFileRequest struct {
-	Path   string `json:"path"`
-	Offset *int64 `json:"offset,omitempty"`
-	Limit  *int64 `json:"limit,omitempty"`
+	Path      string `json:"path"`
+	StartLine int    `json:"start_line,omitempty"`
+	EndLine   int    `json:"end_line,omitempty"`
 }
 
-func (r *ReadFileRequest) Validate(cfg *config.Config) error {
+func (r *ReadFileRequest) Validate() error {
 	if r.Path == "" {
 		return fmt.Errorf("path is required")
 	}
-	if r.Offset != nil && *r.Offset < 0 {
-		*r.Offset = 0
+	if r.StartLine <= 0 {
+		r.StartLine = 1
 	}
-	if r.Limit == nil || *r.Limit <= 0 {
-		limit := cfg.Tools.MaxFileSize
-		r.Limit = &limit
+	if r.EndLine < 0 {
+		r.EndLine = 0
+	}
+	if r.EndLine > 0 && r.EndLine < r.StartLine {
+		r.EndLine = r.StartLine
 	}
 	return nil
 }
@@ -33,9 +35,9 @@ type ReadFileResponse struct {
 	AbsolutePath string
 	RelativePath string
 	Size         int64
-	Offset       int64
-	Limit        int64
-	Truncated    bool
+	StartLine    int
+	EndLine      int
+	TotalLines   int
 }
 
 // -- Write File --
@@ -77,7 +79,7 @@ type EditFileRequest struct {
 	Operations []EditOperation `json:"operations"`
 }
 
-func (r *EditFileRequest) Validate(cfg *config.Config) error {
+func (r *EditFileRequest) Validate() error {
 	if r.Path == "" {
 		return fmt.Errorf("path is required")
 	}

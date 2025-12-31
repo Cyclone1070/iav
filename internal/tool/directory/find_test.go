@@ -156,10 +156,6 @@ func TestFindFile_Pagination(t *testing.T) {
 		t.Errorf("expected TotalCount 10, got %d", resp.TotalCount)
 	}
 
-	if !resp.Truncated {
-		t.Error("expected Truncated=true")
-	}
-
 	if matches[0] != "file2.txt" {
 		t.Errorf("expected file2.txt, got %s", matches[0])
 	}
@@ -357,10 +353,6 @@ func TestFindFile_NoMatches(t *testing.T) {
 
 	if resp.FormattedMatches != "No matches found." {
 		t.Errorf("expected 'No matches found.', got output: %q", resp.FormattedMatches)
-	}
-
-	if resp.Truncated {
-		t.Error("expected Truncated=false for no matches")
 	}
 }
 

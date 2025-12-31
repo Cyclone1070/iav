@@ -826,10 +826,6 @@ func TestListDirectory_HitMaxResults(t *testing.T) {
 		t.Error("expected HitMaxResults to be true")
 	}
 
-	if !resp.Truncated {
-		t.Error("expected Truncated to be true")
-	}
-
 	if resp.TotalCount != 5 {
 		t.Errorf("expected TotalCount 5 (capped), got %d", resp.TotalCount)
 	}

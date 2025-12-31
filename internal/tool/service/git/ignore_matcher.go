@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/Cyclone1070/iav/internal/tool/helper/content"
+	"github.com/Cyclone1070/iav/internal/tool/service/fs"
 	"github.com/go-git/go-git/v5/plumbing/format/gitignore"
 )
 
@@ -23,7 +25,7 @@ func (e *GitignoreReadError) Unwrap() error { return e.Cause }
 // fileSystem defines the minimal filesystem interface needed for gitignore service.
 type fileSystem interface {
 	Stat(path string) (os.FileInfo, error)
-	ReadFileRange(path string, offset, limit int64) ([]byte, error)
+	ReadFileLines(path string, startLine, endLine int) (*fs.ReadFileLinesResult, error)
 }
 
 // IgnoreMatcher implements gitignore pattern matching using go-git's gitignore matcher.
@@ -50,14 +52,14 @@ func NewIgnoreMatcher(workspaceRoot string, fs fileSystem) (*IgnoreMatcher, erro
 	}
 
 	// Read .gitignore file
-	content, err := fs.ReadFileRange(gitignorePath, 0, 0)
+	result, err := fs.ReadFileLines(gitignorePath, 1, 0)
 	if err != nil {
 		return nil, &GitignoreReadError{Path: gitignorePath, Cause: err}
 	}
 
 	// Parse gitignore patterns line by line
 	var patterns []gitignore.Pattern
-	lines := splitLines(string(content))
+	lines := content.SplitLines(result.Content)
 	for _, line := range lines {
 		if line == "" {
 			continue // Skip blank lines
@@ -104,26 +106,6 @@ func splitPath(path string) []string {
 	}
 
 	return segments
-}
-
-// splitLines splits content into lines, handling both \n and \r\n line endings.
-func splitLines(content string) []string {
-	var lines []string
-	start := 0
-	for i := 0; i < len(content); i++ {
-		if content[i] == '\n' {
-			lines = append(lines, content[start:i])
-			start = i + 1
-		} else if content[i] == '\r' && i+1 < len(content) && content[i+1] == '\n' {
-			lines = append(lines, content[start:i])
-			start = i + 2
-			i++ // Skip the \n
-		}
-	}
-	if start < len(content) {
-		lines = append(lines, content[start:])
-	}
-	return lines
 }
 
 // NoOpMatcher is a gitignore matcher that never ignores any files.

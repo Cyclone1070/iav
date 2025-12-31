@@ -177,7 +177,6 @@ func (t *SearchContentTool) Run(ctx context.Context, req *SearchContentRequest) 
 		Offset:           req.Offset,
 		Limit:            limit,
 		TotalCount:       paginationResult.TotalCount,
-		Truncated:        paginationResult.Truncated,
 		HitMaxResults:    hitMaxResults,
 	}, nil
 }

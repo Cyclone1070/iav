@@ -162,7 +162,6 @@ func (t *FindFileTool) Run(ctx context.Context, req *FindFileRequest) (*FindFile
 		Offset:           req.Offset,
 		Limit:            limit,
 		TotalCount:       paginationResult.TotalCount,
-		Truncated:        paginationResult.Truncated,
 		HitMaxResults:    hitMaxResults,
 	}, nil
 }

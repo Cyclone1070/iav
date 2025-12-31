@@ -3,6 +3,8 @@ package shell
 import (
 	"fmt"
 	"strings"
+
+	"github.com/Cyclone1070/iav/internal/tool/helper/content"
 )
 
 // ParseEnvFile parses a .env file and returns a map of environment variables.
@@ -16,14 +18,14 @@ import (
 // - Multi-line values
 // - Variable expansion
 // - Complex shell escaping
-func ParseEnvFile(fs envFileReader, path string) (map[string]string, error) {
-	content, err := fs.ReadFileRange(path, 0, 0)
+func ParseEnvFile(fs envFileOps, path string) (map[string]string, error) {
+	result, err := fs.ReadFileLines(path, 1, 0)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read env file %s: %w", path, err)
 	}
 
 	env := make(map[string]string)
-	lines := strings.Split(string(content), "\n")
+	lines := content.SplitLines(result.Content)
 
 	for i, rawLine := range lines {
 		lineNum := i + 1
