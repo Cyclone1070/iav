@@ -73,6 +73,9 @@ func (c *Config) Validate() error {
 	if c.Tools.DockerGracefulShutdownMs < 1 {
 		errs = append(errs, "tools.docker_graceful_shutdown_ms must be >= 1")
 	}
+	if c.Tools.MaxIterations < 1 {
+		errs = append(errs, "tools.max_iterations must be >= 1")
+	}
 
 	if len(errs) > 0 {
 		return fmt.Errorf("config validation failed: %v", errs)

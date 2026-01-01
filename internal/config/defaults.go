@@ -34,6 +34,9 @@ type ToolsConfig struct {
 	DockerRetryAttempts      int `json:"docker_retry_attempts"`       // Default: 10
 	DockerRetryIntervalMs    int `json:"docker_retry_interval_ms"`    // Default: 1000
 	DockerGracefulShutdownMs int `json:"docker_graceful_shutdown_ms"` // Default: 2000
+
+	// Workflow
+	MaxIterations int `json:"max_iterations"` // Default: 20
 }
 
 // DefaultConfig returns the default configuration.
@@ -56,6 +59,7 @@ func DefaultConfig() *Config {
 			DockerRetryAttempts:         10,
 			DockerRetryIntervalMs:       1000,
 			DockerGracefulShutdownMs:    2000,
+			MaxIterations:               20,
 		},
 	}
 }

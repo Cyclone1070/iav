@@ -1,5 +1,9 @@
 package tool
 
+import (
+	"io"
+)
+
 // Type represents JSON Schema types.
 type Type string
 
@@ -28,3 +32,34 @@ type Declaration struct {
 	Description string  `json:"description"`
 	Parameters  *Schema `json:"parameters,omitempty"`
 }
+
+// ToolDisplay is implemented by all display types returned from tools.
+// The UI uses type switches to render each type appropriately.
+type ToolDisplay interface {
+	isToolDisplay()
+}
+
+// StringDisplay is for simple text output (most tools).
+type StringDisplay string
+
+func (StringDisplay) isToolDisplay() {}
+
+// DiffDisplay is for file edit operations with unified diff content.
+type DiffDisplay struct {
+	FileName     string
+	Diff         string // Unified diff content
+	AddedLines   int
+	RemovedLines int
+}
+
+func (DiffDisplay) isToolDisplay() {}
+
+// ShellDisplay is for shell command execution with streaming output.
+type ShellDisplay struct {
+	Command    string
+	WorkingDir string
+	Output     io.Reader  // Stream stdout/stderr from here
+	Wait       func() int // Call after reading Output to get exit code
+}
+
+func (ShellDisplay) isToolDisplay() {}
