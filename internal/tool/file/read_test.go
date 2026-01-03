@@ -113,6 +113,20 @@ func (m *mockChecksumManagerForRead) Clear() {
 
 // Test functions
 
+// executeRead is a test helper that calls Execute and type-asserts the result.
+func executeRead(t *testing.T, rtool *ReadFileTool, req *ReadFileRequest) *ReadFileResponse {
+	t.Helper()
+	result, err := rtool.Execute(context.Background(), req)
+	if err != nil {
+		t.Fatalf("Execute returned infra error: %v", err)
+	}
+	resp, ok := result.(*ReadFileResponse)
+	if !ok {
+		t.Fatalf("Execute returned wrong type: %T", result)
+	}
+	return resp
+}
+
 func TestReadFile(t *testing.T) {
 	workspaceRoot := "/workspace"
 	maxFileSize := int64(1024 * 1024) // 1MB
@@ -129,9 +143,10 @@ func TestReadFile(t *testing.T) {
 		readTool := NewReadFileTool(fs, checksumManager, path.NewResolver(workspaceRoot), cfg)
 
 		readReq := &ReadFileRequest{Path: "test.txt", Offset: 0, Limit: 100}
-		resp, err := readTool.Run(context.Background(), readReq)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
+		resp := executeRead(t, readTool, readReq)
+
+		if resp.Error != "" {
+			t.Fatalf("Execute failed: %s", resp.Error)
 		}
 
 		if resp.Content != contentStr {
@@ -160,9 +175,10 @@ func TestReadFile(t *testing.T) {
 
 		// Read lines 2 and 3 (Offset=1, Limit=2)
 		readReq := &ReadFileRequest{Path: "test.txt", Offset: 1, Limit: 2}
-		resp, err := readTool.Run(context.Background(), readReq)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
+		resp := executeRead(t, readTool, readReq)
+
+		if resp.Error != "" {
+			t.Fatalf("Execute failed: %s", resp.Error)
 		}
 
 		expected := "line2\nline3"
@@ -201,9 +217,9 @@ func TestReadFile(t *testing.T) {
 		readTool := NewReadFileTool(fs, checksumManager, path.NewResolver(workspaceRoot), cfg)
 
 		readReq := &ReadFileRequest{Path: "binary.bin"}
-		_, err := readTool.Run(context.Background(), readReq)
-		if err == nil {
-			t.Errorf("expected error for binary file, got nil")
+		resp := executeRead(t, readTool, readReq)
+		if resp.Error == "" {
+			t.Errorf("expected error for binary file, got success")
 		}
 	})
 
@@ -219,9 +235,9 @@ func TestReadFile(t *testing.T) {
 		readTool := NewReadFileTool(fs, checksumManager, path.NewResolver(workspaceRoot), cfg)
 
 		readReq := &ReadFileRequest{Path: "large.txt"}
-		_, err := readTool.Run(context.Background(), readReq)
-		if err == nil {
-			t.Fatalf("expected error for file exceeding MaxFileSize, got nil")
+		resp := executeRead(t, readTool, readReq)
+		if resp.Error == "" {
+			t.Fatalf("expected error for file exceeding MaxFileSize, got success")
 		}
 	})
 
@@ -236,10 +252,12 @@ func TestReadFile(t *testing.T) {
 		offset := 100
 
 		readReq := &ReadFileRequest{Path: "test.txt", Offset: offset, Limit: 10}
-		resp, err := readTool.Run(context.Background(), readReq)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
+		resp := executeRead(t, readTool, readReq)
+
+		if resp.Error != "" {
+			t.Fatalf("Execute failed: %s", resp.Error)
 		}
+
 		if resp.Content != "" {
 			t.Errorf("expected empty content, got %q", resp.Content)
 		}
@@ -261,8 +279,8 @@ func TestReadFile(t *testing.T) {
 		readTool := NewReadFileTool(fs, checksumManager, path.NewResolver(workspaceRoot), cfg)
 
 		readReq := &ReadFileRequest{Path: "subdir"}
-		_, err := readTool.Run(context.Background(), readReq)
-		if err == nil {
+		resp := executeRead(t, readTool, readReq)
+		if resp.Error == "" {
 			t.Error("expected error when reading directory")
 		}
 	})
@@ -275,9 +293,9 @@ func TestReadFile(t *testing.T) {
 		readTool := NewReadFileTool(fs, checksumManager, path.NewResolver(workspaceRoot), cfg)
 
 		readReq := &ReadFileRequest{Path: "nonexistent.txt"}
-		_, err := readTool.Run(context.Background(), readReq)
-		if err == nil {
-			t.Errorf("expected error for nonexistent file, got nil")
+		resp := executeRead(t, readTool, readReq)
+		if resp.Error == "" {
+			t.Errorf("expected error for nonexistent file, got success")
 		}
 	})
 }

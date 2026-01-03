@@ -36,9 +36,7 @@
 > [!TIP]
 > **Exception: Helper Package Interfaces**
 >
-> If you already import a helper package (e.g., `pathutil`) and call its functions, you are coupled to it.
-> In this case, **import its interface directly** rather than redefining an identical interface locally.
-> See [Pure Helpers](02-dependency-injection.md) for more on this distinction.
+> If you already import a helper package (e.g., `pathutil`) and call its functions directly, you are already coupled to it. In this case, **import its interface directly** rather than redefining an identical interface locally. See [Pure Helpers](02-dependency-injection.md) for more on this distinction.
 >
 > *   **Bad**: Redefining `type pathResolver interface { Lstat()... }` when you already import `path.Resolve`.
 > *   **Good**: Use `path.FileSystem` directly since coupling already exists.

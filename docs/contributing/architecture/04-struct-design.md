@@ -4,10 +4,17 @@
 
 ## Rule
 
+
 | Struct Type                    | Fields  | Constructor       | Validation          |
 | ------------------------------ | ------- | ----------------- | ------------------- |
 | **Services & Domain Entities** | Private | `NewT()` required | At construction     |
 | **DTOs & Data Holders**        | Public  | Optional          | `Validate()` method |
+
+
+## Why not use only one style?
+
+- **Full public fields**: Go idiom to reduce OOP boilerplate, the reasoning is that developers should be trusted to use structs correctly. Reality is that they can not.
+- **Strict encapsulation**: Preferable really, but the ecosystem is not built for it and you will end up swimming upstream. For example translating JSON requires public fields from struct and won't work with constructors.
 
 ## Services & Domain Entities
 

@@ -46,7 +46,6 @@ func (StringDisplay) isToolDisplay() {}
 
 // DiffDisplay is for file edit operations with unified diff content.
 type DiffDisplay struct {
-	FileName     string
 	Diff         string // Unified diff content
 	AddedLines   int
 	RemovedLines int

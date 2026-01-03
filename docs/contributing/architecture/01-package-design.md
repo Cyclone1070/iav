@@ -18,7 +18,7 @@
 > ```
 
 *   **Package Naming**: Package structure and naming should provide enough context to understand the content and purpose of each package.
-    *   **Why**: Clear names enable discoverability and prevent packages from becoming dumping grounds.
+    *   **Why**: Clear names enable discoverability and prevent packages from becoming dumping grounds. Generic names lead to junk drawers grouping unrelated logic.
     *   **Guideline**: Names like `helper/`, `service/`, or `util/` are acceptable as parent directories when their children and/or parent have specific, descriptive names.
 
 > [!NOTE]
@@ -35,11 +35,6 @@
 > ```
 >
 > The parent directories (`helper/`, `service/`) provide organizational context, while the actual packages have descriptive names.
-
-*   **File Organization**: Prefer flat files within a package over nested sub-packages for layers.
-    *   **Correct**: `feature/types.go`, `feature/service.go`
-    *   **Incorrect**: `feature/models/types.go`, `feature/services/service.go`
-    *   **Why**: Nested layers group by what code IS, not what it DOES.
 
 > [!CAUTION]
 > **ANTI-PATTERN**: Layered Organization
@@ -63,7 +58,7 @@
 >   └── customer/
 > ```
 
-*   **Splitting Rule**: If a package grows to 10-15 files, it is too big. Break it into focused sub-packages.
+*   **Splitting Rule**: If a package grows to 10-15 files (excluding tests), it is likely too big. Break it into focused sub-packages.
     *   **Why**: Large packages become hard to navigate and test.
     *   **Action**: Split by domain (e.g., `internal/user/`, `internal/order/`), not by layer.
 
@@ -71,10 +66,3 @@
 > **Single-File Directories Are Acceptable**
 >
 > When extracting shared code to prevent circular dependencies, a directory with one file is fine. Correct structure matters more than file count.
-
-> [!CAUTION]
-> **ANTI-PATTERN**: Junk Drawer
->
-> *   **Bad**: A single `utils.go` or `common.go` containing unrelated functions (strings, encryption, formatting).
-> *   **Why**: Violates cohesion. Becomes a dumping ground where dependencies tangle.
-> *   **Solution**: Split into focused packages or files by what they operate on.

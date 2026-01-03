@@ -85,7 +85,9 @@ func (t *ReadFileTool) Request() toolmanager.ToolRequest {
 	return &ReadFileRequest{}
 }
 
-// Execute runs the tool with the request and returns a ToolResult.
+// Execute reads a file from the workspace with line-based pagination.
+//
+// Note: ctx is accepted for API consistency but not used - file I/O is synchronous.
 func (t *ReadFileTool) Execute(ctx context.Context, req toolmanager.ToolRequest) (toolmanager.ToolResult, error) {
 	r, ok := req.(*ReadFileRequest)
 	if !ok {
@@ -96,44 +98,35 @@ func (t *ReadFileTool) Execute(ctx context.Context, req toolmanager.ToolRequest)
 		return &ReadFileResponse{Error: err.Error()}, nil
 	}
 
-	resp, err := t.Run(ctx, r)
+	abs, err := t.pathResolver.Abs(r.Path)
 	if err != nil {
-		// PER CONTRACT: Infra/Context errors return error, stopping the loop.
-		if ctx.Err() != nil {
-			return nil, ctx.Err()
-		}
-		// Tool failures (file not found, validation, etc) return response with Error field set
 		return &ReadFileResponse{Error: err.Error()}, nil
-	}
-
-	return resp, nil
-}
-
-// Run reads a file from the workspace with line-based pagination.
-func (t *ReadFileTool) Run(ctx context.Context, req *ReadFileRequest) (*ReadFileResponse, error) {
-	abs, err := t.pathResolver.Abs(req.Path)
-	if err != nil {
-		return nil, err
 	}
 
 	// Read full file content
 	data, err := t.fileOps.ReadFile(abs)
 	if err != nil {
-		return nil, err
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+		return &ReadFileResponse{Error: err.Error()}, nil
 	}
 
-	// Always update checksum since we read the full file
-	checksum := t.checksumManager.Compute(data)
+	// Normalize line endings for consistent checksum (matches EditFileTool behavior)
+	normalizedContent := strings.ReplaceAll(string(data), "\r\n", "\n")
+
+	// Always update checksum since we read the full file (on normalized content)
+	checksum := t.checksumManager.Compute([]byte(normalizedContent))
 	t.checksumManager.Update(abs, checksum)
 
 	// Split into lines using content.SplitLines which handles both \n and \r\n
 	lines := content.SplitLines(string(data))
 
 	// Apply pagination
-	paginatedLines, pagRes := pagination.ApplyPagination(lines, req.Offset, req.Limit)
+	paginatedLines, pagRes := pagination.ApplyPagination(lines, r.Offset, r.Limit)
 
 	// Calculate display lines
-	startLine := req.Offset + 1
+	startLine := r.Offset + 1
 	endLine := startLine + len(paginatedLines) - 1
 	if len(paginatedLines) == 0 {
 		endLine = startLine - 1
