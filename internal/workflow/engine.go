@@ -97,19 +97,5 @@ func (e *Engine) printResultLog(scriptPath string, result *domain.TestExecutionR
 		statusStr = "FAILED"
 	}
 	_, _ = fmt.Fprintf(e.out, "Test Execution Summary for %s: %s\n", filepath.Base(scriptPath), statusStr)
-
-	for _, stage := range result.Stages {
-		status := "[PASS]"
-		errStr := ""
-		if !stage.Success {
-			if stage.Stderr == "Skipped or not executed" {
-				status = "[SKIP]"
-			} else {
-				status = "[FAIL]"
-				errStr = " - " + strings.ReplaceAll(stage.Stderr, "\n", " ")
-			}
-		}
-		_, _ = fmt.Fprintf(e.out, "  %s %s (%dms)%s\n", status, stage.StageName, stage.DurationMs, errStr)
-	}
 	_, _ = fmt.Fprintln(e.out)
 }

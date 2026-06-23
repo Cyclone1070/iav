@@ -85,7 +85,7 @@ func NewTestCmd() *cobra.Command {
 			}
 
 			pipelineFactory := func() workflow.Pipeline {
-				return pipelineAdapter{Pipeline: pipeline.NewPipeline()}
+				return pipelineAdapter{Pipeline: pipeline.NewPipeline(cmd.OutOrStdout())}
 			}
 
 			composeRunner := workflow.NewRunCompose(defaultFS, client, composeStages, pipelineFactory)

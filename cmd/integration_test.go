@@ -59,7 +59,7 @@ services:
 	}
 
 	// 5. Construct Compose pipeline
-	p := pipeline.NewPipeline()
+	p := pipeline.NewPipeline(nil)
 	p.Add(dockerstages.NewComposeUpStage(client, iavfs.RealFS{}))
 	p.Add(dockerstages.NewComposeDownStage(client, iavfs.RealFS{}))
 

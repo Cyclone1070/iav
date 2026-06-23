@@ -1,8 +1,10 @@
 package pipeline
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/Cyclone1070/iav/internal/domain"
@@ -45,7 +47,7 @@ func TestPipelineSuccess(t *testing.T) {
 		},
 	}
 
-	p := NewPipeline()
+	p := NewPipeline(nil)
 	p.Add(s1)
 	p.Add(s2)
 
@@ -85,7 +87,7 @@ func TestPipelineFailure(t *testing.T) {
 		},
 	}
 
-	p := NewPipeline()
+	p := NewPipeline(nil)
 	p.Add(s1)
 	p.Add(s2)
 
@@ -111,5 +113,54 @@ func TestPipelineFailure(t *testing.T) {
 	res2, ok2 := stagesMap["stage2"]
 	if !ok1 || !ok2 || res1.Success || res2.Success {
 		t.Errorf("unexpected stages results: %+v", res.Stages)
+	}
+}
+
+func TestPipelineStreaming(t *testing.T) {
+	ctx := context.Background()
+	ec := &domain.ExecutionContext{
+		WorkspaceRoot: "/tmp",
+	}
+
+	s1 := &dummyStage{
+		name: "stage1",
+		runFunc: func(ctx context.Context, ec *domain.ExecutionContext) (*domain.StageResult, error) {
+			return &domain.StageResult{StageName: "stage1", Success: true}, nil
+		},
+	}
+
+	s2 := &dummyStage{
+		name: "stage2",
+		deps: []string{"stage1"},
+		runFunc: func(ctx context.Context, ec *domain.ExecutionContext) (*domain.StageResult, error) {
+			return &domain.StageResult{StageName: "stage2", Success: false, Stderr: "some error"}, errors.New("failed")
+		},
+	}
+
+	s3 := &dummyStage{
+		name: "stage3",
+		deps: []string{"stage2"},
+		runFunc: func(ctx context.Context, ec *domain.ExecutionContext) (*domain.StageResult, error) {
+			return &domain.StageResult{StageName: "stage3", Success: true}, nil
+		},
+	}
+
+	var buf bytes.Buffer
+	p := NewPipeline(&buf)
+	p.Add(s1)
+	p.Add(s2)
+	p.Add(s3)
+
+	_, _ = p.Execute(ctx, ec)
+
+	output := buf.String()
+	if !strings.Contains(output, "  [PASS] stage1") {
+		t.Errorf("expected output to contain stage1 pass, got: %q", output)
+	}
+	if !strings.Contains(output, "  [FAIL] stage2") {
+		t.Errorf("expected output to contain stage2 fail, got: %q", output)
+	}
+	if !strings.Contains(output, "  [SKIP] stage3") {
+		t.Errorf("expected output to contain stage3 skip, got: %q", output)
 	}
 }

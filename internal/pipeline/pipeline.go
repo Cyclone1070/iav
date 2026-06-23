@@ -6,6 +6,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"strings"
 	"sync"
 	"time"
 
@@ -15,11 +17,13 @@ import (
 
 type Pipeline struct {
 	stages []Stage
+	out    io.Writer
 }
 
-func NewPipeline() *Pipeline {
+func NewPipeline(out io.Writer) *Pipeline {
 	return &Pipeline{
 		stages: make([]Stage, 0),
+		out:    out,
 	}
 }
 
@@ -33,6 +37,7 @@ type stepWrapper struct {
 	res   *domain.StageResult
 	err   error
 	mu    sync.Mutex
+	out   io.Writer
 }
 
 func (w *stepWrapper) Do(ctx context.Context) error {
@@ -41,8 +46,6 @@ func (w *stepWrapper) Do(ctx context.Context) error {
 	duration := time.Since(start).Milliseconds()
 
 	w.mu.Lock()
-	defer w.mu.Unlock()
-
 	if res != nil {
 		res.DurationMs = duration
 		w.res = res
@@ -60,6 +63,18 @@ func (w *stepWrapper) Do(ctx context.Context) error {
 		}
 	}
 	w.err = err
+	w.mu.Unlock()
+
+	if w.out != nil {
+		status := "[PASS]"
+		errStr := ""
+		if !w.res.Success {
+			status = "[FAIL]"
+			errStr = " - " + strings.ReplaceAll(w.res.Stderr, "\n", " ")
+		}
+		_, _ = fmt.Fprintf(w.out, "  %s %s (%dms)%s\n", status, w.res.StageName, w.res.DurationMs, errStr)
+	}
+
 	return err
 }
 
@@ -70,6 +85,19 @@ func (p *Pipeline) Execute(ctx context.Context, ec *domain.ExecutionContext) (*d
 	}
 
 	runErr := w.Do(ctx)
+
+	if p.out != nil {
+		for _, step := range w.Steps() {
+			if wrapper, ok := step.(*stepWrapper); ok {
+				wrapper.mu.Lock()
+				hasRun := wrapper.res != nil
+				wrapper.mu.Unlock()
+				if !hasRun {
+					_, _ = fmt.Fprintf(p.out, "  [SKIP] %s\n", wrapper.stage.Name())
+				}
+			}
+		}
+	}
 
 	stageResults, success, failedErr := collectWorkflowResults(w, runErr)
 
@@ -105,6 +133,7 @@ func (p *Pipeline) buildWorkflow(ec *domain.ExecutionContext) (*flow.Workflow, m
 		wrappers[s.Name()] = &stepWrapper{
 			stage: s,
 			ec:    ec,
+			out:   p.out,
 		}
 	}
 

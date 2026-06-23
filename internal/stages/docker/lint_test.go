@@ -2,6 +2,8 @@ package docker
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/Cyclone1070/iav/internal/domain"
@@ -74,18 +76,25 @@ func TestHadolintStageHostSuccess(t *testing.T) {
 		}
 		return "/usr/local/bin/hadolint", nil
 	}
+
+	tmpDir := t.TempDir()
+	dockerfilePath := filepath.Join(tmpDir, "Dockerfile")
+	if err := os.WriteFile(dockerfilePath, []byte("FROM alpine"), 0600); err != nil {
+		t.Fatalf("failed to write test Dockerfile: %v", err)
+	}
+
 	stage.hostRunner = func(ctx context.Context, name string, arg string) (string, string, int, error) {
 		if name != "/usr/local/bin/hadolint" {
 			t.Errorf("unexpected name: %s", name)
 		}
-		if arg != "/tmp/Dockerfile" {
+		if arg != dockerfilePath {
 			t.Errorf("unexpected arg: %s", arg)
 		}
 		return "HOST_OK", "", 0, nil
 	}
 
 	ec := &domain.ExecutionContext{
-		WorkspaceRoot: "/tmp",
+		WorkspaceRoot: tmpDir,
 	}
 
 	res, err := stage.Run(context.Background(), ec)
@@ -107,12 +116,19 @@ func TestHadolintStageHostFailure(t *testing.T) {
 	stage.lookPath = func(name string) (string, error) {
 		return "/usr/local/bin/hadolint", nil
 	}
+
+	tmpDir := t.TempDir()
+	dockerfilePath := filepath.Join(tmpDir, "Dockerfile")
+	if err := os.WriteFile(dockerfilePath, []byte("FROM alpine"), 0600); err != nil {
+		t.Fatalf("failed to write test Dockerfile: %v", err)
+	}
+
 	stage.hostRunner = func(ctx context.Context, name string, arg string) (string, string, int, error) {
 		return "", "host error: DL3006", 1, nil
 	}
 
 	ec := &domain.ExecutionContext{
-		WorkspaceRoot: "/tmp",
+		WorkspaceRoot: tmpDir,
 	}
 
 	res, err := stage.Run(context.Background(), ec)

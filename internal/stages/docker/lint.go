@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"os/exec"
 	"path/filepath"
 
@@ -58,23 +59,25 @@ func (s *LintStage) Run(ctx context.Context, ec *domain.ExecutionContext) (*doma
 	hadolintPath, err := s.lookPath("hadolint")
 	if err == nil {
 		filePath := filepath.Join(ec.WorkspaceRoot, "Dockerfile")
-		stdout, stderr, exitCode, runErr := s.hostRunner(ctx, hadolintPath, filePath)
-		if runErr != nil {
+		if _, statErr := os.Stat(filePath); statErr == nil {
+			stdout, stderr, exitCode, runErr := s.hostRunner(ctx, hadolintPath, filePath)
+			if runErr != nil {
+				return &domain.StageResult{
+					StageName: s.Name(),
+					Success:   false,
+					Stdout:    stdout,
+					Stderr:    runErr.Error(),
+				}, runErr
+			}
+
+			success, stderr, runErr := processLintResult(exitCode, stderr)
 			return &domain.StageResult{
 				StageName: s.Name(),
-				Success:   false,
+				Success:   success,
 				Stdout:    stdout,
-				Stderr:    runErr.Error(),
+				Stderr:    stderr,
 			}, runErr
 		}
-
-		success, stderr, runErr := processLintResult(exitCode, stderr)
-		return &domain.StageResult{
-			StageName: s.Name(),
-			Success:   success,
-			Stdout:    stdout,
-			Stderr:    stderr,
-		}, runErr
 	}
 
 	// The path to the Dockerfile is assumed to be inside ec.WorkspaceRoot.
