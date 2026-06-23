@@ -76,7 +76,7 @@ func (e *Engine) executeSingleTest(ctx context.Context, testComposePath string, 
 	result, pipelineErr := e.runner.Run(ctx, testComposePath, runID, timeoutMs)
 
 	if result != nil {
-		e.printResultTable(testComposePath, result)
+		e.printResultLog(testComposePath, result)
 	}
 
 	return pipelineErr
@@ -90,21 +90,26 @@ func (e *Engine) generateRunID() string {
 	return hex.EncodeToString(bytes)
 }
 
-func (e *Engine) printResultTable(scriptPath string, result *domain.TestExecutionResult) {
+func (e *Engine) printResultLog(scriptPath string, result *domain.TestExecutionResult) {
 	_, _ = fmt.Fprintln(e.out)
-	_, _ = fmt.Fprintf(e.out, "### Test Execution Summary for `%s` (%s)\n\n", filepath.Base(scriptPath), result.Summary)
-	_, _ = fmt.Fprintln(e.out, "| Stage | Status | Duration | Error |")
-	_, _ = fmt.Fprintln(e.out, "| --- | --- | --- | --- |")
+	statusStr := "PASSED"
+	if !result.Success {
+		statusStr = "FAILED"
+	}
+	_, _ = fmt.Fprintf(e.out, "Test Execution Summary for %s: %s\n", filepath.Base(scriptPath), statusStr)
+
 	for _, stage := range result.Stages {
-		status := "SUCCESS"
-		if !stage.Success {
-			status = "FAILED"
-		}
+		status := "[PASS]"
 		errStr := ""
-		if stage.Stderr != "" {
-			errStr = strings.ReplaceAll(stage.Stderr, "\n", " ")
+		if !stage.Success {
+			if stage.Stderr == "Skipped or not executed" {
+				status = "[SKIP]"
+			} else {
+				status = "[FAIL]"
+				errStr = " - " + strings.ReplaceAll(stage.Stderr, "\n", " ")
+			}
 		}
-		_, _ = fmt.Fprintf(e.out, "| %s | %s | %dms | %s |\n", stage.StageName, status, stage.DurationMs, errStr)
+		_, _ = fmt.Fprintf(e.out, "  %s %s (%dms)%s\n", status, stage.StageName, stage.DurationMs, errStr)
 	}
 	_, _ = fmt.Fprintln(e.out)
 }

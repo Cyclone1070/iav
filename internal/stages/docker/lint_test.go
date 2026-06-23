@@ -64,3 +64,66 @@ func TestHadolintStageFailure(t *testing.T) {
 		t.Errorf("unexpected stderr recorded: %s", res.Stderr)
 	}
 }
+
+func TestHadolintStageHostSuccess(t *testing.T) {
+	mockClient := &mockDockerClient{}
+	stage := NewLintStage(mockClient)
+	stage.lookPath = func(name string) (string, error) {
+		if name != "hadolint" {
+			t.Errorf("unexpected lookPath call for: %s", name)
+		}
+		return "/usr/local/bin/hadolint", nil
+	}
+	stage.hostRunner = func(ctx context.Context, name string, arg string) (string, string, int, error) {
+		if name != "/usr/local/bin/hadolint" {
+			t.Errorf("unexpected name: %s", name)
+		}
+		if arg != "/tmp/Dockerfile" {
+			t.Errorf("unexpected arg: %s", arg)
+		}
+		return "HOST_OK", "", 0, nil
+	}
+
+	ec := &domain.ExecutionContext{
+		WorkspaceRoot: "/tmp",
+	}
+
+	res, err := stage.Run(context.Background(), ec)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if !res.Success {
+		t.Errorf("expected success")
+	}
+	if res.Stdout != "HOST_OK" {
+		t.Errorf("unexpected stdout: %s", res.Stdout)
+	}
+}
+
+func TestHadolintStageHostFailure(t *testing.T) {
+	mockClient := &mockDockerClient{}
+	stage := NewLintStage(mockClient)
+	stage.lookPath = func(name string) (string, error) {
+		return "/usr/local/bin/hadolint", nil
+	}
+	stage.hostRunner = func(ctx context.Context, name string, arg string) (string, string, int, error) {
+		return "", "host error: DL3006", 1, nil
+	}
+
+	ec := &domain.ExecutionContext{
+		WorkspaceRoot: "/tmp",
+	}
+
+	res, err := stage.Run(context.Background(), ec)
+	if err == nil {
+		t.Errorf("expected error, got nil")
+	}
+
+	if res.Success {
+		t.Errorf("expected stage success=false")
+	}
+	if res.Stderr != "host error: DL3006" {
+		t.Errorf("unexpected stderr: %s", res.Stderr)
+	}
+}

@@ -71,11 +71,11 @@ func TestEngine_Success(t *testing.T) {
 	}
 
 	output := buf.String()
-	if !strings.Contains(output, "Running test compose: docker-compose.test.yml") {
-		t.Errorf("expected output to contain compose name, got: %s", output)
+	if !strings.Contains(output, "Test Execution Summary for docker-compose.test.yml: PASSED") {
+		t.Errorf("expected output to contain summary log header, got: %s", output)
 	}
-	if !strings.Contains(output, "### Test Execution Summary for `docker-compose.test.yml`") {
-		t.Errorf("expected output to contain summary table, got: %s", output)
+	if !strings.Contains(output, "  [PASS] Compose Up (20ms)") {
+		t.Errorf("expected output to contain PASS stage log, got: %s", output)
 	}
 }
 

@@ -55,13 +55,17 @@ func NewTestCmd() *cobra.Command {
 		Short: "Run IaV tests for a script or all scripts in a directory",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			completed := false
 			ctx, stop := signal.NotifyContext(cmd.Context(), syscall.SIGINT, syscall.SIGTERM)
-			defer stop()
+			defer func() {
+				completed = true
+				stop()
+			}()
 
 			// Print termination signal notification in background
 			go func() {
 				<-ctx.Done()
-				if ctx.Err() != nil {
+				if !completed && ctx.Err() != nil {
 					cmd.Println("\nReceived termination signal. Cleaning up resources...")
 				}
 			}()
