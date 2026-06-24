@@ -48,6 +48,7 @@ func NewDockerComposeTester(
 }
 
 func (e *DockerComposeTester) Run(ctx context.Context, targetPath string, timeoutMs int) error {
+	_, _ = fmt.Fprintln(e.out, "Testing Docker Compose")
 	testScripts, err := e.discoverer.Run(targetPath)
 	if err != nil {
 		return err
@@ -55,11 +56,32 @@ func (e *DockerComposeTester) Run(ctx context.Context, targetPath string, timeou
 
 	_ = e.pruner.PruneExpiredResources(ctx)
 
+	type testResult struct {
+		name   string
+		passed bool
+	}
+	var results []testResult
+
 	var failedScripts []string
 	for _, scriptPath := range testScripts {
+		filename := filepath.Base(scriptPath)
 		if err := e.executeSingleTest(ctx, scriptPath, timeoutMs); err != nil {
 			failedScripts = append(failedScripts, scriptPath)
+			results = append(results, testResult{name: filename, passed: false})
+		} else {
+			results = append(results, testResult{name: filename, passed: true})
 		}
+	}
+
+	// Print aggregated summary at the end
+	_, _ = fmt.Fprintln(e.out)
+	_, _ = fmt.Fprintln(e.out, "Test Summary:")
+	for _, res := range results {
+		status := "[PASS]"
+		if !res.passed {
+			status = "[FAIL]"
+		}
+		_, _ = fmt.Fprintf(e.out, "  %s %s\n", status, res.name)
 	}
 
 	if len(failedScripts) > 0 {
@@ -70,14 +92,10 @@ func (e *DockerComposeTester) Run(ctx context.Context, targetPath string, timeou
 }
 
 func (e *DockerComposeTester) executeSingleTest(ctx context.Context, testComposePath string, timeoutMs int) error {
-	_, _ = fmt.Fprintf(e.out, "Running test compose: %s\n", filepath.Base(testComposePath))
+	_, _ = fmt.Fprintf(e.out, "  - %s:\n", filepath.Base(testComposePath))
 
 	runID := e.generateRunID()
-	result, pipelineErr := e.runner.Run(ctx, testComposePath, runID, timeoutMs)
-
-	if result != nil {
-		e.printResultLog(testComposePath, result)
-	}
+	_, pipelineErr := e.runner.Run(ctx, testComposePath, runID, timeoutMs)
 
 	return pipelineErr
 }
@@ -88,14 +106,4 @@ func (e *DockerComposeTester) generateRunID() string {
 		return strconv.FormatInt(time.Now().UnixNano(), 10)
 	}
 	return hex.EncodeToString(bytes)
-}
-
-func (e *DockerComposeTester) printResultLog(scriptPath string, result *domain.TestExecutionResult) {
-	_, _ = fmt.Fprintln(e.out)
-	statusStr := "PASSED"
-	if !result.Success {
-		statusStr = "FAILED"
-	}
-	_, _ = fmt.Fprintf(e.out, "Test Execution Summary for %s: %s\n", filepath.Base(scriptPath), statusStr)
-	_, _ = fmt.Fprintln(e.out)
 }

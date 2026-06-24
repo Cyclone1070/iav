@@ -94,7 +94,7 @@ func runRootWorkflow(cmd *cobra.Command, target string, timeout int) error {
 	if hasLint {
 		p := pipelineAdapter{Pipeline: pipeline.NewPipeline(cmd.OutOrStdout())}
 		s := dockerstages.NewLintStage(client)
-		linter := workflow.NewDockerLinter(p, s)
+		linter := workflow.NewDockerLinter(p, s, cmd.OutOrStdout())
 		if lintErr := linter.Run(ctx, target); lintErr != nil {
 			return lintErr
 		}
@@ -103,7 +103,9 @@ func runRootWorkflow(cmd *cobra.Command, target string, timeout int) error {
 	if hasTest {
 		discoverer := workflow.NewDiscovery(defaultFS)
 		pipelineFactory := func() workflow.Pipeline {
-			return pipelineAdapter{Pipeline: pipeline.NewPipeline(cmd.OutOrStdout())}
+			p := pipeline.NewPipeline(cmd.OutOrStdout())
+			p.SetPrefix("    ")
+			return pipelineAdapter{Pipeline: p}
 		}
 
 		testStages := []workflow.Stage{

@@ -18,13 +18,19 @@ import (
 type Pipeline struct {
 	stages []Stage
 	out    io.Writer
+	prefix string
 }
 
 func NewPipeline(out io.Writer) *Pipeline {
 	return &Pipeline{
 		stages: make([]Stage, 0),
 		out:    out,
+		prefix: "  ", // default prefix
 	}
+}
+
+func (p *Pipeline) SetPrefix(prefix string) {
+	p.prefix = prefix
 }
 
 func (p *Pipeline) Add(s Stage) {
@@ -32,15 +38,28 @@ func (p *Pipeline) Add(s Stage) {
 }
 
 type stepWrapper struct {
-	stage Stage
-	ec    *domain.ExecutionContext
-	res   *domain.StageResult
-	err   error
-	mu    sync.Mutex
-	out   io.Writer
+	stage  Stage
+	ec     *domain.ExecutionContext
+	res    *domain.StageResult
+	err    error
+	mu     sync.Mutex
+	out    io.Writer
+	prefix string
 }
 
 func (w *stepWrapper) Do(ctx context.Context) error {
+	w.mu.Lock()
+	out := w.out
+	stageName := w.stage.Name()
+	prefix := w.prefix
+	w.mu.Unlock()
+
+	var pl *ProgressLogger
+	if out != nil {
+		pl = NewProgressLogger(out, prefix)
+		pl.Start(stageName)
+	}
+
 	start := time.Now()
 	res, err := w.stage.Run(ctx, w.ec)
 	duration := time.Since(start).Milliseconds()
@@ -56,7 +75,7 @@ func (w *stepWrapper) Do(ctx context.Context) error {
 			stderr = err.Error()
 		}
 		w.res = &domain.StageResult{
-			StageName:  w.stage.Name(),
+			StageName:  stageName,
 			Success:    success,
 			DurationMs: duration,
 			Stderr:     stderr,
@@ -65,14 +84,14 @@ func (w *stepWrapper) Do(ctx context.Context) error {
 	w.err = err
 	w.mu.Unlock()
 
-	if w.out != nil {
+	if pl != nil {
 		status := "[PASS]"
 		errStr := ""
 		if !w.res.Success {
 			status = "[FAIL]"
-			errStr = " - " + strings.ReplaceAll(w.res.Stderr, "\n", " ")
+			errStr = strings.ReplaceAll(w.res.Stderr, "\n", " ")
 		}
-		_, _ = fmt.Fprintf(w.out, "  %s %s (%dms)%s\n", status, w.res.StageName, w.res.DurationMs, errStr)
+		pl.Complete(stageName, status, w.res.DurationMs, errStr)
 	}
 
 	return err
@@ -131,9 +150,10 @@ func (p *Pipeline) buildWorkflow(ec *domain.ExecutionContext) (*flow.Workflow, m
 	wrappers := make(map[string]*stepWrapper)
 	for _, s := range p.stages {
 		wrappers[s.Name()] = &stepWrapper{
-			stage: s,
-			ec:    ec,
-			out:   p.out,
+			stage:  s,
+			ec:     ec,
+			out:    p.out,
+			prefix: p.prefix,
 		}
 	}
 

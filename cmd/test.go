@@ -56,7 +56,9 @@ func NewTestCmd() *cobra.Command {
 			defer func() { _ = client.Close() }()
 
 			pipelineFactory := func() workflow.Pipeline {
-				return pipelineAdapter{Pipeline: pipeline.NewPipeline(cmd.OutOrStdout())}
+				p := pipeline.NewPipeline(cmd.OutOrStdout())
+				p.SetPrefix("    ")
+				return pipelineAdapter{Pipeline: p}
 			}
 
 			testStages := []workflow.Stage{

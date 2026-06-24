@@ -53,7 +53,7 @@ func NewLintCmd() *cobra.Command {
 
 			p := pipelineAdapter{Pipeline: pipeline.NewPipeline(cmd.OutOrStdout())}
 			s := dockerstages.NewLintStage(client)
-			linter := workflow.NewDockerLinter(p, s)
+			linter := workflow.NewDockerLinter(p, s, cmd.OutOrStdout())
 			return linter.Run(ctx, target)
 		},
 	}

@@ -1,8 +1,10 @@
 package workflow
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/Cyclone1070/iav/internal/domain"
@@ -48,8 +50,9 @@ func (m *mockLinterStage) DependsOn() []string {
 func TestDockerLinter_Success(t *testing.T) {
 	stage := &mockLinterStage{name: "Hadolint"}
 	pipeline := &mockLinterPipeline{}
+	var buf bytes.Buffer
 
-	linter := NewDockerLinter(pipeline, stage)
+	linter := NewDockerLinter(pipeline, stage, &buf)
 	err := linter.Run(context.Background(), "/workspace")
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
@@ -57,6 +60,11 @@ func TestDockerLinter_Success(t *testing.T) {
 
 	if len(pipeline.added) != 1 || pipeline.added[0] != stage {
 		t.Errorf("expected Hadolint stage to be added to pipeline")
+	}
+
+	output := buf.String()
+	if !strings.Contains(output, "Linting Dockerfile") {
+		t.Errorf("expected output to contain static analysis header, got: %q", output)
 	}
 }
 
@@ -67,8 +75,9 @@ func TestDockerLinter_Failure(t *testing.T) {
 			return nil, errors.New("hadolint run failed")
 		},
 	}
+	var buf bytes.Buffer
 
-	linter := NewDockerLinter(pipeline, stage)
+	linter := NewDockerLinter(pipeline, stage, &buf)
 	err := linter.Run(context.Background(), "/workspace")
 	if err == nil {
 		t.Fatal("expected linter execution error, got nil")

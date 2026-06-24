@@ -71,8 +71,17 @@ func TestDockerComposeTester_Success(t *testing.T) {
 	}
 
 	output := buf.String()
-	if !strings.Contains(output, "Test Execution Summary for docker-compose.test.yml: PASSED") {
-		t.Errorf("expected output to contain summary log header, got: %s", output)
+	if !strings.Contains(output, "Testing Docker Compose") {
+		t.Errorf("expected output to contain Testing Docker Compose header, got: %s", output)
+	}
+	if !strings.Contains(output, "  - docker-compose.test.yml:") {
+		t.Errorf("expected output to contain compose file header, got: %s", output)
+	}
+	if !strings.Contains(output, "Test Summary:") {
+		t.Errorf("expected output to contain Test Summary header, got: %s", output)
+	}
+	if !strings.Contains(output, "  [PASS] docker-compose.test.yml") {
+		t.Errorf("expected output to contain Test Summary result, got: %s", output)
 	}
 }
 
