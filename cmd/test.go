@@ -1,60 +1,39 @@
-// Package cmd implements the CLI interface for the iav test runner using cobra.
 package cmd
 
 import (
-	"context"
 	"fmt"
-	"io/fs"
 	"os/signal"
 	"syscall"
 
-	"github.com/Cyclone1070/iav/internal/docker"
-	"github.com/Cyclone1070/iav/internal/domain"
-	iavfs "github.com/Cyclone1070/iav/internal/fs"
 	"github.com/Cyclone1070/iav/internal/pipeline"
 	dockerstages "github.com/Cyclone1070/iav/internal/stages/docker"
 	"github.com/Cyclone1070/iav/internal/workflow"
 	"github.com/spf13/cobra"
 )
 
-type fileSystem interface {
-	Open(name string) (fs.File, error)
-	Abs(path string) (string, error)
-	Stat(path string) (fs.FileInfo, error)
-	WalkDir(root string, fn fs.WalkDirFunc) error
-	EvalSymlinks(path string) (string, error)
-}
-
-var defaultFS fileSystem = iavfs.RealFS{}
-
-type dockerClient interface {
-	Close() error
-	PruneExpiredResources(ctx context.Context) error
-	ComposeUp(ctx context.Context, composeFiles []string, runID string) error
-	ComposeDown(ctx context.Context, composeFiles []string, runID string) error
-	RunContainerInfo(ctx context.Context, opts domain.RunOptions) (stdout string, stderr string, exitCode int, err error)
-}
-
-var dockerClientFactory = func() (dockerClient, error) {
-	return docker.NewDockerClient()
-}
-
-type pipelineAdapter struct {
-	*pipeline.Pipeline
-}
-
-func (a pipelineAdapter) Add(s workflow.Stage) {
-	a.Pipeline.Add(s)
-}
-
 func NewTestCmd() *cobra.Command {
 	var timeout int
 
 	testCmd := &cobra.Command{
-		Use:   "test <script_or_directory>",
-		Short: "Run IaV tests for a script or all scripts in a directory",
-		Args:  cobra.ExactArgs(1),
+		Use:   "test [target_directory]",
+		Short: "Run compose tests (no linting)",
+		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			target := "."
+			if len(args) > 0 {
+				target = args[0]
+			}
+
+			// Verify compose files exist to error early
+			discoverer := workflow.NewDiscovery(defaultFS)
+			scripts, err := discoverer.Run(target)
+			if err != nil || len(scripts) == 0 {
+				if err != nil {
+					return err
+				}
+				return fmt.Errorf("no valid test compose files found in %q", target)
+			}
+
 			completed := false
 			ctx, stop := signal.NotifyContext(cmd.Context(), syscall.SIGINT, syscall.SIGTERM)
 			defer func() {
@@ -76,22 +55,18 @@ func NewTestCmd() *cobra.Command {
 			}
 			defer func() { _ = client.Close() }()
 
-			discoverer := workflow.NewDiscovery(defaultFS)
-
-			composeStages := []workflow.Stage{
-				dockerstages.NewLintStage(client),
-				dockerstages.NewComposeUpStage(client, defaultFS),
-				dockerstages.NewComposeDownStage(client, defaultFS),
-			}
-
 			pipelineFactory := func() workflow.Pipeline {
 				return pipelineAdapter{Pipeline: pipeline.NewPipeline(cmd.OutOrStdout())}
 			}
 
-			composeRunner := workflow.NewRunCompose(defaultFS, client, composeStages, pipelineFactory)
+			testStages := []workflow.Stage{
+				dockerstages.NewComposeUpStage(client, defaultFS),
+				dockerstages.NewComposeDownStage(client, defaultFS),
+			}
 
-			engine := workflow.NewEngine(discoverer, client, composeRunner, cmd.OutOrStdout())
-			return engine.Run(ctx, args[0], timeout)
+			composeRunner := workflow.NewRunCompose(defaultFS, client, testStages, pipelineFactory)
+			tester := workflow.NewDockerComposeTester(discoverer, client, composeRunner, cmd.OutOrStdout())
+			return tester.Run(ctx, target, timeout)
 		},
 	}
 

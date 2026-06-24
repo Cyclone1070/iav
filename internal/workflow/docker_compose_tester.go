@@ -26,20 +26,20 @@ type Runner interface {
 	Run(ctx context.Context, testComposePath string, runID string, timeoutMs int) (*domain.TestExecutionResult, error)
 }
 
-type Engine struct {
+type DockerComposeTester struct {
 	discoverer DiscoveryService
 	pruner     Pruner
 	runner     Runner
 	out        io.Writer
 }
 
-func NewEngine(
+func NewDockerComposeTester(
 	discoverer DiscoveryService,
 	pruner Pruner,
 	runner Runner,
 	out io.Writer,
-) *Engine {
-	return &Engine{
+) *DockerComposeTester {
+	return &DockerComposeTester{
 		discoverer: discoverer,
 		pruner:     pruner,
 		runner:     runner,
@@ -47,7 +47,7 @@ func NewEngine(
 	}
 }
 
-func (e *Engine) Run(ctx context.Context, targetPath string, timeoutMs int) error {
+func (e *DockerComposeTester) Run(ctx context.Context, targetPath string, timeoutMs int) error {
 	testScripts, err := e.discoverer.Run(targetPath)
 	if err != nil {
 		return err
@@ -69,7 +69,7 @@ func (e *Engine) Run(ctx context.Context, targetPath string, timeoutMs int) erro
 	return nil
 }
 
-func (e *Engine) executeSingleTest(ctx context.Context, testComposePath string, timeoutMs int) error {
+func (e *DockerComposeTester) executeSingleTest(ctx context.Context, testComposePath string, timeoutMs int) error {
 	_, _ = fmt.Fprintf(e.out, "Running test compose: %s\n", filepath.Base(testComposePath))
 
 	runID := e.generateRunID()
@@ -82,7 +82,7 @@ func (e *Engine) executeSingleTest(ctx context.Context, testComposePath string, 
 	return pipelineErr
 }
 
-func (e *Engine) generateRunID() string {
+func (e *DockerComposeTester) generateRunID() string {
 	bytes := make([]byte, 8)
 	if _, err := rand.Read(bytes); err != nil {
 		return strconv.FormatInt(time.Now().UnixNano(), 10)
@@ -90,7 +90,7 @@ func (e *Engine) generateRunID() string {
 	return hex.EncodeToString(bytes)
 }
 
-func (e *Engine) printResultLog(scriptPath string, result *domain.TestExecutionResult) {
+func (e *DockerComposeTester) printResultLog(scriptPath string, result *domain.TestExecutionResult) {
 	_, _ = fmt.Fprintln(e.out)
 	statusStr := "PASSED"
 	if !result.Success {

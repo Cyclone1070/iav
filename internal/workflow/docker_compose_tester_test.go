@@ -43,7 +43,7 @@ func (m *mockPruner) PruneExpiredResources(ctx context.Context) error {
 	return nil
 }
 
-func TestEngine_Success(t *testing.T) {
+func TestDockerComposeTester_Success(t *testing.T) {
 	discover := &mockDiscoveryService{
 		runFunc: func(targetPath string) ([]string, error) {
 			return []string{"/workspace/docker-compose.test.yml"}, nil
@@ -63,7 +63,7 @@ func TestEngine_Success(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	engine := NewEngine(discover, pruner, runner, &buf)
+	engine := NewDockerComposeTester(discover, pruner, runner, &buf)
 
 	err := engine.Run(context.Background(), "/workspace/docker-compose.test.yml", 30000)
 	if err != nil {
@@ -76,7 +76,7 @@ func TestEngine_Success(t *testing.T) {
 	}
 }
 
-func TestEngine_DiscoveryFailure(t *testing.T) {
+func TestDockerComposeTester_DiscoveryFailure(t *testing.T) {
 	discover := &mockDiscoveryService{
 		runFunc: func(targetPath string) ([]string, error) {
 			return nil, errors.New("discovery failed")
@@ -86,7 +86,7 @@ func TestEngine_DiscoveryFailure(t *testing.T) {
 	runner := &mockRunner{}
 
 	var buf bytes.Buffer
-	engine := NewEngine(discover, pruner, runner, &buf)
+	engine := NewDockerComposeTester(discover, pruner, runner, &buf)
 
 	err := engine.Run(context.Background(), "/workspace/nonexistent", 30000)
 	if err == nil {
@@ -94,7 +94,7 @@ func TestEngine_DiscoveryFailure(t *testing.T) {
 	}
 }
 
-func TestEngine_ScriptFailure(t *testing.T) {
+func TestDockerComposeTester_ScriptFailure(t *testing.T) {
 	discover := &mockDiscoveryService{
 		runFunc: func(targetPath string) ([]string, error) {
 			return []string{"/workspace/docker-compose.test.yml"}, nil
@@ -108,7 +108,7 @@ func TestEngine_ScriptFailure(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	engine := NewEngine(discover, pruner, runner, &buf)
+	engine := NewDockerComposeTester(discover, pruner, runner, &buf)
 
 	err := engine.Run(context.Background(), "/workspace/docker-compose.test.yml", 30000)
 	if err == nil {

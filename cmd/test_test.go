@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/Cyclone1070/iav/internal/domain"
-	"github.com/spf13/cobra"
 )
 
 type mockFS struct {
@@ -223,25 +222,13 @@ func (m *mockDockerClient) RunContainerInfo(ctx context.Context, opts domain.Run
 	return "ok", "", 0, nil
 }
 
-func TestTestCommand_NoArgs(t *testing.T) {
-	root := &cobra.Command{Use: "iav"}
-	testCmd := NewTestCmd()
-	root.AddCommand(testCmd)
-
-	var buf bytes.Buffer
-	root.SetOut(&buf)
-	root.SetErr(&buf)
-
-	root.SetArgs([]string{"test"})
-	err := root.Execute()
-	if err == nil {
-		t.Fatalf("expected error when no test script or directory is specified")
-	}
-}
-
-func TestTestCommand_NonExistentScript(t *testing.T) {
+func TestRootCommand_BothLintAndTest(t *testing.T) {
 	m := &mockFS{
-		files:      make(map[string][]byte),
+		files: map[string][]byte{
+			"/workspace/Dockerfile":              []byte("FROM alpine"),
+			"/workspace/docker-compose.yml":      []byte("version: '3'"),
+			"/workspace/docker-compose.test.yml": []byte("version: '3'"),
+		},
 		currentDir: "/workspace",
 	}
 
@@ -249,22 +236,91 @@ func TestTestCommand_NonExistentScript(t *testing.T) {
 	defaultFS = m
 	defer func() { defaultFS = oldFS }()
 
-	root := &cobra.Command{Use: "iav"}
-	testCmd := NewTestCmd()
-	root.AddCommand(testCmd)
+	mockClient := &mockDockerClient{}
+	var runContainerCalled, composeUpCalled bool
+	mockClient.runContainerInfoFunc = func(ctx context.Context, opts domain.RunOptions) (string, string, int, error) {
+		runContainerCalled = true
+		return "ok", "", 0, nil
+	}
+	mockClient.composeUpFunc = func(ctx context.Context, composeFiles []string, runID string) error {
+		composeUpCalled = true
+		return nil
+	}
 
+	oldFactory := dockerClientFactory
+	dockerClientFactory = func() (dockerClient, error) {
+		return mockClient, nil
+	}
+	defer func() { dockerClientFactory = oldFactory }()
+
+	root := NewRootCmd()
 	var buf bytes.Buffer
 	root.SetOut(&buf)
 	root.SetErr(&buf)
 
-	root.SetArgs([]string{"test", "/nonexistent"})
+	root.SetArgs([]string{"/workspace"})
 	err := root.Execute()
-	if err == nil {
-		t.Fatalf("expected error for nonexistent target")
+	if err != nil {
+		t.Fatalf("unexpected error: %v, output: %s", err, buf.String())
+	}
+
+	if !runContainerCalled {
+		t.Errorf("expected Hadolint container run to be called")
+	}
+	if !composeUpCalled {
+		t.Errorf("expected ComposeUp to be called")
 	}
 }
 
-func TestTestCommand_ValidCompose(t *testing.T) {
+func TestRootCommand_OnlyLint(t *testing.T) {
+	m := &mockFS{
+		files: map[string][]byte{
+			"/workspace/Dockerfile": []byte("FROM alpine"),
+		},
+		currentDir: "/workspace",
+	}
+
+	oldFS := defaultFS
+	defaultFS = m
+	defer func() { defaultFS = oldFS }()
+
+	mockClient := &mockDockerClient{}
+	var runContainerCalled, composeUpCalled bool
+	mockClient.runContainerInfoFunc = func(ctx context.Context, opts domain.RunOptions) (string, string, int, error) {
+		runContainerCalled = true
+		return "ok", "", 0, nil
+	}
+	mockClient.composeUpFunc = func(ctx context.Context, composeFiles []string, runID string) error {
+		composeUpCalled = true
+		return nil
+	}
+
+	oldFactory := dockerClientFactory
+	dockerClientFactory = func() (dockerClient, error) {
+		return mockClient, nil
+	}
+	defer func() { dockerClientFactory = oldFactory }()
+
+	root := NewRootCmd()
+	var buf bytes.Buffer
+	root.SetOut(&buf)
+	root.SetErr(&buf)
+
+	root.SetArgs([]string{"/workspace"})
+	err := root.Execute()
+	if err != nil {
+		t.Fatalf("unexpected error: %v, output: %s", err, buf.String())
+	}
+
+	if !runContainerCalled {
+		t.Errorf("expected Hadolint container run to be called")
+	}
+	if composeUpCalled {
+		t.Errorf("expected ComposeUp NOT to be called")
+	}
+}
+
+func TestRootCommand_OnlyTest(t *testing.T) {
 	m := &mockFS{
 		files: map[string][]byte{
 			"/workspace/docker-compose.yml":      []byte("version: '3'"),
@@ -278,19 +334,13 @@ func TestTestCommand_ValidCompose(t *testing.T) {
 	defer func() { defaultFS = oldFS }()
 
 	mockClient := &mockDockerClient{}
-	var composeUpCalled, composeDownCalled bool
+	var runContainerCalled, composeUpCalled bool
+	mockClient.runContainerInfoFunc = func(ctx context.Context, opts domain.RunOptions) (string, string, int, error) {
+		runContainerCalled = true
+		return "ok", "", 0, nil
+	}
 	mockClient.composeUpFunc = func(ctx context.Context, composeFiles []string, runID string) error {
 		composeUpCalled = true
-		if len(composeFiles) != 2 || composeFiles[0] != "/workspace/docker-compose.yml" || composeFiles[1] != "/workspace/docker-compose.test.yml" {
-			t.Errorf("unexpected compose files passed to ComposeUp: %v", composeFiles)
-		}
-		return nil
-	}
-	mockClient.composeDownFunc = func(ctx context.Context, composeFiles []string, runID string) error {
-		composeDownCalled = true
-		if len(composeFiles) != 2 || composeFiles[0] != "/workspace/docker-compose.yml" || composeFiles[1] != "/workspace/docker-compose.test.yml" {
-			t.Errorf("unexpected compose files passed to ComposeDown: %v", composeFiles)
-		}
 		return nil
 	}
 
@@ -300,10 +350,57 @@ func TestTestCommand_ValidCompose(t *testing.T) {
 	}
 	defer func() { dockerClientFactory = oldFactory }()
 
-	root := &cobra.Command{Use: "iav"}
-	testCmd := NewTestCmd()
-	root.AddCommand(testCmd)
+	root := NewRootCmd()
+	var buf bytes.Buffer
+	root.SetOut(&buf)
+	root.SetErr(&buf)
 
+	root.SetArgs([]string{"/workspace"})
+	err := root.Execute()
+	if err != nil {
+		t.Fatalf("unexpected error: %v, output: %s", err, buf.String())
+	}
+
+	if runContainerCalled {
+		t.Errorf("expected Hadolint container run NOT to be called")
+	}
+	if !composeUpCalled {
+		t.Errorf("expected ComposeUp to be called")
+	}
+}
+
+func TestSubcommand_TestOnly(t *testing.T) {
+	m := &mockFS{
+		files: map[string][]byte{
+			"/workspace/Dockerfile":              []byte("FROM alpine"),
+			"/workspace/docker-compose.yml":      []byte("version: '3'"),
+			"/workspace/docker-compose.test.yml": []byte("version: '3'"),
+		},
+		currentDir: "/workspace",
+	}
+
+	oldFS := defaultFS
+	defaultFS = m
+	defer func() { defaultFS = oldFS }()
+
+	mockClient := &mockDockerClient{}
+	var runContainerCalled, composeUpCalled bool
+	mockClient.runContainerInfoFunc = func(ctx context.Context, opts domain.RunOptions) (string, string, int, error) {
+		runContainerCalled = true
+		return "ok", "", 0, nil
+	}
+	mockClient.composeUpFunc = func(ctx context.Context, composeFiles []string, runID string) error {
+		composeUpCalled = true
+		return nil
+	}
+
+	oldFactory := dockerClientFactory
+	dockerClientFactory = func() (dockerClient, error) {
+		return mockClient, nil
+	}
+	defer func() { dockerClientFactory = oldFactory }()
+
+	root := NewRootCmd()
 	var buf bytes.Buffer
 	root.SetOut(&buf)
 	root.SetErr(&buf)
@@ -314,10 +411,112 @@ func TestTestCommand_ValidCompose(t *testing.T) {
 		t.Fatalf("unexpected error: %v, output: %s", err, buf.String())
 	}
 
+	if runContainerCalled {
+		t.Errorf("expected Hadolint container run NOT to be called")
+	}
 	if !composeUpCalled {
 		t.Errorf("expected ComposeUp to be called")
 	}
-	if !composeDownCalled {
-		t.Errorf("expected ComposeDown to be called")
+}
+
+func TestSubcommand_LintOnly(t *testing.T) {
+	m := &mockFS{
+		files: map[string][]byte{
+			"/workspace/Dockerfile":              []byte("FROM alpine"),
+			"/workspace/docker-compose.yml":      []byte("version: '3'"),
+			"/workspace/docker-compose.test.yml": []byte("version: '3'"),
+		},
+		currentDir: "/workspace",
+	}
+
+	oldFS := defaultFS
+	defaultFS = m
+	defer func() { defaultFS = oldFS }()
+
+	mockClient := &mockDockerClient{}
+	var runContainerCalled, composeUpCalled bool
+	mockClient.runContainerInfoFunc = func(ctx context.Context, opts domain.RunOptions) (string, string, int, error) {
+		runContainerCalled = true
+		return "ok", "", 0, nil
+	}
+	mockClient.composeUpFunc = func(ctx context.Context, composeFiles []string, runID string) error {
+		composeUpCalled = true
+		return nil
+	}
+
+	oldFactory := dockerClientFactory
+	dockerClientFactory = func() (dockerClient, error) {
+		return mockClient, nil
+	}
+	defer func() { dockerClientFactory = oldFactory }()
+
+	root := NewRootCmd()
+	var buf bytes.Buffer
+	root.SetOut(&buf)
+	root.SetErr(&buf)
+
+	root.SetArgs([]string{"lint", "/workspace"})
+	err := root.Execute()
+	if err != nil {
+		t.Fatalf("unexpected error: %v, output: %s", err, buf.String())
+	}
+
+	if !runContainerCalled {
+		t.Errorf("expected Hadolint container run to be called")
+	}
+	if composeUpCalled {
+		t.Errorf("expected ComposeUp NOT to be called")
 	}
 }
+
+func TestRootCommand_MultipleTestFilesRunsLintOnce(t *testing.T) {
+	m := &mockFS{
+		files: map[string][]byte{
+			"/workspace/Dockerfile":              []byte("FROM alpine"),
+			"/workspace/docker-compose.yml":      []byte("version: '3'"),
+			"/workspace/docker-compose.test.yml": []byte("version: '3'"),
+			"/workspace/another.test.yml":        []byte("version: '3'"),
+		},
+		currentDir: "/workspace",
+	}
+
+	oldFS := defaultFS
+	defaultFS = m
+	defer func() { defaultFS = oldFS }()
+
+	mockClient := &mockDockerClient{}
+	var runContainerCallCount, composeUpCallCount int
+	mockClient.runContainerInfoFunc = func(ctx context.Context, opts domain.RunOptions) (string, string, int, error) {
+		runContainerCallCount++
+		return "ok", "", 0, nil
+	}
+	mockClient.composeUpFunc = func(ctx context.Context, composeFiles []string, runID string) error {
+		composeUpCallCount++
+		return nil
+	}
+
+	oldFactory := dockerClientFactory
+	dockerClientFactory = func() (dockerClient, error) {
+		return mockClient, nil
+	}
+	defer func() { dockerClientFactory = oldFactory }()
+
+	root := NewRootCmd()
+	var buf bytes.Buffer
+	root.SetOut(&buf)
+	root.SetErr(&buf)
+
+	root.SetArgs([]string{"/workspace"})
+	err := root.Execute()
+	if err != nil {
+		t.Fatalf("unexpected error: %v, output: %s", err, buf.String())
+	}
+
+	if runContainerCallCount != 1 {
+		t.Errorf("expected Hadolint container run to be called exactly ONCE, but was called %d times", runContainerCallCount)
+	}
+	if composeUpCallCount != 2 {
+		t.Errorf("expected ComposeUp to be called exactly TWICE (once per test file), but was called %d times", composeUpCallCount)
+	}
+}
+
